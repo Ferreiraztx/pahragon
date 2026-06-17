@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  email     String    @unique
+  senha     String
+  telefone  String?
+  createdAt DateTime  @default(now())
+  bookings  Booking[]
+}
+
+model Admin {
+  id    Int    @id @default(autoincrement())
+  nome  String
+  email String @unique
+  senha String
+}
+
+model Court {
+  id           Int       @id @default(autoincrement())
+  nome         String
+  descricao    String?
+  precoPorHora Float
+  bookings     Booking[]
+}
+
+model Booking {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  court      Court    @relation(fields: [courtId], references: [id])
+  courtId    Int
+  data       DateTime
+  horaInicio DateTime
+  horaFim    DateTime
+  status     String   @default("pendente")
+  createdAt  DateTime @default(now())
+  payment    Payment?
+}
+
+model Payment {
+  id        Int     @id @default(autoincrement())
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  bookingId Int     @unique
+  valor     Float
+  metodo    String
+  status    String  @default("pendente")
+  gatewayId String?
+}
