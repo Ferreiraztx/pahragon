@@ -26,10 +26,31 @@ async function criarPagamento(req, res) {
       return res.status(403).json({ error: 'Sem permissão' })
     }
 
+    // ==========================================================
+    // VALIDAÇÃO COM FUSO HORÁRIO (UTC-3) - Movido para o lugar correto
+    // ==========================================================
+    const agoraUTC = new Date()
+    const agoraLocal = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000))
+    const horarioInicioReserva = new Date(booking.horaInicio)
+
+    if (horarioInicioReserva <= agoraLocal) {
+      return res.status(400).json({ 
+        error: 'Não é possível realizar o pagamento de uma reserva que já passou ou está acontecendo agora.' 
+      })
+    }
+    // ==========================================================
+
     const inicio = new Date(booking.horaInicio)
     const fim = new Date(booking.horaFim)
     const horas = (fim - inicio) / (1000 * 60 * 60)
     const valor = booking.court.precoPorHora * horas
+
+    // -----------------------------------------------------------
+    // CONFIGURAÇÃO DA EXPIRAÇÃO DE 10 MINUTOS PARA O MERCADO PAGO
+    // -----------------------------------------------------------
+    // O Mercado Pago exige o formato ISO 8601 completo com o offset do fuso (ex: -03:00)
+    // Para evitar problemas de fuso, adicionamos 10 minutos à data UTC atual e passamos para ISO string.
+    const dataExpiracao = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     const preference = new Preference(client)
 
@@ -57,7 +78,12 @@ async function criarPagamento(req, res) {
         external_reference: String(booking.id),
         payment_methods: {
           installments: 1
-        }
+        },
+        // =========================================================
+        // AQUI ESTÁ A LIMITAÇÃO DO TEMPO DE PAGAMENTO NO MP:
+        // =========================================================
+        expires: true,
+        expiration_date_to: dataExpiracao
       }
     })
 
@@ -73,11 +99,12 @@ async function criarPagamento(req, res) {
       }
     })
 
-    return res.json({
-      checkoutUrl: result.init_point,
-      sandboxUrl: result.sandbox_init_point,
-      preferenceId: result.id
-    })
+// Substitua o return final do seu criarPagamento por este:
+return res.json({
+  initPoint: result.init_point, // Renomeado para 'initPoint'
+  sandboxUrl: result.sandbox_init_point,
+  preferenceId: result.id
+})
   } catch (err) {
     console.error('ERRO PAGAMENTO:', err)
     return res.status(500).json({ error: 'Erro ao criar pagamento' })
@@ -96,14 +123,23 @@ async function webhook(req, res) {
       const status = payment.status
 
       if (status === 'approved') {
-        await prisma.booking.update({
+        const bookingAtualizado = await prisma.booking.update({
           where: { id: bookingId },
-          data: { status: 'confirmado' }
+          data: { status: 'confirmado' },
+          include: { court: true, user: true }
         })
+
         await prisma.payment.update({
           where: { bookingId },
           data: { status: 'aprovado', metodo: payment.payment_type_id }
         })
+
+        // Envia o e-mail de confirmação pelo webhook se aprovado por lá
+        try {
+          await enviarConfirmacaoReserva(bookingAtualizado)
+        } catch (emailErr) {
+          console.error('Erro ao enviar e-mail via webhook:', emailErr.message)
+        }
       } else if (status === 'rejected') {
         await prisma.payment.update({
           where: { bookingId },
@@ -123,14 +159,25 @@ async function confirmarPagamento(req, res) {
 
   try {
     if (status === 'approved') {
-      await prisma.booking.update({
+      const bookingAtualizado = await prisma.booking.update({
         where: { id: Number(bookingId) },
-        data: { status: 'confirmado' }
+        data: { status: 'confirmado' },
+        include: { court: true, user: true }
       })
+      
       await prisma.payment.update({
         where: { bookingId: Number(bookingId) },
         data: { status: 'aprovado' }
       })
+
+      // Dispara o e-mail de confirmação
+      try {
+        await enviarConfirmacaoReserva(bookingAtualizado)
+      } catch (emailErr) {
+        console.error('Erro ao enviar e-mail via confirmação direta:', emailErr.message)
+      }
+
+      return res.json(bookingAtualizado)
     }
 
     const booking = await prisma.booking.findUnique({
@@ -138,29 +185,9 @@ async function confirmarPagamento(req, res) {
       include: { court: true, user: true }
     })
 
-    // Envia e-mail de confirmação
-    if (status === 'approved') {
-        const bookingAtualizado = await prisma.booking.update({
-          where: { id: bookingId },
-          data: { status: 'confirmado' },
-          include: { court: true, user: true } // <-- IMPORTANTE: precisa incluir para ter os dados no e-mail
-        })
-        
-        await prisma.payment.update({
-          where: { bookingId },
-          data: { status: 'aprovado', metodo: payment.payment_type_id }
-        })
-
-        // DISPARA O EMAIL AQUI TAMBÉM
-        try {
-          await enviarConfirmacaoReserva(bookingAtualizado)
-        } catch (emailErr) {
-          console.error('Erro ao enviar e-mail via webhook:', emailErr.message)
-        }
-      }
-
     return res.json(booking)
   } catch (err) {
+    console.error('Erro ao confirmar pagamento:', err)
     return res.status(500).json({ error: 'Erro ao confirmar pagamento' })
   }
 }

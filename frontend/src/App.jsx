@@ -12,6 +12,7 @@ import PagamentoSucesso from './pages/PagamentoSucesso'
 import PagamentoFalha from './pages/PagamentoFalha'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import PagamentoAguardando from './pages/PagamentoAguardando';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/contato" element={<Contato />} />
       <Route path="/agendar" element={<PrivateRoute><Booking /></PrivateRoute>} />
       <Route path="/minhas-reservas" element={<PrivateRoute><MinhasReservas /></PrivateRoute>} />
+      <Route path="/pagamento/aguardando" element={<PagamentoAguardando />} />
       <Route path="/pagamento/sucesso" element={<PrivateRoute><PagamentoSucesso /></PrivateRoute>} />
       <Route path="/pagamento/falha" element={<PrivateRoute><PagamentoFalha /></PrivateRoute>} />
       <Route path="/pagamento/pendente" element={<PrivateRoute><PagamentoSucesso /></PrivateRoute>} />
