@@ -55,3 +55,14 @@ model Payment {
   status    String  @default("pendente")
   gatewayId String?
 }
+
+model Tournament {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  descricao   String?
+  data        DateTime
+  vagas       Int
+  preco       Float
+  status      String   @default("aberto")
+  createdAt   DateTime @default(now())
+}

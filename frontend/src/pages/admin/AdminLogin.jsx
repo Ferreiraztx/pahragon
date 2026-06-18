@@ -42,7 +42,7 @@ const styles = {
   card: { background: '#fff', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', width: '100%', maxWidth: '400px' },
   title: { textAlign: 'center', color: '#1a73e8', marginBottom: '0.5rem' },
   subtitle: { textAlign: 'center', color: '#333', marginBottom: '1.5rem' },
-  input: { width: '100%', padding: '0.75rem', marginBottom: '1rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', boxSizing: 'border-box' },
+  input: { color: '#000', width: '100%', padding: '0.75rem', marginBottom: '1rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', boxSizing: 'border-box' },
   button: { width: '100%', padding: '0.75rem', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer' },
   erro: { color: 'red', textAlign: 'center', marginBottom: '1rem' }
 }

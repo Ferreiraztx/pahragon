@@ -1,5 +1,6 @@
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago')
 const { PrismaClient } = require('@prisma/client')
+const { enviarConfirmacaoReserva } = require('../services/emailService')
 
 const prisma = new PrismaClient()
 
@@ -134,8 +135,29 @@ async function confirmarPagamento(req, res) {
 
     const booking = await prisma.booking.findUnique({
       where: { id: Number(bookingId) },
-      include: { court: true }
+      include: { court: true, user: true }
     })
+
+    // Envia e-mail de confirmação
+    if (status === 'approved') {
+        const bookingAtualizado = await prisma.booking.update({
+          where: { id: bookingId },
+          data: { status: 'confirmado' },
+          include: { court: true, user: true } // <-- IMPORTANTE: precisa incluir para ter os dados no e-mail
+        })
+        
+        await prisma.payment.update({
+          where: { bookingId },
+          data: { status: 'aprovado', metodo: payment.payment_type_id }
+        })
+
+        // DISPARA O EMAIL AQUI TAMBÉM
+        try {
+          await enviarConfirmacaoReserva(bookingAtualizado)
+        } catch (emailErr) {
+          console.error('Erro ao enviar e-mail via webhook:', emailErr.message)
+        }
+      }
 
     return res.json(booking)
   } catch (err) {
