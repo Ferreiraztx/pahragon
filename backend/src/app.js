@@ -10,7 +10,15 @@ const tournamentRoutes = require('./routes/tournaments');
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173' // mantém o frontend local funcionando em dev
+].filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/auth', authRoutes);
