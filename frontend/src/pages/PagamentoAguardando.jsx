@@ -14,8 +14,6 @@ export default function PagamentoAguardando() {
   const [initPoint, setInitPoint] = useState("");
   const [valorTotal, setValorTotal] = useState(0);
 
-  // Estado para controlar se existe algum aviso de buraco na agenda
-
   useEffect(() => {
     if (!bookingId) {
       setErro("Reserva não identificada.");
@@ -23,23 +21,17 @@ export default function PagamentoAguardando() {
       return;
     }
 
-    // Simulação da busca dos dados do agendamento e geração do link do Mercado Pago
     async function inicializarPagamento() {
       try {
-        // 1. Busca os detalhes da reserva
         const resBooking = await api.get(`/bookings/detalhes/${bookingId}`);
 
-        // CORREÇÃO AQUI: Acessa o preço que vem da relação 'court'
-        // Se o seu campo no banco for diferente, ajuste 'precoPorHora'
         const preco = resBooking.data.court?.precoPorHora || 80;
         setValorTotal(preco);
 
-        // 2. Tenta gerar a preferência
         const resPagamento = await api.post("/payments/criar-preferencia", {
           bookingId,
         });
 
-        // Verifique se a API realmente retornou o link
         if (resPagamento.data.initPoint) {
           setInitPoint(resPagamento.data.initPoint);
         } else {
@@ -57,29 +49,37 @@ export default function PagamentoAguardando() {
     inicializarPagamento();
   }, [bookingId]);
 
+  // Cancela a reserva no banco, liberando o horário para outras pessoas
+  async function liberarReserva() {
+    try {
+      await api.patch(`/bookings/${bookingId}/cancelar`);
+    } catch (err) {
+      // Mesmo se der erro (ex: já estava cancelada), seguimos o fluxo normalmente
+      console.error("Erro ao cancelar reserva:", err);
+    }
+  }
+
   // Cronômetro regressivo de 10 minutos
   useEffect(() => {
-    // 1. Tenta recuperar o tempo final salvo no navegador
     const tempoFinalSalvo = localStorage.getItem(`tempoFim_${bookingId}`);
 
-    // Se não existir, calcula 10 minutos a partir de agora
     const tempoFim = tempoFinalSalvo
       ? parseInt(tempoFinalSalvo)
       : new Date().getTime() + 10 * 60 * 1000;
 
-    // Se não existia, salva no localStorage
     if (!tempoFinalSalvo) {
       localStorage.setItem(`tempoFim_${bookingId}`, tempoFim);
     }
 
-    const intervalo = setInterval(() => {
+    const intervalo = setInterval(async () => {
       const agora = new Date().getTime();
       const restante = tempoFim - agora;
 
       if (restante <= 0) {
         clearInterval(intervalo);
-        localStorage.removeItem(`tempoFim_${bookingId}`); // Limpa ao acabar
-        navigate("/booking");
+        localStorage.removeItem(`tempoFim_${bookingId}`);
+        await liberarReserva();
+        navigate("/agendar");
       } else {
         const m = String(Math.floor(restante / 1000 / 60)).padStart(2, "0");
         const s = String(Math.floor((restante / 1000) % 60)).padStart(2, "0");
@@ -90,8 +90,14 @@ export default function PagamentoAguardando() {
     return () => clearInterval(intervalo);
   }, [navigate, bookingId]);
 
+  async function cancelarEVoltar() {
+    localStorage.removeItem(`tempoFim_${bookingId}`);
+    await liberarReserva();
+    navigate("/agendar");
+  }
+
   function irParaMercadoPago() {
-    console.log("Conteúdo de initPoint:", initPoint); // Verifique se isso aparece no F12 -> Console
+    console.log("Conteúdo de initPoint:", initPoint);
 
     if (initPoint) {
       window.location.href = initPoint;
@@ -119,7 +125,6 @@ export default function PagamentoAguardando() {
           </div>
         )}
 
-        {/* Card do Cronômetro Principal */}
         <div className="bg-[#141414] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-xl relative overflow-hidden">
           <div className="space-y-2">
             <h2 className="text-purple-400 font-bold text-lg tracking-wide">
@@ -131,14 +136,12 @@ export default function PagamentoAguardando() {
             </p>
           </div>
 
-          {/* Display do Timer */}
           <div className="bg-black/40 border border-white/5 rounded-xl py-6 max-w-[240px] mx-auto shadow-inner">
             <span className="text-5xl font-black text-[#00c46a] tracking-wider font-mono">
               {tempoRestante}
             </span>
           </div>
 
-          {/* Botão de Redirecionamento */}
           <button
             onClick={irParaMercadoPago}
             className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl transition-all duration-200 text-base shadow-lg shadow-purple-600/10 border border-purple-500/20 active:scale-[0.99]"
@@ -147,7 +150,7 @@ export default function PagamentoAguardando() {
           </button>
 
           <button
-            onClick={() => navigate("/booking")}
+            onClick={cancelarEVoltar}
             className="text-white/40 hover:text-white/70 text-xs font-semibold tracking-wide block mx-auto transition pt-2"
           >
             ← Cancelar e voltar
