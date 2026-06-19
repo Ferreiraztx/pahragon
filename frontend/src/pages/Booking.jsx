@@ -25,14 +25,9 @@ export default function Booking() {
     "20:00", "20:30", "21:00", "21:30", "22:00",
   ];
 
-  // Aqui guardaremos os blocos processados: { horario: "08:00", status: "disponivel" | "ocupado" }
   const [horariosProcessados, setHorariosProcessados] = useState([]);
-  // Array que guarda todos os blocos de 30 min selecionados (strings simples)
   const [blocosSelecionados, setBlocosSelecionados] = useState([]);
-
   const [mensagem, setMensagem] = useState("");
-
-  // Estado para controlar o Modal de Aviso
   const [modalAviso, setModalAviso] = useState({ visivel: false, texto: "" });
 
   const navigate = useNavigate();
@@ -46,21 +41,18 @@ export default function Booking() {
 
       const horariosDisponiveisVindoDoBanco = res.data.disponiveis || [];
       
-      // Pegamos o momento e data atual do fuso local para travar horários passados
       const agora = new Date();
       const hojeStr = obterDataHojeLocal();
       const horaAtual = agora.getHours();
       const minutoAtual = agora.getMinutes();
 
       const mapeados = gradeCompletaDoDia.map((horario) => {
-        // Verifica se está livre no banco
         let estaDisponivel = horariosDisponiveisVindoDoBanco.includes(horario);
 
-        // Se a data selecionada for HOJE, invalida horários que já passaram do relógio
         if (data === hojeStr) {
           const [horaBloco, minutoBloco] = horario.split(":").map(Number);
           if (horaBloco < horaAtual || (horaBloco === horaAtual && minutoBloco <= minutoAtual)) {
-            estaDisponivel = false; // Força a ficar indisponível
+            estaDisponivel = false;
           }
         }
 
@@ -89,23 +81,19 @@ export default function Booking() {
     setBlocosSelecionados([]);
   }, [quadraSelecionada, data]);
 
-  // Lógica de preenchimento automático
   function lidarComSelecaoDeBloco(horarioClicado) {
     setMensagem("");
 
-    // Se já estiver selecionado, limpa a seleção para reiniciar
     if (blocosSelecionados.includes(horarioClicado)) {
       setBlocosSelecionados([]);
       return;
     }
 
-    // Se for a primeira seleção
     if (blocosSelecionados.length === 0) {
       setBlocosSelecionados([horarioClicado]);
       return;
     }
 
-    // Intervalo automático entre o primeiro clique e o atual
     const primeiroSelecionado = blocosSelecionados[0];
     const indexPrimeiro = gradeCompletaDoDia.indexOf(primeiroSelecionado);
     const indexAtual = gradeCompletaDoDia.indexOf(horarioClicado);
@@ -115,7 +103,6 @@ export default function Booking() {
 
     const intervaloPreenchido = gradeCompletaDoDia.slice(deIndex, ateIndex + 1);
 
-    // Validação: Verificar se há algum horário ocupado no meio do intervalo
     const possuiOcupadoNoMeio = intervaloPreenchido.some((h) => {
       const correspondente = horariosProcessados.find((p) => p.horario === h);
       return correspondente && correspondente.status === "ocupado";
@@ -159,7 +146,6 @@ export default function Booking() {
       return encontrado ? encontrado.status : null;
     };
 
-    // Validação de Buracos de 30 minutos ANTES
     const minutos30Antes = primeiroMinutos - 30;
     const minutos60Antes = primeiroMinutos - 60;
     if (
@@ -173,7 +159,6 @@ export default function Booking() {
       return;
     }
 
-    // Validação de Buracos de 30 minutos DEPOIS
     const minutos30Depois = ultimoMinutos + 30;
     const minutes60Depois = ultimoMinutos + 60;
     if (
@@ -299,11 +284,11 @@ export default function Booking() {
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Data
           </label>
-          {/* Container relativo para sobrepor o input ao botão falso */}
-          <div className="relative mt-2">
-            {/* O "Botão" visual */}
-            <div className="w-full bg-white border border-teal-600 rounded-xl px-4 py-3 text-slate-800 flex justify-between items-center select-none">
-              <span>
+          {/* Container relativo */}
+          <div className="relative mt-2 h-[52px]">
+            {/* O "Botão" visual fica por trás (z-0) */}
+            <div className="absolute inset-0 w-full h-full bg-white border border-teal-600 rounded-xl px-4 flex justify-between items-center select-none pointer-events-none z-0">
+              <span className="text-slate-800">
                 {data
                   ? new Date(data + "T00:00:00").toLocaleDateString("pt-BR")
                   : "Selecione uma data"}
@@ -311,13 +296,24 @@ export default function Booking() {
               <span className="text-slate-400 text-sm">📅</span>
             </div>
 
-            {/* Input nativo invisível sobreposto. Funciona perfeitamente no mobile e desktop */}
+            {/* Input nativo invisível por cima de tudo (z-10). 
+                No celular, ao tocar, ele abre naturalmente. 
+                No PC, o onClick força a abertura do calendário. */}
             <input
               type="date"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               value={data}
               onChange={(e) => setData(e.target.value)}
               min={obterDataHojeLocal()}
+              onClick={(e) => {
+                if (typeof e.target.showPicker === "function") {
+                  try {
+                    e.target.showPicker();
+                  } catch (error) {
+                    // Ignora falhas em navegadores antigos (o mobile usa o toque nativo)
+                  }
+                }
+              }}
             />
           </div>
         </div>
