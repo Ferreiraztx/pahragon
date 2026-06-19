@@ -13,47 +13,16 @@ export default function Booking() {
     return `${ano}-${mes}-${dia}`;
   });
 
-  // Lista com TODOS os blocos possíveis do dia (Horário de funcionamento da quadra)
   const gradeCompletaDoDia = [
-    "08:00",
-    "08:30",
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "12:30",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-    "17:30",
-    "18:00",
-    "18:30",
-    "19:00",
-    "19:30",
-    "20:00",
-    "20:30",
-    "21:00",
-    "21:30",
-    "22:00",
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+    "20:00", "20:30", "21:00", "21:30", "22:00",
   ];
 
-  // Aqui guardaremos os blocos processados: { horario: "08:00", status: "disponivel" | "ocupado" }
   const [horariosProcessados, setHorariosProcessados] = useState([]);
-  // Array que guarda todos os blocos de 30 min selecionados (strings simples)
   const [blocosSelecionados, setBlocosSelecionados] = useState([]);
-
   const [mensagem, setMensagem] = useState("");
-
-  // Estado para controlar o Modal de Aviso Bonitinho
   const [modalAviso, setModalAviso] = useState({ visivel: false, texto: "" });
 
   const navigate = useNavigate();
@@ -64,18 +33,14 @@ export default function Booking() {
       const res = await api.get(
         `/bookings/disponiveis?courtId=${quadraSelecionada}&data=${data}`,
       );
-
       const horariosDisponiveisVindoDoBanco = res.data.disponiveis || [];
-
       const mapeados = gradeCompletaDoDia.map((horario) => {
-        const estaDisponivel =
-          horariosDisponiveisVindoDoBanco.includes(horario);
+        const estaDisponivel = horariosDisponiveisVindoDoBanco.includes(horario);
         return {
           horario,
           status: estaDisponivel ? "disponivel" : "ocupado",
         };
       });
-
       setHorariosProcessados(mapeados);
     } catch (err) {
       console.error("Erro ao buscar horários", err);
@@ -95,53 +60,39 @@ export default function Booking() {
     setBlocosSelecionados([]);
   }, [quadraSelecionada, data]);
 
-  // Lógica de preenchimento automático
   function lidarComSelecaoDeBloco(horarioClicado) {
     setMensagem("");
-
-    // Se já estiver selecionado, limpa a seleção para reiniciar
     if (blocosSelecionados.includes(horarioClicado)) {
       setBlocosSelecionados([]);
       return;
     }
-
-    // Se for a primeira seleção
     if (blocosSelecionados.length === 0) {
       setBlocosSelecionados([horarioClicado]);
       return;
     }
-
-    // Intervalo automático entre o primeiro clique e o atual
     const primeiroSelecionado = blocosSelecionados[0];
     const indexPrimeiro = gradeCompletaDoDia.indexOf(primeiroSelecionado);
     const indexAtual = gradeCompletaDoDia.indexOf(horarioClicado);
 
     const deIndex = Math.min(indexPrimeiro, indexAtual);
     const ateIndex = Math.max(indexPrimeiro, indexAtual);
-
     const intervaloPreenchido = gradeCompletaDoDia.slice(deIndex, ateIndex + 1);
 
-    // Validação: Verificar se há algum horário ocupado no meio do intervalo
     const possuiOcupadoNoMeio = intervaloPreenchido.some((h) => {
       const correspondente = horariosProcessados.find((p) => p.horario === h);
       return correspondente && correspondente.status === "ocupado";
     });
 
     if (possuiOcupadoNoMeio) {
-      setMensagem(
-        "⚠️ Não é possível selecionar esse intervalo pois existem horários já reservados no meio dele.",
-      );
+      setMensagem("⚠️ Intervalo inválido: existem horários já reservados no meio dele.");
       return;
     }
-
     setBlocosSelecionados(intervaloPreenchido);
   }
 
   async function handleAgendar() {
     if (blocosSelecionados.length < 2) {
-      setMensagem(
-        "⚠️ O tempo mínimo de agendamento é de 1 hora (Selecione pelo menos 2 blocos).",
-      );
+      setMensagem("⚠️ O tempo mínimo de agendamento é de 1 hora (2 blocos).");
       return;
     }
 
@@ -155,9 +106,7 @@ export default function Booking() {
     };
 
     const primeiroMinutos = converterParaMinutos(selecionadosOrdenados[0]);
-    const ultimoMinutos = converterParaMinutos(
-      selecionadosOrdenados[selecionadosOrdenados.length - 1],
-    );
+    const ultimoMinutos = converterParaMinutos(selecionadosOrdenados[selecionadosOrdenados.length - 1]);
 
     const obterStatusPorMinutos = (minutos) => {
       const hStr = `${String(Math.floor(minutos / 60)).padStart(2, "0")}:${String(minutos % 60).padStart(2, "0")}`;
@@ -165,30 +114,20 @@ export default function Booking() {
       return encontrado ? encontrado.status : null;
     };
 
-    // Validação de Buracos de 30 minutos ANTES
     const minutos30Antes = primeiroMinutos - 30;
     const minutos60Antes = primeiroMinutos - 60;
-    if (
-      obterStatusPorMinutos(minutos30Antes) === "disponivel" &&
-      obterStatusPorMinutos(minutos60Antes) === "ocupado"
-    ) {
-      const msgAntes =
-        "Sua reserva deixará um intervalo vago de apenas 30 minutos antes do seu jogo. Por favor, inclua esse horário ou junte com a reserva anterior.";
-      setModalAviso({ visivel: true, texto: msgAntes }); // <--- ABRE O MODAL CUSTOMIZADO
+    if (obterStatusPorMinutos(minutos30Antes) === "disponivel" && obterStatusPorMinutos(minutos60Antes) === "ocupado") {
+      const msgAntes = "Sua reserva deixará um intervalo vago de apenas 30 minutos antes do seu jogo. Por favor, inclua esse horário ou junte com a reserva anterior.";
+      setModalAviso({ visivel: true, texto: msgAntes });
       setMensagem(`⚠️ ${msgAntes}`);
       return;
     }
 
-    // Validação de Buracos de 30 minutos DEPOIS
     const minutos30Depois = ultimoMinutos + 30;
     const minutes60Depois = ultimoMinutos + 60;
-    if (
-      obterStatusPorMinutos(minutos30Depois) === "disponivel" &&
-      obterStatusPorMinutos(minutes60Depois) === "ocupado"
-    ) {
-      const msgDepois =
-        "Sua reserva deixará um intervalo vago de apenas 30 minutos após o seu jogo. Por favor, inclua mais 30 minutos ou estenda até o próximo agendamento.";
-      setModalAviso({ visivel: true, texto: msgDepois }); // <--- ABRE O MODAL CUSTOMIZADO
+    if (obterStatusPorMinutos(minutos30Depois) === "disponivel" && obterStatusPorMinutos(minutes60Depois) === "ocupado") {
+      const msgDepois = "Sua reserva deixará um intervalo vago de apenas 30 minutos após o seu jogo. Por favor, inclua mais 30 minutos ou estenda até o próximo agendamento.";
+      setModalAviso({ visivel: true, texto: msgDepois });
       setMensagem(`⚠️ ${msgDepois}`);
       return;
     }
@@ -201,12 +140,8 @@ export default function Booking() {
     const horaFinalCalculada = minFinal === 60 ? hFim + 1 : hFim;
     const minutoFinalCalculada = minFinal === 60 ? 0 : 30;
 
-    const horaInicioISO = new Date(
-      `${data}T${primeiroBloco}:00.000Z`,
-    ).toISOString();
-    const horaFimISO = new Date(
-      `${data}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00.000Z`,
-    ).toISOString();
+    const horaInicioISO = new Date(`${data}T${primeiroBloco}:00.000Z`).toISOString();
+    const horaFimISO = new Date(`${data}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00.000Z`).toISOString();
 
     try {
       const resBooking = await api.post("/bookings", {
@@ -215,37 +150,33 @@ export default function Booking() {
         horaInicio: horaInicioISO,
         horaFim: horaFimISO,
       });
-
       navigate(`/pagamento/aguardando?bookingId=${resBooking.data.id}`);
     } catch {
-      setMensagem(
-        "❌ Erro ao processar o agendamento. Verifique se os horários ainda estão vagos.",
-      );
+      setMensagem("❌ Erro ao processar o agendamento. Verifique se os horários ainda estão vagos.");
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] font-sans pb-10">
-      {/* MODAL CUSTOMIZADO — BONITINHO E MODERNO */}
+    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] font-sans pb-16 antialiased tracking-tight">
+      
+      {/* MODAL PADRONIZADO — WARM FLAT / EDITORIAL */}
       {modalAviso.visivel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-          {/* Fundo escurecido com desfoque (Glassmorphism) */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             onClick={() => setModalAviso({ visivel: false, texto: "" })}
           />
 
-          {/* Card do Modal */}
-          <div className="bg-[#141414] border border-white/10 rounded-2xl max-w-md w-full p-6 relative z-10 shadow-2xl space-y-5 text-center animate-scale-up">
-            <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto text-amber-400 text-xl">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 relative z-10 shadow-xl text-center space-y-5">
+            <div className="w-12 h-12 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center mx-auto text-amber-600 text-xl">
               ⚠️
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-white font-black text-lg">
+            <div className="space-y-1.5">
+              <h3 className="text-[#1e2221] font-black text-xl tracking-tighter">
                 Ajuste de Grade Necessário
               </h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <p className="text-slate-500 text-sm leading-relaxed font-normal">
                 {modalAviso.texto}
               </p>
             </div>
@@ -253,16 +184,19 @@ export default function Booking() {
             <button
               type="button"
               onClick={() => setModalAviso({ visivel: false, texto: "" })}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-purple-600/10 active:scale-[0.98] "
-            ></button>
+              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-3.5 rounded-xl transition shadow-sm text-xs uppercase tracking-wider"
+            >
+              Entendido, ajustar
+            </button>
           </div>
         </div>
       )}
 
-      <header className="max-w-xl mx-auto px-6 py-8 border-b border-slate-200">
+      {/* HEADER */}
+      <header className="max-w-xl mx-auto px-6 py-8 border-b border-slate-200/80">
         <button
           onClick={() => navigate("/")}
-          className="text-sm font-bold text-slate-400 hover:text-[#1e2221]"
+          className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-[#1e2221] transition"
         >
           ← Voltar
         </button>
@@ -274,79 +208,79 @@ export default function Booking() {
         </p>
       </header>
 
-      <main className="max-w-xl mx-auto px-6 py-10 space-y-6">
+      {/* CONTEÚDO PRINCIPAL */}
+      <main className="max-w-xl mx-auto px-6 py-8 space-y-6">
+        
         {mensagem && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl">
+          <div className="bg-rose-50 border border-rose-100 text-rose-700 text-sm px-4 py-3 rounded-xl font-medium">
             {mensagem}
           </div>
         )}
 
-        {/* Seleção da Quadra */}
-        <div>
-          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+        {/* SELEÇÃO DA QUADRA */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
             Quadra
           </label>
-          <select
-            className="w-full h-[52px] bg-white border border-teal-600 rounded-xl px-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/20 transition appearance-none cursor-pointer"
-            value={quadraSelecionada}
-            onChange={(e) => setQuadraSelecionada(e.target.value)}
-          >
-            <option value="">Selecione uma quadra</option>
-            {quadras.map((q) => (
-              <option key={q.id} value={q.id}>
-                {q.nome} — R$ {q.precoPorHora}/h
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className="w-full h-[52px] bg-white border border-slate-200 rounded-xl px-4 text-slate-800 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition appearance-none cursor-pointer font-medium text-sm"
+              value={quadraSelecionada}
+              onChange={(e) => setQuadraSelecionada(e.target.value)}
+            >
+              <option value="">Selecione uma quadra</option>
+              {quadras.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.nome} — R$ {q.precoPorHora.toFixed(2)}/h
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs">▼</div>
+          </div>
         </div>
 
-        {/* Seleção de Data */}
-        <div>
-          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-            Data
+        {/* SELEÇÃO DE DATA CORRIGIDA PARA MOBILE */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+            Data do Jogo
           </label>
-          <div className="relative mt-2">
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById("meu-input-data").showPicker()
-              }
-              className="w-full bg-white border border-teal-600 rounded-xl px-4 py-3 text-slate-800 text-left focus:outline-none focus:border-teal-600 transition flex justify-between items-center cursor-pointer select-none"
-            >
-              <span>
-                {data
-                  ? new Date(data + "T00:00:00").toLocaleDateString("pt-BR")
-                  : "Selecione uma data"}
-              </span>
-              <span className="text-white/30 text-sm">📅</span>
-            </button>
-
+          <div className="relative w-full h-[52px]">
+            {/* O truque: Deixamos o input nativo invisível cobrindo todo o espaço. Ele repassa o toque nativamente para o iOS/Android abrir o calendário oficial, mas exibe o texto formatado no span abaixo. */}
             <input
-              id="meu-input-data"
               type="date"
-              className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+              className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer text-base"
               value={data}
               onChange={(e) => setData(e.target.value)}
               min={new Date().toISOString().split("T")[0]}
             />
+            
+            {/* Máscara visual bonita idêntica ao select */}
+            <div className="absolute inset-0 bg-white border border-slate-200 rounded-xl px-4 flex justify-between items-center z-10 pointer-events-none">
+              <span className="text-slate-800 text-sm font-medium">
+                {data
+                  ? new Date(data + "T00:00:00").toLocaleDateString("pt-BR")
+                  : "Selecione uma data"}
+              </span>
+              <span className="text-slate-400 text-sm">📅</span>
+            </div>
           </div>
         </div>
 
         {/* LISTAGEM DE HORÁRIOS */}
         {horariosProcessados.length > 0 && (
-          <div>
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-                Selecione os Blocos (Mínimo 1 hora)
+          <div className="pt-2">
+            <div className="flex justify-between items-center mb-3 px-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Horários Disponíveis (Mínimo 1 hora)
               </label>
               {blocosSelecionados.length > 0 && (
-                <span className="text-xs font-bold text-[#0d9488]">
-                  {blocosSelecionados.length * 30} min selecionados
+                <span className="text-xs font-mono font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100">
+                  {blocosSelecionados.length * 30} min
                 </span>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 mt-3 max-h-[350px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto pr-1">
               {horariosProcessados.map((item) => {
                 const isSelected = blocosSelecionados.includes(item.horario);
                 const isOcupado = item.status === "ocupado";
@@ -366,32 +300,26 @@ export default function Booking() {
                     type="button"
                     disabled={isOcupado}
                     onClick={() => lidarComSelecaoDeBloco(item.horario)}
-                    className={`w-full px-5 py-3.5 rounded-xl font-bold text-left border transition flex justify-between items-center ${
+                    className={`w-full px-5 py-4 rounded-xl text-left border transition flex justify-between items-center ${
                       isOcupado
-                        ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                        ? "bg-slate-50 border-slate-150 text-slate-300 cursor-not-allowed"
                         : isSelected
-                          ? "bg-teal-600 border-teal-600 text-white shadow-lg"
-                          : "bg-white border-slate-300 text-slate-800 hover:border-teal-600"
+                          ? "bg-[#1e2221] border-[#1e2221] text-white shadow-sm"
+                          : "bg-white border-slate-200 text-slate-800 hover:border-slate-300"
                     }`}
                   >
-                    <span className="text-base tracking-wide">
-                      {item.horario} &gt;&gt; {horarioFimFiltrado}
+                    <span className="text-sm font-mono font-bold tracking-tight">
+                      {item.horario} — {horarioFimFiltrado}
                     </span>
 
-                    <span
-                      className={`text-xs font-bold ${
-                        isOcupado
-                          ? "text-rose-500" // Cor de erro legível no fundo claro
-                          : isSelected
-                            ? "text-teal-50" // Branco bem clarinho para contrastar com o fundo teal
-                            : "teal-600" // Preto para o status "Disponível"
-                      }`}
-                    >
-                      {isOcupado
-                        ? "❌ RESERVADO"
-                        : isSelected
-                          ? "✓ SELECIONADO"
-                          : "DISPONÍVEL"}
+                    <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${
+                      isOcupado 
+                        ? "text-rose-400" 
+                        : isSelected 
+                          ? "text-teal-400" 
+                          : "text-teal-600"
+                    }`}>
+                      {isOcupado ? "Reservado" : isSelected ? "✓ Selecionado" : "Livre"}
                     </span>
                   </button>
                 );
@@ -400,14 +328,15 @@ export default function Booking() {
           </div>
         )}
 
-        {/* Botão de Confirmação */}
+        {/* BOTÃO DE CONFIRMAÇÃO */}
         {blocosSelecionados.length > 0 && (
           <button
             onClick={handleAgendar}
-            className={`w-full font-bold py-4 rounded-xl transition text-lg mt-4 shadow-lg ${
+            disabled={blocosSelecionados.length < 2}
+            className={`w-full font-bold py-4 rounded-xl transition text-sm uppercase tracking-wider mt-4 shadow-sm ${
               blocosSelecionados.length >= 2
-                ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-600/20" // Cor de destaque do Admin
-                : "bg-slate-200 text-slate-400 cursor-not-allowed" // Cor de desativado
+                ? "bg-[#1e2221] hover:bg-black text-white"
+                : "bg-slate-100 border border-slate-200 text-slate-300 cursor-not-allowed shadow-none"
             }`}
           >
             {blocosSelecionados.length >= 2
