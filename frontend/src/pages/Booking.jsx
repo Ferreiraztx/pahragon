@@ -5,7 +5,7 @@ import api from "../services/api";
 export default function Booking() {
   const [quadras, setQuadras] = useState([]);
   const [quadraSelecionada, setQuadraSelecionada] = useState("");
-  
+
   // Função auxiliar para obter a string correta de HOJE no fuso horário local (AAAA-MM-DD)
   const obterDataHojeLocal = () => {
     const hoje = new Date();
@@ -19,10 +19,35 @@ export default function Booking() {
 
   // Lista com TODOS os blocos possíveis do dia (Horário de funcionamento da quadra)
   const gradeCompletaDoDia = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
-    "20:00", "20:30", "21:00", "21:30", "22:00",
+    "08:00",
+    "08:30",
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "11:00",
+    "11:30",
+    "12:00",
+    "12:30",
+    "13:00",
+    "13:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "15:30",
+    "16:00",
+    "16:30",
+    "17:00",
+    "17:30",
+    "18:00",
+    "18:30",
+    "19:00",
+    "19:30",
+    "20:00",
+    "20:30",
+    "21:00",
+    "21:30",
+    "22:00",
   ];
 
   const [horariosProcessados, setHorariosProcessados] = useState([]);
@@ -40,7 +65,7 @@ export default function Booking() {
       );
 
       const horariosDisponiveisVindoDoBanco = res.data.disponiveis || [];
-      
+
       const agora = new Date();
       const hojeStr = obterDataHojeLocal();
       const horaAtual = agora.getHours();
@@ -51,7 +76,10 @@ export default function Booking() {
 
         if (data === hojeStr) {
           const [horaBloco, minutoBloco] = horario.split(":").map(Number);
-          if (horaBloco < horaAtual || (horaBloco === horaAtual && minutoBloco <= minutoAtual)) {
+          if (
+            horaBloco < horaAtual ||
+            (horaBloco === horaAtual && minutoBloco <= minutoAtual)
+          ) {
             estaDisponivel = false;
           }
         }
@@ -180,12 +208,8 @@ export default function Booking() {
     const horaFinalCalculada = minFinal === 60 ? hFim + 1 : hFim;
     const minutoFinalCalculada = minFinal === 60 ? 0 : 30;
 
-    const horaInicioISO = new Date(
-      `${data}T${primeiroBloco}:00.000Z`,
-    ).toISOString();
-    const horaFimISO = new Date(
-      `${data}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00.000Z`,
-    ).toISOString();
+    const horaInicioISO = `${data}T${primeiroBloco}:00`;
+    const horaFimISO = `${data}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00`;
 
     try {
       const resBooking = await api.post("/bookings", {
