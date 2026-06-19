@@ -5,45 +5,24 @@ import api from "../services/api";
 export default function Booking() {
   const [quadras, setQuadras] = useState([]);
   const [quadraSelecionada, setQuadraSelecionada] = useState("");
-  const [data, setData] = useState(() => {
+  
+  // Função auxiliar para obter a string correta de HOJE no fuso horário local do usuário (AAAA-MM-DD)
+  const obterDataHojeLocal = () => {
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const mes = String(hoje.getMonth() + 1).padStart(2, "0");
     const dia = String(hoje.getDate()).padStart(2, "0");
     return `${ano}-${mes}-${dia}`;
-  });
+  };
+
+  const [data, setData] = useState(obterDataHojeLocal);
 
   // Lista com TODOS os blocos possíveis do dia (Horário de funcionamento da quadra)
   const gradeCompletaDoDia = [
-    "08:00",
-    "08:30",
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "12:30",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-    "17:30",
-    "18:00",
-    "18:30",
-    "19:00",
-    "19:30",
-    "20:00",
-    "20:30",
-    "21:00",
-    "21:30",
-    "22:00",
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+    "20:00", "20:30", "21:00", "21:30", "22:00",
   ];
 
   // Aqui guardaremos os blocos processados: { horario: "08:00", status: "disponivel" | "ocupado" }
@@ -58,6 +37,26 @@ export default function Booking() {
 
   const navigate = useNavigate();
 
+  // Função para abrir o calendário que funciona no PC e previne bloqueios no Mobile
+  const abrirCalendario = () => {
+    const input = document.getElementById("meu-input-data");
+    if (!input) return;
+    
+    try {
+      // Tenta o método moderno (Funciona 100% no Desktop)
+      input.showPicker();
+    } catch (err) {
+      // Fallback para navegadores móveis restritivos (como Safari iOS)
+      input.classList.remove("pointer-events-none");
+      input.focus();
+      input.click();
+      // Restaura a segurança após a abertura
+      setTimeout(() => {
+        input.classList.add("pointer-events-none");
+      }, 500);
+    }
+  };
+
   async function buscarHorarios() {
     if (!quadraSelecionada || !data) return;
     try {
@@ -68,8 +67,7 @@ export default function Booking() {
       const horariosDisponiveisVindoDoBanco = res.data.disponiveis || [];
 
       const mapeados = gradeCompletaDoDia.map((horario) => {
-        const estaDisponivel =
-          horariosDisponiveisVindoDoBanco.includes(horario);
+        const estaDisponivel = horariosDisponiveisVindoDoBanco.includes(horario);
         return {
           horario,
           status: estaDisponivel ? "disponivel" : "ocupado",
@@ -174,7 +172,7 @@ export default function Booking() {
     ) {
       const msgAntes =
         "Sua reserva deixará um intervalo vago de apenas 30 minutos antes do seu jogo. Por favor, inclua esse horário ou junte com a reserva anterior.";
-      setModalAviso({ visivel: true, texto: msgAntes }); // <--- ABRE O MODAL CUSTOMIZADO
+      setModalAviso({ visivel: true, texto: msgAntes });
       setMensagem(`⚠️ ${msgAntes}`);
       return;
     }
@@ -188,7 +186,7 @@ export default function Booking() {
     ) {
       const msgDepois =
         "Sua reserva deixará um intervalo vago de apenas 30 minutos após o seu jogo. Por favor, inclua mais 30 minutos ou estenda até o próximo agendamento.";
-      setModalAviso({ visivel: true, texto: msgDepois }); // <--- ABRE O MODAL CUSTOMIZADO
+      setModalAviso({ visivel: true, texto: msgDepois });
       setMensagem(`⚠️ ${msgDepois}`);
       return;
     }
@@ -229,13 +227,11 @@ export default function Booking() {
       {/* MODAL CUSTOMIZADO — BONITINHO E MODERNO */}
       {modalAviso.visivel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-          {/* Fundo escurecido com desfoque (Glassmorphism) */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setModalAviso({ visivel: false, texto: "" })}
           />
 
-          {/* Card do Modal */}
           <div className="bg-[#141414] border border-white/10 rounded-2xl max-w-md w-full p-6 relative z-10 shadow-2xl space-y-5 text-center animate-scale-up">
             <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto text-amber-400 text-xl">
               ⚠️
@@ -254,7 +250,9 @@ export default function Booking() {
               type="button"
               onClick={() => setModalAviso({ visivel: false, texto: "" })}
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-purple-600/10 active:scale-[0.98] "
-            ></button>
+            >
+              Entendido
+            </button>
           </div>
         </div>
       )}
@@ -308,9 +306,8 @@ export default function Booking() {
           <div className="relative mt-2">
             <button
               type="button"
-              onClick={() =>
-                document.getElementById("meu-input-data").showPicker()
-              }
+              onClick={abrirCalendario}
+              onTouchStart={abrirCalendario}
               className="w-full bg-white border border-teal-600 rounded-xl px-4 py-3 text-slate-800 text-left focus:outline-none focus:border-teal-600 transition flex justify-between items-center cursor-pointer select-none"
             >
               <span>
@@ -327,7 +324,7 @@ export default function Booking() {
               className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
+              min={obterDataHojeLocal()}
             />
           </div>
         </div>
@@ -381,10 +378,10 @@ export default function Booking() {
                     <span
                       className={`text-xs font-bold ${
                         isOcupado
-                          ? "text-rose-500" // Cor de erro legível no fundo claro
+                          ? "text-rose-500"
                           : isSelected
-                            ? "text-teal-50" // Branco bem clarinho para contrastar com o fundo teal
-                            : "teal-600" // Preto para o status "Disponível"
+                            ? "text-teal-50"
+                            : "text-teal-600"
                       }`}
                     >
                       {isOcupado
@@ -406,8 +403,8 @@ export default function Booking() {
             onClick={handleAgendar}
             className={`w-full font-bold py-4 rounded-xl transition text-lg mt-4 shadow-lg ${
               blocosSelecionados.length >= 2
-                ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-600/20" // Cor de destaque do Admin
-                : "bg-slate-200 text-slate-400 cursor-not-allowed" // Cor de desativado
+                ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-600/20"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed"
             }`}
           >
             {blocosSelecionados.length >= 2
