@@ -32,7 +32,7 @@ export default function Booking() {
 
   const [mensagem, setMensagem] = useState("");
 
-  // Estado para controlar o Modal de Aviso Bonitinho
+  // Estado para controlar o Modal de Aviso
   const [modalAviso, setModalAviso] = useState({ visivel: false, texto: "" });
 
   const navigate = useNavigate();
@@ -220,7 +220,7 @@ export default function Booking() {
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] font-sans pb-10">
-      {/* MODAL CUSTOMIZADO — BONITINHO E MODERNO */}
+      {/* MODAL CUSTOMIZADO */}
       {modalAviso.visivel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
           <div
@@ -245,7 +245,7 @@ export default function Booking() {
             <button
               type="button"
               onClick={() => setModalAviso({ visivel: false, texto: "" })}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-purple-600/10 active:scale-[0.98]"
+              className="w-full bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-white font-bold py-3 rounded-xl transition shadow-lg active:scale-[0.98]"
             >
               Entendido
             </button>
@@ -277,11 +277,11 @@ export default function Booking() {
 
         {/* Seleção da Quadra */}
         <div>
-          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Quadra
           </label>
           <select
-            className="w-full h-[52px] bg-white border border-teal-600 rounded-xl px-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/20 transition appearance-none cursor-pointer"
+            className="w-full h-[52px] mt-2 bg-white border border-teal-600 rounded-xl px-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/20 transition appearance-none cursor-pointer"
             value={quadraSelecionada}
             onChange={(e) => setQuadraSelecionada(e.target.value)}
           >
@@ -296,32 +296,25 @@ export default function Booking() {
 
         {/* Seleção de Data */}
         <div>
-          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Data
           </label>
+          {/* Container relativo para sobrepor o input ao botão falso */}
           <div className="relative mt-2">
-            <button
-              type="button"
-              onClick={() => {
-                const input = document.getElementById("meu-input-data");
-                if (input && typeof input.showPicker === "function") {
-                  input.showPicker();
-                }
-              }}
-              className="w-full bg-white border border-teal-600 rounded-xl px-4 py-3 text-slate-800 text-left focus:outline-none focus:border-teal-600 transition flex justify-between items-center cursor-pointer select-none"
-            >
+            {/* O "Botão" visual */}
+            <div className="w-full bg-white border border-teal-600 rounded-xl px-4 py-3 text-slate-800 flex justify-between items-center select-none">
               <span>
                 {data
                   ? new Date(data + "T00:00:00").toLocaleDateString("pt-BR")
                   : "Selecione uma data"}
               </span>
-              <span className="text-white/30 text-sm">📅</span>
-            </button>
+              <span className="text-slate-400 text-sm">📅</span>
+            </div>
 
+            {/* Input nativo invisível sobreposto. Funciona perfeitamente no mobile e desktop */}
             <input
-              id="meu-input-data"
               type="date"
-              className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               value={data}
               onChange={(e) => setData(e.target.value)}
               min={obterDataHojeLocal()}
@@ -333,17 +326,17 @@ export default function Booking() {
         {horariosProcessados.length > 0 && (
           <div>
             <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Selecione os Blocos (Mínimo 1 hora)
               </label>
               {blocosSelecionados.length > 0 && (
-                <span className="text-xs font-bold text-[#0d9488]">
+                <span className="text-xs font-bold text-teal-600">
                   {blocosSelecionados.length * 30} min selecionados
                 </span>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 mt-3 max-h-[350px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 mt-3 max-h-[400px] overflow-y-auto pr-1">
               {horariosProcessados.map((item) => {
                 const isSelected = blocosSelecionados.includes(item.horario);
                 const isOcupado = item.status === "ocupado";
