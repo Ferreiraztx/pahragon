@@ -5,13 +5,17 @@ import api from "../services/api";
 export default function Booking() {
   const [quadras, setQuadras] = useState([]);
   const [quadraSelecionada, setQuadraSelecionada] = useState("");
-  const [data, setData] = useState(() => {
+  
+  // Função auxiliar para pegar a data de hoje no fuso horário local (AAAA-MM-DD)
+  const obterDataHojeLocal = () => {
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const mes = String(hoje.getMonth() + 1).padStart(2, "0");
     const dia = String(hoje.getDate()).padStart(2, "0");
     return `${ano}-${mes}-${dia}`;
-  });
+  };
+
+  const [data, setData] = useState(obterDataHojeLocal);
 
   const gradeCompletaDoDia = [
     "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -115,8 +119,8 @@ export default function Booking() {
     };
 
     const minutos30Antes = primeiroMinutos - 30;
-    const minutos60Antes = primeiroMinutos - 60;
-    if (obterStatusPorMinutos(minutos30Antes) === "disponivel" && obterStatusPorMinutos(minutos60Antes) === "ocupado") {
+    const minutes60Antes = primeiroMinutos - 60;
+    if (obterStatusPorMinutos(minutos30Antes) === "disponivel" && obterStatusPorMinutos(minutes60Antes) === "ocupado") {
       const msgAntes = "Sua reserva deixará um intervalo vago de apenas 30 minutos antes do seu jogo. Por favor, inclua esse horário ou junte com a reserva anterior.";
       setModalAviso({ visivel: true, texto: msgAntes });
       setMensagem(`⚠️ ${msgAntes}`);
@@ -159,28 +163,25 @@ export default function Booking() {
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] font-sans pb-16 antialiased tracking-tight">
       
-      {/* MODAL PADRONIZADO — WARM FLAT / EDITORIAL */}
+      {/* MODAL PADRONIZADO */}
       {modalAviso.visivel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             onClick={() => setModalAviso({ visivel: false, texto: "" })}
           />
-
           <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 relative z-10 shadow-xl text-center space-y-5">
             <div className="w-12 h-12 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center mx-auto text-amber-600 text-xl">
               ⚠️
             </div>
-
             <div className="space-y-1.5">
               <h3 className="text-[#1e2221] font-black text-xl tracking-tighter">
-                Ajuste de Grade Necessário
+                Ajuste de Grade Necessary
               </h3>
               <p className="text-slate-500 text-sm leading-relaxed font-normal">
                 {modalAviso.texto}
               </p>
             </div>
-
             <button
               type="button"
               onClick={() => setModalAviso({ visivel: false, texto: "" })}
@@ -239,30 +240,20 @@ export default function Booking() {
           </div>
         </div>
 
-        {/* SELEÇÃO DE DATA CORRIGIDA PARA MOBILE */}
+        {/* SELEÇÃO DE DATA - CORRIGIDA E NATIVA */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
             Data do Jogo
           </label>
-          <div className="relative w-full h-[52px]">
-            {/* O truque: Deixamos o input nativo invisível cobrindo todo o espaço. Ele repassa o toque nativamente para o iOS/Android abrir o calendário oficial, mas exibe o texto formatado no span abaixo. */}
+          <div className="relative">
+            {/* Input puro, visível, responsivo e estilizado sem quebrar cliques em nenhuma plataforma */}
             <input
               type="date"
-              className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer text-base"
+              className="w-full h-[52px] bg-white border border-slate-200 rounded-xl px-4 text-slate-800 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition font-medium text-sm cursor-pointer block"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
+              min={obterDataHojeLocal()}
             />
-            
-            {/* Máscara visual bonita idêntica ao select */}
-            <div className="absolute inset-0 bg-white border border-slate-200 rounded-xl px-4 flex justify-between items-center z-10 pointer-events-none">
-              <span className="text-slate-800 text-sm font-medium">
-                {data
-                  ? new Date(data + "T00:00:00").toLocaleDateString("pt-BR")
-                  : "Selecione uma data"}
-              </span>
-              <span className="text-slate-400 text-sm">📅</span>
-            </div>
           </div>
         </div>
 
