@@ -13,50 +13,81 @@ export default function Contato() {
   const mapaUrl = "https://maps.google.com/maps?q=Rua+Joao+Alencar+Guimaraes+574+Curitiba&output=embed"
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans">
       <Navbar />
+      
       <main className="max-w-4xl mx-auto px-6 pt-32 pb-20">
-        <div className="mb-10">
-          <span className="text-[#00c46a] text-xs font-bold tracking-widest uppercase">Fale com a gente</span>
-          <h1 className="text-4xl font-black text-white mt-2">Contato</h1>
+        {/* Título da Página com Tipografia Editorial */}
+        <div className="mb-12">
+          <span className="text-teal-600 text-xs font-extrabold tracking-widest uppercase block mb-1">
+            Fale com a gente
+          </span>
+          <h1 className="text-4xl font-black text-[#1e2221] tracking-tighter">
+            Contato
+          </h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Layout em Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* Coluna da Esquerda: Cards de Informação */}
           <div className="space-y-4">
             {infos.map((item, i) => (
-              <div key={i} className="bg-[#141414] border border-white/5 rounded-2xl p-5 flex gap-4">
-                <div className="w-11 h-11 rounded-xl bg-[#00c46a]/10 flex items-center justify-center text-xl shrink-0">
+              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 flex gap-4 shadow-sm hover:border-slate-300 transition-all">
+                <div className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-xl shrink-0">
                   {item.icon}
                 </div>
                 <div>
-                  <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-1">{item.title}</p>
-                  <p className="text-white text-sm whitespace-pre-line">{item.info}</p>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                    {item.title}
+                  </p>
+                  <p className="text-[#1e2221] text-sm font-medium whitespace-pre-line leading-relaxed">
+                    {item.info}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
+          {/* Coluna da Direita: Mapa e Ações Sociais */}
           <div className="space-y-4">
-            <div className="bg-[#141414] border border-white/5 rounded-2xl overflow-hidden h-64">
+            {/* Container do Mapa Integrado sem o Filtro Dark */}
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden h-64 shadow-sm">
               <iframe
                 title="Mapa"
                 src={mapaUrl}
                 width="100%"
                 height="100%"
-                style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
+                style={{ border: 0 }}
                 allowFullScreen={true}
                 loading="lazy"
               />
             </div>
-            <a href={whatsappUrl} className="flex items-center justify-center gap-3 w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-4 rounded-2xl transition">
-              <span className="text-xl">💬</span>
-              Chamar no WhatsApp
-            </a>
-            <a href={instagramUrl} className="flex items-center justify-center gap-3 w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-4 rounded-2xl transition">
-              <span className="text-xl">📸</span>
-              Seguir no Instagram
-            </a>
+
+            {/* Links de Ação como Botões Estruturados */}
+            <div className="grid grid-cols-1 gap-3 pt-2">
+              <a 
+                href={whatsappUrl} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2.5 w-full bg-[#1e2221] hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-sm text-sm tracking-wide"
+              >
+                <span className="text-lg">💬</span>
+                Chamar no WhatsApp
+              </a>
+
+              <a 
+                href={instagramUrl} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2.5 w-full bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-bold py-4 rounded-xl transition shadow-sm text-sm tracking-wide"
+              >
+                <span className="text-lg">📸</span>
+                Seguir no Instagram
+              </a>
+            </div>
           </div>
+
         </div>
       </main>
     </div>

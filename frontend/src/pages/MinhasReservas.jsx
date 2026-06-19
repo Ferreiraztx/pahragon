@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import api from '../services/api'
 
 export default function MinhasReservas() {
@@ -16,54 +16,102 @@ export default function MinhasReservas() {
     setReservas(reservas.map(r => r.id === id ? { ...r, status: 'cancelado' } : r))
   }
 
+  // Mapeamento de estilos usando tons pastéis elegantes e bordas finas idênticas ao Admin
   const statusStyle = {
-    pendente: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    confirmado: 'bg-[#00c46a]/10 text-[#00c46a] border-[#00c46a]/20',
-    cancelado: 'bg-red-500/10 text-red-400 border-red-500/20'
+    pendente: 'bg-amber-50 text-amber-800 border-amber-200/60',
+    confirmado: 'bg-teal-50 text-teal-900 border-teal-200/60',
+    cancelado: 'bg-slate-50 text-slate-400 border-slate-200'
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      <header className="border-b border-white/5 px-6 py-4 flex items-center gap-4">
-        <button onClick={() => navigate('/')} className="text-white/50 hover:text-white transition">
-          ← Voltar
-        </button>
-        <div>
-          <h1 className="text-white font-black text-xl">Minhas Reservas</h1>
-          <p className="text-[#00c46a] text-xs font-semibold tracking-widest uppercase">Pahragon Beach Tennis</p>
+    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base">
+      
+      {/* Cabeçalho Minimalista Integrado */}
+      <header className="border-b border-slate-200/80 bg-white sticky top-0 z-10">
+        <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
+          <button 
+            onClick={() => navigate('/')} 
+            className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-900 transition flex items-center gap-1"
+          >
+            ← Voltar
+          </button>
+          
+          <div className="text-right">
+            <h1 className="text-[#1e2221] font-black text-xl tracking-tighter leading-none">Minhas Reservas</h1>
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-teal-600 block mt-1">pahragon arena</span>
+          </div>
         </div>
       </header>
 
+      {/* Área de Conteúdo Centralizada */}
       <main className="max-w-xl mx-auto px-6 py-10 space-y-4">
+        
+        {/* Estado Vazio Traduzido para o Design Limpo */}
         {reservas.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-5xl mb-4">🎾</p>
-            <p className="text-white/40">Você ainda não tem reservas.</p>
-            <button onClick={() => navigate('/agendar')} className="mt-4 text-[#00c46a] font-semibold hover:underline">
+          <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-4 text-xl">
+              🎾
+            </div>
+            <h3 className="font-extrabold text-slate-900 text-lg tracking-tight">Nenhuma reserva encontrada</h3>
+            <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto">
+              Você ainda não agendou nenhum horário na areia para as próximas semanas.
+            </p>
+            <button 
+              onClick={() => navigate('/agendar')} 
+              className="mt-5 inline-block bg-[#1e2221] hover:bg-black text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-sm"
+            >
               Agendar agora
             </button>
           </div>
         ) : (
+          
+          /* Lista de Reservas Individuais */
           reservas.map(r => (
-            <div key={r.id} className="bg-[#141414] border border-white/5 rounded-2xl p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-white font-bold text-lg">{r.court.nome}</h3>
-                <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${statusStyle[r.status]}`}>
-                  {r.status}
-                </span>
+            <div key={r.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between group">
+              
+              <div>
+                {/* Linha de Cima: Título e Badge de Status */}
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Espaço</span>
+                    <h3 className="text-[#1e2221] font-black text-lg tracking-tight leading-tight">
+                      {r.court?.nome || "Quadra de Beach Tennis"}
+                    </h3>
+                  </div>
+                  <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border ${statusStyle[r.status] || statusStyle.pendente}`}>
+                    {r.status}
+                  </span>
+                </div>
+
+                {/* Grid de Metadados Cronológicos */}
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-sm">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Agendado para</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {new Date(r.data).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Intervalo de Horário</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {new Date(r.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} — {new Date(r.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1 text-white/50 text-sm">
-                <p>📅 {new Date(r.data).toLocaleDateString('pt-BR')}</p>
-                <p>🕐 {new Date(r.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} — {new Date(r.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-              </div>
+
+              {/* Botão de Cancelamento Discreto no Rodapé do Card */}
               {r.status !== 'cancelado' && (
-                <button
-                  onClick={() => cancelar(r.id)}
-                  className="mt-4 text-sm text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-4 py-2 rounded-xl transition"
-                >
-                  Cancelar reserva
-                </button>
+                <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    onClick={() => cancelar(r.id)}
+                    className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 bg-white hover:bg-rose-50/50 px-4 py-2.5 rounded-xl transition"
+                  >
+                    Cancelar reserva
+                  </button>
+                </div>
               )}
+
             </div>
           ))
         )}

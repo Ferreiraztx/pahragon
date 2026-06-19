@@ -19,35 +19,39 @@ export default function Login() {
       login(res.data.user, res.data.token)
       navigate('/')
     } catch (_err) {
-      setErro('E-mail ou senha incorretos')
+      setErro('E-mail ou senha incorretos.')
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#faf9f6] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        
+        {/* Identidade Visual Homogênea */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#00c46a] mb-4">
-            <span className="text-2xl">🎾</span>
-          </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">PAHRAGON</h1>
-          <p className="text-[#00c46a] font-semibold text-sm tracking-widest uppercase mt-1">Beach Tennis</p>
+          <Link to="/" className="inline-flex items-baseline gap-2 mb-4">
+            <span className="font-black text-4xl tracking-tighter text-[#1e2221]">pahragon</span>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">arena</span>
+          </Link>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Acesse sua conta</h1>
+          <p className="text-slate-500 text-sm mt-1">Conecte-se para gerenciar seus horários.</p>
         </div>
 
-        <div className="bg-[#141414] rounded-2xl p-8 border border-white/5">
-          <h2 className="text-xl font-bold text-white mb-6">Entrar na conta</h2>
-
+        {/* Card de Autenticação */}
+        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          
+          {/* Mensagem de Erro Semitransparente / Suave */}
           {erro && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">
+            <div className="bg-rose-50 border border-rose-100 text-rose-700 text-sm px-4 py-3 rounded-xl mb-6 font-medium text-center">
               {erro}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">E-mail</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
               <input
-                className="w-full mt-1.5 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-[#00c46a] transition"
+                className="w-full mt-1.5 bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-300 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition"
                 type="email"
                 placeholder="seu@email.com"
                 value={email}
@@ -55,10 +59,11 @@ export default function Login() {
                 required
               />
             </div>
+
             <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Senha</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Senha</label>
               <input
-                className="w-full mt-1.5 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-[#00c46a] transition"
+                className="w-full mt-1.5 bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-300 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition"
                 type="password"
                 placeholder="••••••••"
                 value={senha}
@@ -66,21 +71,23 @@ export default function Login() {
                 required
               />
             </div>
+
             <button
-              className="w-full bg-[#00c46a] hover:bg-[#00a857] text-black font-bold py-3.5 rounded-xl transition mt-2"
+              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-3.5 rounded-xl transition shadow-sm mt-2"
               type="submit"
             >
               Entrar
             </button>
           </form>
 
-          <p className="text-center text-white/40 text-sm mt-6">
+          <p className="text-center text-slate-400 text-sm mt-6">
             Não tem conta?{' '}
-            <Link to="/register" className="text-[#00c46a] font-semibold hover:underline">
+            <Link to="/register" className="text-teal-600 font-bold hover:underline">
               Cadastre-se
             </Link>
           </p>
         </div>
+
       </div>
     </div>
   )

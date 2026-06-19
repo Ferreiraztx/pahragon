@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
 
 export default function PagamentoAguardando() {
@@ -54,7 +54,6 @@ export default function PagamentoAguardando() {
     try {
       await api.patch(`/bookings/${bookingId}/cancelar`);
     } catch (err) {
-      // Mesmo se der erro (ex: já estava cancelada), seguimos o fluxo normalmente
       console.error("Erro ao cancelar reserva:", err);
     }
   }
@@ -106,10 +105,11 @@ export default function PagamentoAguardando() {
     }
   }
 
+  // Loading Screen no mesmo padrão Off-White limpo
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center">
-        <p className="text-white font-medium text-lg animate-pulse">
+      <div className="min-h-screen bg-[#faf9f6] flex flex-col items-center justify-center">
+        <p className="text-[#1e2221] font-bold text-lg animate-pulse tracking-tight">
           Gerando Pix do Mercado Pago...
         </p>
       </div>
@@ -117,44 +117,61 @@ export default function PagamentoAguardando() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans flex flex-col items-center justify-center px-6 py-12">
       <main className="max-w-md w-full space-y-6">
+        
+        {/* Alerta de erro estilo Admin */}
         {erro && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl text-center">
+          <div className="bg-rose-50 border border-rose-100 text-rose-700 text-sm px-4 py-3 rounded-xl text-center font-medium">
             {erro}
           </div>
         )}
 
-        <div className="bg-[#141414] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-xl relative overflow-hidden">
+        {/* Card Principal */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-8 shadow-sm relative overflow-hidden">
+          
+          {/* Identidade Visual Discreta no topo do card */}
+          <div className="flex items-center justify-center gap-1.5 opacity-40">
+            <span className="font-black text-sm tracking-tighter text-[#1e2221]">pahragon</span>
+            <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">arena</span>
+          </div>
+
           <div className="space-y-2">
-            <h2 className="text-purple-400 font-bold text-lg tracking-wide">
+            <h2 className="text-[#1e2221] font-black text-2xl tracking-tighter">
               Reserva Quase Pronta!
             </h2>
-            <p className="text-white/60 text-sm leading-relaxed max-w-xs mx-auto">
-              Seguramos o seu horário na quadra. Conclua o pagamento antes que o
-              cronômetro zere para não perder a vaga.
+            <p className="text-slate-500 text-sm leading-relaxed max-w-xs mx-auto">
+              Seguramos o seu horário na areia. Conclua o pagamento antes que o tempo se encerre para não perder a vaga.
             </p>
           </div>
 
-          <div className="bg-black/40 border border-white/5 rounded-xl py-6 max-w-[240px] mx-auto shadow-inner">
-            <span className="text-5xl font-black text-[#00c46a] tracking-wider font-mono">
+          {/* Cronômetro Regressivo Estilo Caixa de Dados do Admin */}
+          <div className="bg-teal-50/50 border border-teal-100 rounded-2xl py-6 max-w-[220px] mx-auto shadow-inner text-center">
+            <span className="text-xs font-bold text-teal-700 uppercase tracking-widest block mb-1">
+              Tempo Restante
+            </span>
+            <span className="text-4xl font-light text-[#1e2221] tracking-tighter font-mono font-bold">
               {tempoRestante}
             </span>
           </div>
 
-          <button
-            onClick={irParaMercadoPago}
-            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl transition-all duration-200 text-base shadow-lg shadow-purple-600/10 border border-purple-500/20 active:scale-[0.99]"
-          >
-            Ir para o Mercado Pago (Pagar R$ {valorTotal})
-          </button>
+          {/* Botões de Ação */}
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={irParaMercadoPago}
+              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-md active:scale-[0.99] text-sm tracking-wide"
+            >
+              Ir para o Mercado Pago • R$ {valorTotal.toFixed(2)}
+            </button>
 
-          <button
-            onClick={cancelarEVoltar}
-            className="text-white/40 hover:text-white/70 text-xs font-semibold tracking-wide block mx-auto transition pt-2"
-          >
-            ← Cancelar e voltar
-          </button>
+            <button
+              onClick={cancelarEVoltar}
+              className="w-full text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider py-2 transition"
+            >
+              ← Cancelar e liberar horário
+            </button>
+          </div>
+
         </div>
       </main>
     </div>

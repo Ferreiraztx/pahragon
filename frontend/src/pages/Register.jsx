@@ -21,41 +21,44 @@ export default function Register() {
       login(res.data.user, res.data.token)
       navigate('/')
     } catch (_err) {
-      setErro('Erro ao cadastrar. Tente outro e-mail.')
+      setErro('Erro ao cadastrar. Verifique seus dados e tente novamente.')
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#faf9f6] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        
+        {/* Identidade Visual Refinada */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#00c46a] mb-4">
-            <span className="text-2xl">🎾</span>
-          </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">PAHRAGON</h1>
-          <p className="text-[#00c46a] font-semibold text-sm tracking-widest uppercase mt-1">Beach Tennis</p>
+          <Link to="/" className="inline-flex items-baseline gap-2 mb-4">
+            <span className="font-black text-4xl tracking-tighter text-[#1e2221]">pahragon</span>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">arena</span>
+          </Link>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Criar sua conta</h1>
+          <p className="text-slate-500 text-sm mt-1">Junte-se à nossa comunidade no Santa Quitéria.</p>
         </div>
 
-        <div className="bg-[#141414] rounded-2xl p-8 border border-white/5">
-          <h2 className="text-xl font-bold text-white mb-6">Criar conta</h2>
-
+        {/* Card do Formulário */}
+        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          
           {erro && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">
+            <div className="bg-rose-50 border border-rose-100 text-rose-700 text-sm px-4 py-3 rounded-xl mb-6 font-medium">
               {erro}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {[
-              { name: 'nome', label: 'Nome completo', type: 'text', placeholder: 'Seu nome' },
+              { name: 'nome', label: 'Nome completo', type: 'text', placeholder: 'Ex: Matheus Leal' },
               { name: 'email', label: 'E-mail', type: 'email', placeholder: 'seu@email.com' },
               { name: 'senha', label: 'Senha', type: 'password', placeholder: '••••••••' },
-              { name: 'telefone', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000' },
+              { name: 'telefone', label: 'Telefone', type: 'text', placeholder: '(41) 99999-9999' },
             ].map(field => (
               <div key={field.name}>
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{field.label}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
                 <input
-                  className="w-full mt-1.5 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-[#00c46a] transition"
+                  className="w-full mt-1.5 bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-300 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition"
                   name={field.name}
                   type={field.type}
                   placeholder={field.placeholder}
@@ -64,17 +67,18 @@ export default function Register() {
                 />
               </div>
             ))}
+            
             <button
-              className="w-full bg-[#00c46a] hover:bg-[#00a857] text-black font-bold py-3.5 rounded-xl transition mt-2"
+              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-3.5 rounded-xl transition shadow-sm mt-2"
               type="submit"
             >
-              Criar conta
+              Finalizar Cadastro
             </button>
           </form>
 
-          <p className="text-center text-white/40 text-sm mt-6">
-            Já tem conta?{' '}
-            <Link to="/login" className="text-[#00c46a] font-semibold hover:underline">
+          <p className="text-center text-slate-400 text-sm mt-6">
+            Já possui acesso?{' '}
+            <Link to="/login" className="text-teal-600 font-bold hover:underline">
               Entrar
             </Link>
           </p>
