@@ -296,21 +296,31 @@ export default function Booking() {
               <span className="text-slate-400 text-sm">📅</span>
             </div>
 
-            {/* Input nativo invisível por cima de tudo (z-10). 
-                No celular, ao tocar, ele abre naturalmente. 
-                No PC, o onClick força a abertura do calendário. */}
+            {/* Input nativo com dupla validação (Bloqueio visual + Bloqueio por código) */}
             <input
               type="date"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               value={data}
-              onChange={(e) => setData(e.target.value)}
               min={obterDataHojeLocal()}
+              onChange={(e) => {
+                const dataSelecionada = e.target.value;
+                const hojeStr = obterDataHojeLocal();
+
+                // VALIDAÇÃO ANTI-BURLA: se a data for menor que hoje, força voltar para hoje
+                if (dataSelecionada && dataSelecionada < hojeStr) {
+                  setData(hojeStr);
+                  setMensagem("⚠️ Não é permitido selecionar datas passadas.");
+                } else {
+                  setData(dataSelecionada);
+                  setMensagem(""); // Limpa a mensagem caso mude para uma data válida
+                }
+              }}
               onClick={(e) => {
                 if (typeof e.target.showPicker === "function") {
                   try {
                     e.target.showPicker();
                   } catch (error) {
-                    // Ignora falhas em navegadores antigos (o mobile usa o toque nativo)
+                    // Ignora falhas em navegadores antigos
                   }
                 }
               }}
