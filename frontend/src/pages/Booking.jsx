@@ -209,8 +209,8 @@ export default function Booking() {
     const horaFinalCalculada = minFinal === 60 ? hFim + 1 : hFim;
     const minutoFinalCalculada = minFinal === 60 ? 0 : 30;
 
-    const horaInicioISO = `${data}T${primeiroBloco}:00`;
-    const horaFimISO = `${data}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00`;
+    const horaInicioISO = `${data}T${primeiroBloco}:00.000Z`;
+    const horaFimISO = `${data}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00.000Z`;
 
     try {
       const resBooking = await api.post("/bookings", {

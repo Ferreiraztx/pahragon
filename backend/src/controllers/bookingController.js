@@ -2,19 +2,24 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // Criar reserva
+// Criar reserva (Versão Corrigida Timezone)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim } = req.body;
   const userId = req.userId;
 
   try {
     // ==========================================================
-    // TRAVA DE SEGURANÇA: EVITAR QUE CLIQUEM EM HORÁRIOS PASSADOS
+    // TRAVA DE SEGURANÇA CORRIGIDA: Comparação Direta em UTC
     // ==========================================================
     const agoraUTC = new Date();
-    const agoraLocal = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000)); // Fuso Brasília (UTC-3)
     const inicioReserva = new Date(horaInicio);
 
-    if (inicioReserva <= agoraLocal) {
+    // Ajustamos apenas o "agora" para refletir o horário de Brasília correspondente na comparação
+    const agoraBrasilia = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000));
+
+    // Se o frontend envia em formato UTC fixo (.000Z), criamos um Date puro para o dia
+    // garantindo que a comparação de passado/futuro não desloque as horas
+    if (inicioReserva <= agoraUTC) {
       return res.status(400).json({ error: 'Não é possível agendar em um horário que já passou.' });
     }
     // ==========================================================
@@ -23,19 +28,21 @@ async function criar(req, res) {
       const lockKey = `${courtId}-${data}-${horaInicio}`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
 
-      // IMPORTANTE: Aqui também atualizamos para considerar o tempo limite se clicarem no mesmo milissegundo
       const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
+
+      // Criamos a data limpa (Ex: 2026-06-22T00:00:00.000Z) para bater com a busca
+      const dataFormatada = new Date(`${data.split('T')[0]}T00:00:00.000Z`);
 
       const conflito = await tx.booking.findFirst({
         where: {
           courtId: Number(courtId),
-          data: new Date(data),
+          data: dataFormatada,
           OR: [
             { status: 'pago' },
             { status: 'confirmado' },
             {
               status: 'pendente',
-              createdAt: { gte: dezMinutosAtras } // Bloqueia apenas se tiver menos de 10 min de vida
+              createdAt: { gte: dezMinutosAtras }
             }
           ],
           AND: [
@@ -63,7 +70,7 @@ async function criar(req, res) {
         data: {
           userId,
           courtId: Number(courtId),
-          data: new Date(data),
+          data: dataFormatada,
           horaInicio: new Date(horaInicio),
           horaFim: new Date(horaFim),
           status: 'pendente'
@@ -198,7 +205,7 @@ async function horariosDisponiveis(req, res) {
     disponiveis = disponiveis.filter(horario => {
       const [h, m] = horario.split(':').map(Number);
       
-      const inicioSugerido = new Date(`${dataSelecionadaString}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+      const inicioSugerido = new Date(`${dataSelecionadaString}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`);
       const fimSugerido = new Date(inicioSugerido.getTime() + (30 * 60 * 1000)); 
 
       const temConflito = reservas.some(r => {
