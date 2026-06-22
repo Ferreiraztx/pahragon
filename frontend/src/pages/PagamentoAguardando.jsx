@@ -25,20 +25,44 @@ export default function PagamentoAguardando() {
       try {
         const resBooking = await api.get(`/bookings/detalhes/${bookingId}`);
 
-        // 1. Pega os dados da reserva
         const precoPorHora = resBooking.data.court?.precoPorHora || 80;
-        const inicio = new Date(resBooking.data.horaInicio);
-        const fim = new Date(resBooking.data.horaFim);
 
-        // 2. Calcula a diferença em minutos e converte para horas decimais
-        const diferencaEmMinutos = (fim - inicio) / (1000 * 60);
-        const totalHoras = diferencaEmMinutos / 60;
+        // Pegamos as strings brutas enviadas pelo backend (ex: "2026-06-22T21:00:00")
+        const stringInicio = resBooking.data.horaInicio;
+        const stringFim = resBooking.data.horaFim;
 
-        // 3. Calcula o valor proporcional real (ex: 1.5 horas * R$ 80 = R$ 120)
-        const valorCalculado = totalHoras * precoPorHora;
-        setValorTotal(valorCalculado);
+        if (stringInicio && stringFim) {
+          // Extrai apenas o trecho "HH:MM" de dentro da string
+          const [hInicio, mInicio] = stringInicio
+            .split("T")[1]
+            .substring(0, 5)
+            .split(":")
+            .map(Number);
+          const [hFim, mFim] = stringFim
+            .split("T")[1]
+            .substring(0, 5)
+            .split(":")
+            .map(Number);
 
-        // Mantém o fluxo normal do Mercado Pago abaixo
+          // Converte tudo para minutos totais desde o início do dia
+          const minutosInicio = hInicio * 60 + mInicio;
+          const minutosFim = hFim * 60 + mFim;
+
+          // Calcula a diferença real em minutos
+          const diferencaEmMinutos = minutosFim - minutosInicio;
+
+          // Converte para horas decimais (ex: 90 minutos = 1.5 horas)
+          const totalHoras = diferencaEmMinutos / 60;
+
+          // Multiplica e atualiza o estado
+          const valorCalculado = totalHoras * precoPorHora;
+          setValorTotal(valorCalculado);
+        } else {
+          // Fallback caso não venham as strings de horário
+          setValorTotal(precoPorHora);
+        }
+
+        // Fluxo normal do Mercado Pago
         const resPagamento = await api.post("/payments/criar-preferencia", {
           bookingId,
         });
