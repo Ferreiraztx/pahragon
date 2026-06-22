@@ -48,6 +48,7 @@ export default function Booking() {
     "21:00",
     "21:30",
     "22:00",
+    "22:30",
   ];
 
   const [horariosProcessados, setHorariosProcessados] = useState([]);
