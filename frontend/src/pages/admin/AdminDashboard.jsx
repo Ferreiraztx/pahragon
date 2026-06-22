@@ -216,7 +216,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base">
+    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base overflow-x-hidden">
       
       {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
       {modalConfirmacao.aberto && (
@@ -325,8 +325,8 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 lg:gap-16 items-start">
           
-          {/* Barra Lateral de Controle: nav só aparece no desktop, filtros aparecem em todas as telas */}
-          <div className="lg:col-span-1 space-y-10 lg:sticky lg:top-10 min-w-0">
+          {/* Barra Lateral de Controle */}
+          <div className="lg:col-span-1 space-y-10 lg:sticky lg:top-10 min-w-0 w-full overflow-hidden">
             <div className="hidden lg:block">
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Menu Principal</p>
               <nav className="flex flex-col gap-2">
@@ -352,9 +352,9 @@ export default function AdminDashboard() {
             </div>
 
             {(aba === 'reservas' || aba === 'caixa') && (
-              <div className="space-y-5 pt-6 lg:pt-0 lg:border-t-0 border-t border-slate-200/80 min-w-0">
+              <div className="space-y-5 pt-6 lg:pt-0 lg:border-t-0 border-t border-slate-200/80 min-w-0 w-full">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Filtrar Período</p>
-                <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1">
+                <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1 w-[vw]">
                   {[
                     { id: 'tudo', label: 'Todo o histórico' },
                     { id: 'hoje', label: 'Apenas hoje' },
@@ -375,16 +375,17 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
-                <div className="space-y-3 pt-2 min-w-0">
+                <div className="space-y-3 pt-2 min-w-0 w-full">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Período Customizado</p>
-                  <div className="flex flex-col gap-3 min-w-0 w-full">
+                  {/* AJUSTADO: mudou para grid grid-cols-2 no mobile para encaixar os dois inputs lado a lado sem estourar */}
+                  <div className="grid grid-cols-2 lg:flex lg:flex-col gap-3 min-w-0 w-full">
                     <label className="flex flex-col gap-1 min-w-0 w-full">
                       <span className="text-xs text-slate-400 font-medium">De</span>
                       <input
                         type="date"
                         value={dataInicio}
                         onChange={e => { setDataInicio(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
                       />
                     </label>
                     <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -393,7 +394,7 @@ export default function AdminDashboard() {
                         type="date"
                         value={dataFim}
                         onChange={e => { setDataFim(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
                       />
                     </label>
                   </div>
@@ -403,7 +404,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Área Conteúdo */}
-          <div className="lg:col-span-3 space-y-10 min-w-0">
+          <div className="lg:col-span-3 space-y-10 min-w-0 w-full">
             
             {/* RESERVAS */}
             {aba === 'reservas' && (
@@ -440,7 +441,6 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
-                {/* Lista de Reservas em Formato de Cards Separados */}
                 <div className="grid grid-cols-1 gap-4">
                   {reservasExibidasNaLista.length === 0 ? (
                     <div className="text-slate-400 text-base py-16 text-center font-light">
@@ -486,7 +486,6 @@ export default function AdminDashboard() {
               <div className="space-y-12">
                 <div>
                   <h2 className="text-2xl font-extrabold text-slate-900 mb-6">Estrutura das Quadras</h2>
-                  
                   <div className="grid grid-cols-1 gap-4">
                     {quadras.length === 0 ? (
                       <p className="text-slate-400 text-base py-4">Nenhuma quadra listada.</p>
@@ -501,8 +500,6 @@ export default function AdminDashboard() {
                               Tarifa: <span className="text-teal-700 font-extrabold font-mono">R$ {q.precoPorHora}/h</span>
                             </p>
                           </div>
-                          
-                          {/* Botão de texto fixo */}
                           <button 
                             onClick={() => solicitarDeletarQuadra(q.id, q.nome)} 
                             className="self-start sm:self-auto text-sm font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
@@ -547,8 +544,6 @@ export default function AdminDashboard() {
                               <p className="text-sm text-slate-500 mt-1">👥 {t.vagas} duplas/vagas totais <span className="mx-2 text-slate-300">•</span> Inscrição: <span className="font-mono text-slate-700 font-bold">R$ {Number(t.preco).toFixed(2)}</span></p>
                             </div>
                           </div>
-
-                          {/* Botão de texto fixo */}
                           <button 
                             onClick={() => solicitarDeletarTorneio(t.id, t.nome)} 
                             className="self-start sm:self-auto text-sm font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
@@ -595,7 +590,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="py-4">
+                <div className="py-4 w-full min-w-0">
                   <div className="mb-6">
                     <h3 className="text-lg font-extrabold text-slate-900">Curva de Ganhos</h3>
                     <p className="text-slate-400 text-sm font-light">Evolução do faturamento bruto por dia</p>
@@ -606,9 +601,10 @@ export default function AdminDashboard() {
                       Nenhum dado financeiro mapeado no filtro ativo.
                     </div>
                   ) : (
-                    <div className="h-60 w-full -ml-4">
+                    /* AJUSTADO: Adicionado pr-4 para compensar margens do Recharts e removido o -ml-4 fixo que vazava a tela */
+                    <div className="h-60 w-full pr-2">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={dadosGrafico} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                        <AreaChart data={dadosGrafico} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <XAxis 
                             dataKey="name" 
                             stroke="#94a3b8" 
