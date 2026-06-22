@@ -14,6 +14,7 @@ export default function AdminDashboard() {
   const [dataFim, setDataFim] = useState('')
   const [filtroDataAtivo, setFiltroDataAtivo] = useState('tudo')
   const [filtroStatus, setFiltroStatus] = useState('todos')
+  const [menuAberto, setMenuAberto] = useState(false)
 
   const [novaQuadra, setNovaQuadra] = useState({ nome: '', descricao: '', precoPorHora: '' })
   const [novoTorneio, setNovoTorneio] = useState({ nome: '', descricao: '', data: '', vagas: '', preco: '' })
@@ -99,6 +100,18 @@ export default function AdminDashboard() {
 
   function fecharModal() {
     setModalConfirmacao({ aberto: false, titulo: '', mensagem: '', acaoConfirmar: null })
+  }
+
+  function selecionarAba(id) {
+    setAba(id)
+    setFiltroStatus('todos')
+    setMenuAberto(false)
+  }
+
+  function sair() {
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('admin')
+    navigate('/admin/login')
   }
 
   function aplicarFiltroRapido(tipo) {
@@ -222,21 +235,76 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <header className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80">
+      {/* CABEÇALHO */}
+      <header className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 flex items-center justify-between border-b border-slate-200/80">
         <div className="flex items-baseline gap-2.5">
           <span className="font-black text-2xl sm:text-3xl tracking-tighter text-[#1e2221]">pahragon</span>
           <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">arena</span>
         </div>
-        <div className="flex items-center gap-4 sm:gap-8 text-sm sm:text-base">
+
+        {/* Info + sair: visível só no desktop */}
+        <div className="hidden lg:flex items-center gap-8 text-sm sm:text-base">
           <span className="text-slate-500">Logado como <span className="font-bold text-slate-800">{admin.nome}</span></span>
           <button
-            onClick={() => { localStorage.removeItem('adminToken'); localStorage.removeItem('admin'); navigate('/admin/login') }}
+            onClick={sair}
             className="text-slate-400 hover:text-rose-600 transition font-semibold"
           >
             Sair
           </button>
         </div>
+
+        {/* Botão hambúrguer: visível só no mobile/tablet */}
+        <button
+          onClick={() => setMenuAberto(!menuAberto)}
+          className="lg:hidden flex flex-col items-center justify-center gap-1.5 w-10 h-10 rounded-xl hover:bg-slate-200/60 transition"
+          aria-label="Abrir menu"
+        >
+          <span className={`block w-6 h-0.5 bg-[#1e2221] transition-transform ${menuAberto ? 'translate-y-2 rotate-45' : ''}`} />
+          <span className={`block w-6 h-0.5 bg-[#1e2221] transition-opacity ${menuAberto ? 'opacity-0' : ''}`} />
+          <span className={`block w-6 h-0.5 bg-[#1e2221] transition-transform ${menuAberto ? '-translate-y-2 -rotate-45' : ''}`} />
+        </button>
       </header>
+
+      {/* PAINEL DO MENU MOBILE */}
+      {menuAberto && (
+        <div className="lg:hidden border-b border-slate-200/80 bg-white shadow-md animate-fadeIn">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200/80">
+              <span className="text-sm text-slate-500">Logado como <span className="font-bold text-slate-800">{admin.nome}</span></span>
+              <button
+                onClick={sair}
+                className="text-sm font-bold text-rose-600 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition"
+              >
+                Sair
+              </button>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Menu Principal</p>
+              <nav className="flex flex-col gap-2">
+                {abas.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => selecionarAba(a.id)}
+                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${
+                      aba === a.id
+                        ? 'bg-[#1e2221] text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                  >
+                    <span>{a.label}</span>
+                    {a.count !== null && (
+                      <span className={`text-xs px-2.5 py-1 rounded-md font-mono ${aba === a.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                        {a.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {mensagem && (
@@ -248,16 +316,16 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 lg:gap-16 items-start">
           
-          {/* Barra Lateral de Controle */}
-          <div className="lg:col-span-1 space-y-10 lg:sticky lg:top-10">
-            <div>
+          {/* Barra Lateral de Controle: nav só aparece no desktop, filtros aparecem em todas as telas */}
+          <div className="lg:col-span-1 space-y-10 lg:sticky lg:top-10 min-w-0">
+            <div className="hidden lg:block">
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Menu Principal</p>
-              <nav className="flex flex-row lg:flex-col gap-2 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1">
+              <nav className="flex flex-col gap-2">
                 {abas.map(a => (
                   <button
                     key={a.id}
-                    onClick={() => { setAba(a.id); setFiltroStatus('todos') }}
-                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between gap-3 whitespace-nowrap shrink-0 lg:shrink ${
+                    onClick={() => selecionarAba(a.id)}
+                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${
                       aba === a.id
                         ? 'bg-[#1e2221] text-white shadow-md'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -275,7 +343,7 @@ export default function AdminDashboard() {
             </div>
 
             {(aba === 'reservas' || aba === 'caixa') && (
-              <div className="space-y-5 pt-6 border-t border-slate-200/80">
+              <div className="space-y-5 pt-6 lg:pt-0 lg:border-t-0 border-t border-slate-200/80 min-w-0">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Filtrar Período</p>
                 <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1">
                   {[
@@ -299,20 +367,20 @@ export default function AdminDashboard() {
                 </div>
 
                 {aba === 'reservas' && (
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-3 pt-2 min-w-0">
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Período Customizado</p>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 min-w-0">
                       <input
                         type="date"
                         value={dataInicio}
                         onChange={e => { setDataInicio(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2 sm:px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-900"
                       />
                       <input
                         type="date"
                         value={dataFim}
                         onChange={e => { setDataFim(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2 sm:px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-900"
                       />
                     </div>
                   </div>
@@ -322,7 +390,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Área Conteúdo */}
-          <div className="lg:col-span-3 space-y-10">
+          <div className="lg:col-span-3 space-y-10 min-w-0">
             
             {/* RESERVAS */}
             {aba === 'reservas' && (
