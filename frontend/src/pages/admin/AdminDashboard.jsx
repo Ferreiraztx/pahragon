@@ -21,7 +21,6 @@ export default function AdminDashboard() {
   const [mensagem, setMensagem] = useState('')
   const navigate = useNavigate()
 
-  // Estados para o Modal de Confirmação Customizado
   const [modalConfirmacao, setModalConfirmacao] = useState({
     aberto: false,
     titulo: '',
@@ -71,7 +70,6 @@ export default function AdminDashboard() {
     } catch { setMensagem('❌ Erro ao publicar torneio.') }
   }
 
-  // Modais de Confirmação para Remoção
   function solicitarDeletarQuadra(id, nome) {
     setModalConfirmacao({
       aberto: true,
@@ -220,8 +218,8 @@ export default function AdminDashboard() {
       
       {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
       {modalConfirmacao.aberto && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity animate-fadeIn">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 max-w-md w-full shadow-2xl space-y-6 transform scale-100 transition-transform">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 max-w-md w-full shadow-2xl space-y-6">
             <div className="space-y-2">
               <h3 className="text-xl font-extrabold text-slate-900">{modalConfirmacao.titulo}</h3>
               <p className="text-slate-500 text-sm leading-relaxed">{modalConfirmacao.mensagem}</p>
@@ -251,18 +249,11 @@ export default function AdminDashboard() {
           <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">arena</span>
         </div>
 
-        {/* Info + sair: visível só no desktop */}
         <div className="hidden lg:flex items-center gap-8 text-sm sm:text-base">
           <span className="text-slate-500">Logado como <span className="font-bold text-slate-800">{admin.nome}</span></span>
-          <button
-            onClick={sair}
-            className="text-slate-400 hover:text-rose-600 transition font-semibold"
-          >
-            Sair
-          </button>
+          <button onClick={sair} className="text-slate-400 hover:text-rose-600 transition font-semibold">Sair</button>
         </div>
 
-        {/* Botão hambúrguer: visível só no mobile/tablet */}
         <button
           onClick={() => setMenuAberto(!menuAberto)}
           className="lg:hidden flex flex-col items-center justify-center gap-1.5 w-10 h-10 rounded-xl hover:bg-slate-200/60 transition"
@@ -280,12 +271,7 @@ export default function AdminDashboard() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 space-y-5">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200/80">
               <span className="text-sm text-slate-500">Logado como <span className="font-bold text-slate-800">{admin.nome}</span></span>
-              <button
-                onClick={sair}
-                className="text-sm font-bold text-rose-600 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition"
-              >
-                Sair
-              </button>
+              <button onClick={sair} className="text-sm font-bold text-rose-600 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition">Sair</button>
             </div>
 
             <div>
@@ -296,9 +282,7 @@ export default function AdminDashboard() {
                     key={a.id}
                     onClick={() => selecionarAba(a.id)}
                     className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${
-                      aba === a.id
-                        ? 'bg-[#1e2221] text-white shadow-md'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      aba === a.id ? 'bg-[#1e2221] text-white shadow-md' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                     }`}
                   >
                     <span>{a.label}</span>
@@ -335,9 +319,7 @@ export default function AdminDashboard() {
                     key={a.id}
                     onClick={() => selecionarAba(a.id)}
                     className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${
-                      aba === a.id
-                        ? 'bg-[#1e2221] text-white shadow-md'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      aba === a.id ? 'bg-[#1e2221] text-white shadow-md' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                     }`}
                   >
                     <span>{a.label}</span>
@@ -352,9 +334,9 @@ export default function AdminDashboard() {
             </div>
 
             {(aba === 'reservas' || aba === 'caixa') && (
-              <div className="space-y-5 pt-6 lg:pt-0 lg:border-t-0 border-t border-slate-200/80 min-w-0 w-full">
+              <div className="space-y-6 pt-6 lg:pt-0 lg:border-t-0 border-t border-slate-200/80 min-w-0 w-full">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Filtrar Período</p>
-                <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1 w-[vw]">
+                <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1 w-full">
                   {[
                     { id: 'tudo', label: 'Todo o histórico' },
                     { id: 'hoje', label: 'Apenas hoje' },
@@ -364,10 +346,8 @@ export default function AdminDashboard() {
                     <button
                       key={item.id}
                       onClick={() => aplicarFiltroRapido(item.id)}
-                      className={`text-left text-sm px-3 py-2 rounded-lg font-medium transition whitespace-nowrap shrink-0 lg:shrink ${
-                        filtroDataAtivo === item.id 
-                          ? 'text-teal-700 font-bold bg-teal-50' 
-                          : 'text-slate-500 hover:text-slate-900'
+                      className={`text-left text-sm px-3 py-2 rounded-lg font-medium transition whitespace-nowrap ${
+                        filtroDataAtivo === item.id ? 'text-teal-700 font-bold bg-teal-50' : 'text-slate-500 hover:text-slate-900'
                       }`}
                     >
                       {item.label}
@@ -377,24 +357,24 @@ export default function AdminDashboard() {
 
                 <div className="space-y-3 pt-2 min-w-0 w-full">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Período Customizado</p>
-                  {/* AJUSTADO: mudou para grid grid-cols-2 no mobile para encaixar os dois inputs lado a lado sem estourar */}
-                  <div className="grid grid-cols-2 lg:flex lg:flex-col gap-3 min-w-0 w-full">
-                    <label className="flex flex-col gap-1 min-w-0 w-full">
-                      <span className="text-xs text-slate-400 font-medium">De</span>
+                  {/* AJUSTADO: Grid empilhada perfeitamente no mobile com gap correto */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-4 min-w-0 w-full">
+                    <label className="flex flex-col gap-1.5 min-w-0 w-full">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">De</span>
                       <input
                         type="date"
                         value={dataInicio}
                         onChange={e => { setDataInicio(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm"
                       />
                     </label>
-                    <label className="flex flex-col gap-1 min-w-0 w-full">
-                      <span className="text-xs text-slate-400 font-medium">Até</span>
+                    <label className="flex flex-col gap-1.5 min-w-0 w-full">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">Até</span>
                       <input
                         type="date"
                         value={dataFim}
                         onChange={e => { setDataFim(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm"
                       />
                     </label>
                   </div>
@@ -434,7 +414,7 @@ export default function AdminDashboard() {
                     <button
                       key={tab.id}
                       onClick={() => setFiltroStatus(tab.id)}
-                      className={`pb-1.5 transition text-sm font-medium whitespace-nowrap shrink-0 ${filtroStatus === tab.id ? 'text-slate-900 border-b-2 border-slate-900 font-bold' : 'text-slate-400 hover:text-slate-700'}`}
+                      className={`pb-1.5 transition text-sm font-medium whitespace-nowrap ${filtroStatus === tab.id ? 'text-slate-900 border-b-2 border-slate-900 font-bold' : 'text-slate-400 hover:text-slate-700'}`}
                     >
                       {tab.label}
                     </button>
@@ -515,9 +495,9 @@ export default function AdminDashboard() {
                 <div className="pt-8 border-t border-slate-200/80 max-w-lg">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Nova Quadra</h3>
                   <form onSubmit={criarQuadra} className="space-y-4">
-                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Título/Identificação da Quadra" value={novaQuadra.nome} onChange={e => setNovaQuadra({ ...novaQuadra, nome: e.target.value })} required />
-                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Descrição ou observações estruturais" value={novaQuadra.descricao} onChange={e => setNovaQuadra({ ...novaQuadra, descricao: e.target.value })} />
-                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono" placeholder="Preço Cobrado por Hora (Ex: 90)" type="number" value={novaQuadra.precoPorHora} onChange={e => setNovaQuadra({ ...novaQuadra, precoPorHora: e.target.value })} required />
+                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm" placeholder="Título/Identificação da Quadra" value={novaQuadra.nome} onChange={e => setNovaQuadra({ ...novaQuadra, nome: e.target.value })} required />
+                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm" placeholder="Descrição ou observações estruturais" value={novaQuadra.descricao} onChange={e => setNovaQuadra({ ...novaQuadra, descricao: e.target.value })} />
+                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono h-12 shadow-sm" placeholder="Preço Cobrado por Hora (Ex: 80)" type="number" value={novaQuadra.precoPorHora} onChange={e => setNovaQuadra({ ...novaQuadra, precoPorHora: e.target.value })} required />
                     <button className="bg-[#1e2221] hover:bg-black text-white text-sm font-bold px-5 py-3.5 rounded-xl transition shadow-md w-full sm:w-auto" type="submit">Adicionar à Arena</button>
                   </form>
                 </div>
@@ -559,12 +539,24 @@ export default function AdminDashboard() {
                 <div className="pt-8 border-t border-slate-200/80 max-w-lg">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Novo Torneio</h3>
                   <form onSubmit={criarTorneio} className="space-y-4">
-                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Nome da Competição" value={novoTorneio.nome} onChange={e => setNovoTorneio({ ...novoTorneio, nome: e.target.value })} required />
-                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Categorias envolvidas (Ex: Open Masculino / Mista B)" value={novoTorneio.descricao} onChange={e => setNovoTorneio({ ...novoTorneio, descricao: e.target.value })} />
-                    <input className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-3 sm:px-4 py-3 text-sm sm:text-base focus:outline-none focus:border-slate-900 text-slate-500 cursor-pointer" type="datetime-local" value={novoTorneio.data} onChange={e => setNovoTorneio({ ...novoTorneio, data: e.target.value })} required />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono" placeholder="Limite de Vagas" type="number" value={novoTorneio.vagas} onChange={e => setNovoTorneio({ ...novoTorneio, vagas: e.target.value })} required />
-                      <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono" placeholder="Valor Inscrição R$ (Ex: 120)" type="number" value={novoTorneio.preco} onChange={e => setNovoTorneio({ ...novoTorneio, preco: e.target.value })} required />
+                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm" placeholder="Nome da Competição" value={novoTorneio.nome} onChange={e => setNovoTorneio({ ...novoTorneio, nome: e.target.value })} required />
+                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm" placeholder="Categorias envolvidas (Ex: Open Masculino / Mista B)" value={novoTorneio.descricao} onChange={e => setNovoTorneio({ ...novoTorneio, descricao: e.target.value })} />
+                    
+                    {/* AJUSTADO: Input de data corrigido para mobile (sem ficar transparente ou esmagado) */}
+                    <div className="flex flex-col gap-1 w-full">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">Data do Torneio</span>
+                      <input 
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm appearance-none" 
+                        type="datetime-local" 
+                        value={novoTorneio.data} 
+                        onChange={e => setNovoTorneio({ ...novoTorneio, data: e.target.value })} 
+                        required 
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono h-12 shadow-sm" placeholder="Limite de Vagas" type="number" value={novoTorneio.vagas} onChange={e => setNovoTorneio({ ...novoTorneio, vagas: e.target.value })} required />
+                      <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono h-12 shadow-sm" placeholder="Valor Inscrição R$ (Ex: 120)" type="number" value={novoTorneio.preco} onChange={e => setNovoTorneio({ ...novoTorneio, preco: e.target.value })} required />
                     </div>
                     <button className="bg-[#1e2221] hover:bg-black text-white text-sm font-bold px-5 py-3.5 rounded-xl transition shadow-md w-full sm:w-auto" type="submit">Lançar Torneio</button>
                   </form>
@@ -601,39 +593,18 @@ export default function AdminDashboard() {
                       Nenhum dado financeiro mapeado no filtro ativo.
                     </div>
                   ) : (
-                    /* AJUSTADO: Adicionado pr-4 para compensar margens do Recharts e removido o -ml-4 fixo que vazava a tela */
                     <div className="h-60 w-full pr-2">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={dadosGrafico} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <XAxis 
-                            dataKey="name" 
-                            stroke="#94a3b8" 
-                            fontSize={12}
-                            tickLine={false}
-                            axisLine={false}
-                            dy={10}
-                          />
-                          <YAxis 
-                            stroke="#94a3b8" 
-                            fontSize={12}
-                            tickLine={false}
-                            axisLine={false}
-                            tickFormatter={(v) => `R$${v}`}
-                          />
+                          <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                          <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
                           <Tooltip
                             contentStyle={{ backgroundColor: '#1e2221', borderColor: '#1e2221', borderRadius: '12px', color: '#fff', padding: '12px' }}
                             labelStyle={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '4px' }}
                             itemStyle={{ color: '#f97316', fontSize: '14px', fontWeight: 'bold' }}
                             formatter={(value) => [`R$ ${value.toFixed(2)}`, 'Faturamento']}
                           />
-                          <Area 
-                            type="monotone" 
-                            dataKey="faturamento" 
-                            stroke="#ea580c" 
-                            strokeWidth={2.5}
-                            fillOpacity={0.04} 
-                            fill="#ea580c" 
-                          />
+                          <Area type="monotone" dataKey="faturamento" stroke="#ea580c" strokeWidth={2.5} fillOpacity={0.04} fill="#ea580c" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -648,7 +619,7 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 text-base py-6 font-light">Sem transações no período.</p>
                     ) : (
                       paymentsFiltradosPorPeriodo.map(p => (
-                        <div key={p.id} className="py-4.5 px-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base group hover:bg-slate-200/30 rounded-xl transition-colors">
+                        <div key={p.id} className="py-4 px-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base group hover:bg-slate-200/30 rounded-xl transition-colors">
                           <div className="flex items-center gap-4 sm:gap-6">
                             <span className="text-sm font-mono text-slate-400 w-16 font-bold shrink-0">
                               {formatarDataLateral(p.booking.data)}
