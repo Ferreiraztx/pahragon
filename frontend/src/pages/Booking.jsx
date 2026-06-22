@@ -211,9 +211,8 @@ export default function Booking() {
 
     const dataLimpa = data.split("T")[0];
 
-    // Adicionado o sufixo 'Z' para garantir que o backend interprete estritamente como string UTC limpa
-    const horaInicioISO = `${dataLimpa}T${primeiroBloco}:00Z`;
-    const horaFimISO = `${dataLimpa}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00Z`;
+    const horaInicioISO = `${dataLimpa}T${primeiroBloco}:00`;
+    const horaFimISO = `${dataLimpa}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00`;
 
     try {
       const resBooking = await api.post("/bookings", {

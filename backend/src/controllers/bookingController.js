@@ -37,13 +37,16 @@ async function criar(req, res) {
       const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
 
       // Desestruturando os pedaços da data e hora para forçar o UTC puro
+      // Dentro da transaction na função criar():
       const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
       const [hInicioStr, mInicioStr] = horaAgendamentoStr.split(':');
       const [hFimStr, mFimStr] = horaFim.split('T')[1].substring(0, 5).split(':');
 
       const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 0, 0, 0));
-      const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicioStr), Number(mInicioStr), 0));
-      const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFimStr), Number(mFimStr), 0));
+
+      // ATENÇÃO AQUI: Adicionamos +3 horas na conversão para o banco armazenar o UTC equivalente ao horário de Brasília escolhido
+      const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicioStr) + 3, Number(mInicioStr), 0));
+      const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFimStr) + 3, Number(mFimStr), 0));
 
       const conflito = await tx.booking.findFirst({
         where: {
