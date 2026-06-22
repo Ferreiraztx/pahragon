@@ -160,6 +160,15 @@ export default function AdminDashboard() {
     return true
   })
 
+  const paymentsFiltradosPorPeriodo = (caixa?.payments || []).filter(p => {
+    const dataPagamentoISO = new Date(p.booking.data).toISOString().split('T')[0]
+    if (dataInicio && dataPagamentoISO < dataInicio) return false
+    if (dataFim && dataPagamentoISO > dataFim) return false
+    return true
+  })
+
+  const totalFiltradoPorPeriodo = paymentsFiltradosPorPeriodo.reduce((soma, p) => soma + p.valor, 0)
+
   const totalConfirmadasNoPeriodo = reservasFiltradasPorData.filter(r => r.status === 'confirmado').length
   const totalPendentesNoPeriodo = reservasFiltradasPorData.filter(r => r.status === 'pendente').length
   const totalCanceladasNoPeriodo = reservasFiltradasPorData.filter(r => r.status === 'cancelado').length
@@ -168,8 +177,8 @@ export default function AdminDashboard() {
     return filtroStatus === 'todos' || r.status === filtroStatus
   })
 
-  const dadosGrafico = caixa?.payments ? Object.values(
-    caixa.payments.reduce((acc, p) => {
+  const dadosGrafico = paymentsFiltradosPorPeriodo.length ? Object.values(
+    paymentsFiltradosPorPeriodo.reduce((acc, p) => {
       const dataObj = new Date(p.booking.data)
       const dataFormatada = `${dataObj.getDate().toString().padStart(2, '0')}/${(dataObj.getMonth() + 1).toString().padStart(2, '0')}`
       
@@ -366,25 +375,29 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
-                {aba === 'reservas' && (
-                  <div className="space-y-3 pt-2 min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Período Customizado</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 min-w-0">
+                <div className="space-y-3 pt-2 min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Período Customizado</p>
+                  <div className="flex flex-col gap-3 min-w-0 w-full">
+                    <label className="flex flex-col gap-1 min-w-0 w-full">
+                      <span className="text-xs text-slate-400 font-medium">De</span>
                       <input
                         type="date"
                         value={dataInicio}
                         onChange={e => { setDataInicio(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2 sm:px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
                       />
+                    </label>
+                    <label className="flex flex-col gap-1 min-w-0 w-full">
+                      <span className="text-xs text-slate-400 font-medium">Até</span>
                       <input
                         type="date"
                         value={dataFim}
                         onChange={e => { setDataFim(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-2 sm:px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-900"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-900"
                       />
-                    </div>
+                    </label>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
@@ -553,7 +566,7 @@ export default function AdminDashboard() {
                   <form onSubmit={criarTorneio} className="space-y-4">
                     <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Nome da Competição" value={novoTorneio.nome} onChange={e => setNovoTorneio({ ...novoTorneio, nome: e.target.value })} required />
                     <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Categorias envolvidas (Ex: Open Masculino / Mista B)" value={novoTorneio.descricao} onChange={e => setNovoTorneio({ ...novoTorneio, descricao: e.target.value })} />
-                    <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 text-slate-500 cursor-pointer" type="datetime-local" value={novoTorneio.data} onChange={e => setNovoTorneio({ ...novoTorneio, data: e.target.value })} required />
+                    <input className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-3 sm:px-4 py-3 text-sm sm:text-base focus:outline-none focus:border-slate-900 text-slate-500 cursor-pointer" type="datetime-local" value={novoTorneio.data} onChange={e => setNovoTorneio({ ...novoTorneio, data: e.target.value })} required />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono" placeholder="Limite de Vagas" type="number" value={novoTorneio.vagas} onChange={e => setNovoTorneio({ ...novoTorneio, vagas: e.target.value })} required />
                       <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono" placeholder="Valor Inscrição R$ (Ex: 120)" type="number" value={novoTorneio.preco} onChange={e => setNovoTorneio({ ...novoTorneio, preco: e.target.value })} required />
@@ -570,7 +583,7 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 py-4 border-b border-slate-200/80">
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Período Selecionado</span>
-                    <span className="text-3xl sm:text-5xl font-light text-orange-600 font-mono tracking-tighter">R$ {caixa.totalMes.toFixed(2)}</span>
+                    <span className="text-3xl sm:text-5xl font-light text-orange-600 font-mono tracking-tighter">R$ {totalFiltradoPorPeriodo.toFixed(2)}</span>
                   </div>
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Acumulado Histórico</span>
@@ -578,7 +591,7 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Volume de Vendas</span>
-                    <span className="text-3xl sm:text-5xl font-light text-slate-700 font-mono tracking-tighter">{caixa.payments.length} <span className="text-sm text-slate-400 font-normal font-sans">itens</span></span>
+                    <span className="text-3xl sm:text-5xl font-light text-slate-700 font-mono tracking-tighter">{paymentsFiltradosPorPeriodo.length} <span className="text-sm text-slate-400 font-normal font-sans">itens</span></span>
                   </div>
                 </div>
 
@@ -635,10 +648,10 @@ export default function AdminDashboard() {
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">Entradas Registradas</h3>
                   
                   <div className="divide-y divide-slate-200/60">
-                    {caixa.payments.length === 0 ? (
+                    {paymentsFiltradosPorPeriodo.length === 0 ? (
                       <p className="text-slate-400 text-base py-6 font-light">Sem transações no período.</p>
                     ) : (
-                      caixa.payments.map(p => (
+                      paymentsFiltradosPorPeriodo.map(p => (
                         <div key={p.id} className="py-4.5 px-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base group hover:bg-slate-200/30 rounded-xl transition-colors">
                           <div className="flex items-center gap-4 sm:gap-6">
                             <span className="text-sm font-mono text-slate-400 w-16 font-bold shrink-0">
