@@ -37,18 +37,17 @@ async function criar(req, res) {
       const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
 
       // Desestruturando os pedaços da data e hora para forçar o UTC puro
-      // Dentro da transaction na função criar():
       const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
       const [hInicioStr, mInicioStr] = horaAgendamentoStr.split(':');
       const [hFimStr, mFimStr] = horaFim.split('T')[1].substring(0, 5).split(':');
 
-// Altere esta linha dentro da transaction na função criar():
-const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 12, 0, 0));
+      const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 12, 0, 0));
 
-      // ATENÇÃO AQUI: Adicionamos +3 horas na conversão para o banco armazenar o UTC equivalente ao horário de Brasília escolhido
+      // ATENÇÃO: Salvando os horários em UTC correspondentes ao horário selecionado
       const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicioStr) + 3, Number(mInicioStr), 0));
       const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFimStr) + 3, Number(mFimStr), 0));
 
+      // CORREÇÃO DA QUERY DE CONFLITO: Cobre todas as possibilidades de interseção de horários
       const conflito = await tx.booking.findFirst({
         where: {
           courtId: Number(courtId),
@@ -65,12 +64,19 @@ const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Numb
             {
               OR: [
                 {
+                  // Caso 1: O início da nova reserva cai dentro de uma existente
                   horaInicio: { lte: inicioFormatado },
                   horaFim: { gt: inicioFormatado }
                 },
                 {
+                  // Caso 2: O fim da nova reserva cai dentro de uma existente
                   horaInicio: { lt: fimFormatado },
                   horaFim: { gte: fimFormatado }
+                },
+                {
+                  // Caso 3: A nova reserva engloba completamente uma existente por fora
+                  horaInicio: { gte: inicioFormatado },
+                  horaFim: { lte: fimFormatado }
                 }
               ]
             }
@@ -105,7 +111,6 @@ const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Numb
   }
 }
 
-// Listar reservas do usuário logado
 // Listar reservas do usuário logado (Versão Corrigida com ordenação invertida)
 async function minhasReservas(req, res) {
   const userId = req.userId;
@@ -114,8 +119,6 @@ async function minhasReservas(req, res) {
     const bookings = await prisma.booking.findMany({
       where: { userId },
       include: { court: true },
-      // ALTERAÇÃO AQUI: Mudamos de 'asc' para 'desc'
-      // Ordena primeiro pela data da reserva e, se for o mesmo dia, pelo horário de início
       orderBy: [
         { data: 'desc' },
         { horaInicio: 'desc' }
@@ -178,7 +181,6 @@ async function horariosDisponiveis(req, res) {
       data: { status: 'cancelado' }
     });
 
-    // Ajuste para ler a data sem deslocamento de timezone na busca
     const dataSelecionadaString = data.split('T')[0];
     const [anoD, mesD, diaD] = dataSelecionadaString.split('-');
     const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12, 0, 0));
@@ -223,7 +225,8 @@ async function horariosDisponiveis(req, res) {
     disponiveis = disponiveis.filter(horario => {
       const [h, m] = horario.split(':').map(Number);
       
-      const inicioSugerido = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), h, m, 0));
+      // Ajustado adicionando +3 horas para bater exatamente com a checagem do banco
+      const inicioSugerido = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), h + 3, m, 0));
       const fimSugerido = new Date(inicioSugerido.getTime() + (30 * 60 * 1000)); 
 
       const temConflito = reservas.some(r => {
