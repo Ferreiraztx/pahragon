@@ -211,8 +211,9 @@ export default function Booking() {
 
     const dataLimpa = data.split("T")[0];
 
-    const horaInicioISO = `${dataLimpa}T${primeiroBloco}:00`;
-    const horaFimISO = `${dataLimpa}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00`;
+    // Adicionado o sufixo 'Z' para garantir que o backend interprete estritamente como string UTC limpa
+    const horaInicioISO = `${dataLimpa}T${primeiroBloco}:00Z`;
+    const horaFimISO = `${dataLimpa}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00Z`;
 
     try {
       const resBooking = await api.post("/bookings", {
@@ -229,6 +230,13 @@ export default function Booking() {
       );
     }
   }
+
+  // Função para formatar a data na tela sem sofrer alteração de fuso horário
+  const formatarDataExibicao = (dataStr) => {
+    if (!dataStr) return "Selecione uma data";
+    const [ano, mes, dia] = dataStr.split("-");
+    return `${dia}/${mes}/${ano}`;
+  };
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] font-sans pb-10">
@@ -311,19 +319,14 @@ export default function Booking() {
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Data
           </label>
-          {/* Container relativo */}
           <div className="relative mt-2 h-[52px]">
-            {/* O "Botão" visual fica por trás (z-0) */}
             <div className="absolute inset-0 w-full h-full bg-white border border-teal-600 rounded-xl px-4 flex justify-between items-center select-none pointer-events-none z-0">
               <span className="text-slate-800">
-                {data
-                  ? new Date(data + "T00:00:00").toLocaleDateString("pt-BR")
-                  : "Selecione uma data"}
+                {formatarDataExibicao(data)}
               </span>
               <span className="text-slate-400 text-sm">📅</span>
             </div>
 
-            {/* Input nativo com dupla validação (Bloqueio visual + Bloqueio por código) */}
             <input
               type="date"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -333,13 +336,12 @@ export default function Booking() {
                 const dataSelecionada = e.target.value;
                 const hojeStr = obterDataHojeLocal();
 
-                // VALIDAÇÃO ANTI-BURLA: se a data for menor que hoje, força voltar para hoje
                 if (dataSelecionada && dataSelecionada < hojeStr) {
                   setData(hojeStr);
                   setMensagem("⚠️ Não é permitido selecionar datas passadas.");
                 } else {
                   setData(dataSelecionada);
-                  setMensagem(""); // Limpa a mensagem caso mude para uma data válida
+                  setMensagem("");
                 }
               }}
               onClick={(e) => {
