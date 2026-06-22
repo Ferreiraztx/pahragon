@@ -106,6 +106,7 @@ const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Numb
 }
 
 // Listar reservas do usuário logado
+// Listar reservas do usuário logado (Versão Corrigida com ordenação invertida)
 async function minhasReservas(req, res) {
   const userId = req.userId;
 
@@ -113,7 +114,12 @@ async function minhasReservas(req, res) {
     const bookings = await prisma.booking.findMany({
       where: { userId },
       include: { court: true },
-      orderBy: { data: 'asc' }
+      // ALTERAÇÃO AQUI: Mudamos de 'asc' para 'desc'
+      // Ordena primeiro pela data da reserva e, se for o mesmo dia, pelo horário de início
+      orderBy: [
+        { data: 'desc' },
+        { horaInicio: 'desc' }
+      ]
     });
     return res.json(bookings);
   } catch (err) {
