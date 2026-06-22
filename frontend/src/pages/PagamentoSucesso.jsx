@@ -1,46 +1,64 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import api from '../services/api'
+import { useNavigate } from "react-router-dom";
 
 export default function PagamentoSucesso() {
-  const [searchParams] = useSearchParams()
-  const [reserva, setReserva] = useState(null)
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    const bookingId = searchParams.get('bookingId')
-    const status = searchParams.get('status') || 'approved'
-
-    if (bookingId) {
-      api.post('/payments/confirmar', { bookingId, status })
-        .then(res => setReserva(res.data))
-    }
-  }, [])
+  const navigate = useNavigate();
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <span style={styles.icon}>✅</span>
-        <h2>Pagamento aprovado!</h2>
-        <p>Sua reserva foi confirmada com sucesso.</p>
-        {reserva && (
-          <div style={styles.info}>
-            <p><strong>{reserva.court.nome}</strong></p>
-            <p>📅 {new Date(reserva.data).toLocaleDateString('pt-BR')}</p>
+    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans flex flex-col items-center justify-center px-6 py-12">
+      <main className="max-w-md w-full">
+        
+        {/* Card Principal */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-8 shadow-sm relative overflow-hidden">
+          
+          {/* Identidade Visual Discreta no topo */}
+          <div className="flex items-center justify-center gap-1.5 opacity-40">
+            <span className="font-black text-sm tracking-tighter text-[#1e2221]">pahragon</span>
+            <span className="text-[8px] font-extrabold uppercase tracking-widest text-emerald-600">arena</span>
           </div>
-        )}
-        <button style={styles.button} onClick={() => navigate('/minhas-reservas')}>
-          Ver minhas reservas
-        </button>
-      </div>
-    </div>
-  )
-}
 
-const styles = {
-  container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f0f4f8' },
-  card: { background: '#fff', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '400px', width: '100%' },
-  icon: { fontSize: '4rem' },
-  info: { background: '#f0f4f8', padding: '1rem', borderRadius: '8px', margin: '1rem 0' },
-  button: { width: '100%', padding: '0.75rem', background: '#34a853', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer' }
+          {/* Ícone de Sucesso Estilizado */}
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 border border-emerald-100">
+            <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+
+          {/* Textos Informativos */}
+          <div className="space-y-2">
+            <h2 className="text-[#1e2221] font-black text-2xl tracking-tighter">
+              Reserva Confirmada!
+            </h2>
+            <p className="text-slate-500 text-sm leading-relaxed max-w-xs mx-auto">
+              Seu pagamento foi aprovado com sucesso. A quadra já está preparada e reservada para o seu jogo.
+            </p>
+          </div>
+
+          {/* Caixa de Aviso Informativo */}
+          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 text-center">
+            <p className="text-xs text-emerald-800 font-medium leading-relaxed">
+              Os detalhes do seu agendamento e o código de acesso já estão disponíveis no seu painel.
+            </p>
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={() => navigate("/meus-agendamentos")}
+              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-md active:scale-[0.99] text-sm tracking-wide"
+            >
+              Ir para Meus Agendamentos
+            </button>
+
+            <button
+              onClick={() => navigate("/agendar")}
+              className="w-full text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider py-2 transition"
+            >
+              Reservar outro horário
+            </button>
+          </div>
+
+        </div>
+      </main>
+    </div>
+  );
 }
