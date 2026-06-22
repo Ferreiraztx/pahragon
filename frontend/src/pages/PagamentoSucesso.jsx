@@ -36,14 +36,14 @@ export default function PagamentoSucesso() {
           {/* Caixa de Aviso Informativo */}
           <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 text-center">
             <p className="text-xs text-emerald-800 font-medium leading-relaxed">
-              Os detalhes do seu agendamento e o código de acesso já estão disponíveis no seu painel.
+              Os detalhes do seu agendamento já estão disponíveis no seu painel.
             </p>
           </div>
 
           {/* Botões de Ação */}
           <div className="space-y-3 pt-2">
             <button
-              onClick={() => navigate("/meus-agendamentos")}
+              onClick={() => navigate("/minhas-reservas")}
               className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-md active:scale-[0.99] text-sm tracking-wide"
             >
               Ir para Meus Agendamentos

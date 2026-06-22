@@ -52,7 +52,7 @@ export default function PagamentoFalha() {
             </button>
 
             <button
-              onClick={() => navigate("/meus-agendamentos")}
+              onClick={() => navigate("/minhas-reservas")}
               className="w-full text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider py-2 transition"
             >
               Ver minhas reservas
