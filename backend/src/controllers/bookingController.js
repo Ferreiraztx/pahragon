@@ -1,17 +1,15 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Criar reserva
-// Criar reserva (Versão Corrigida com Validação de Data Local)
+// Criar reserva (Versão Corrigida com Validação Local e Date.UTC)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim } = req.body;
   const userId = req.userId;
 
   try {
     // ==========================================================
-    // TRAVA DE SEGURANÇA CORRIGIDA: Validação usando Strings Locais
+    // TRAVA DE SEGURANÇA: Validação usando Strings Locais
     // ==========================================================
-    // 1. Pega a data e hora atual no fuso de Brasília (UTC-3)
     const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
     const ano = agoraBR.getUTCFullYear();
     const mes = String(agoraBR.getUTCMonth() + 1).padStart(2, '0');
@@ -20,12 +18,9 @@ async function criar(req, res) {
     
     const horaAtualStr = `${String(agoraBR.getUTCHours()).padStart(2, '0')}:${String(agoraBR.getUTCMinutes()).padStart(2, '0')}`;
 
-    // 2. Extrai a data e o horário do agendamento enviados pelo Frontend
-    // Mesmo vindo com ".000Z", a gente isola a data e a hora correspondentes
     const dataAgendamentoString = data.split('T')[0]; 
     const horaAgendamentoStr = horaInicio.split('T')[1].substring(0, 5); // "20:30"
 
-    // 3. Comparações diretas de texto para evitar flutuações de fuso
     if (dataAgendamentoString < hojeString) {
       return res.status(400).json({ error: 'Não é possível agendar em um dia que já passou.' });
     }
@@ -40,7 +35,15 @@ async function criar(req, res) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
 
       const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
-      const dataFormatada = new Date(`${dataAgendamentoString}T00:00:00.000Z`);
+
+      // Desestruturando os pedaços da data e hora para forçar o UTC puro
+      const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
+      const [hInicioStr, mInicioStr] = horaAgendamentoStr.split(':');
+      const [hFimStr, mFimStr] = horaFim.split('T')[1].substring(0, 5).split(':');
+
+      const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 0, 0, 0));
+      const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicioStr), Number(mInicioStr), 0));
+      const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFimStr), Number(mFimStr), 0));
 
       const conflito = await tx.booking.findFirst({
         where: {
@@ -58,12 +61,12 @@ async function criar(req, res) {
             {
               OR: [
                 {
-                  horaInicio: { lte: new Date(horaInicio) },
-                  horaFim: { gt: new Date(horaInicio) }
+                  horaInicio: { lte: inicioFormatado },
+                  horaFim: { gt: inicioFormatado }
                 },
                 {
-                  horaInicio: { lt: new Date(horaFim) },
-                  horaFim: { gte: new Date(horaFim) }
+                  horaInicio: { lt: fimFormatado },
+                  horaFim: { gte: fimFormatado }
                 }
               ]
             }
@@ -80,8 +83,8 @@ async function criar(req, res) {
           userId,
           courtId: Number(courtId),
           data: dataFormatada,
-          horaInicio: new Date(horaInicio),
-          horaFim: new Date(horaFim),
+          horaInicio: inicioFormatado,
+          horaFim: fimFormatado,
           status: 'pendente'
         },
         include: { court: true, user: true }
@@ -143,8 +146,7 @@ async function cancelar(req, res) {
   }
 }
 
-// Listar horários disponíveis de uma quadra em uma data (Versão 30 min com Expiração)
-// Listar horários disponíveis de uma quadra em uma data (Versão Corrigida Timezone)
+// Listar horários disponíveis de uma quadra em uma data
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
 
@@ -166,10 +168,15 @@ async function horariosDisponiveis(req, res) {
       data: { status: 'cancelado' }
     });
 
+    // Ajuste para ler a data sem deslocamento de timezone na busca
+    const dataSelecionadaString = data.split('T')[0];
+    const [anoD, mesD, diaD] = dataSelecionadaString.split('-');
+    const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 0, 0, 0));
+
     const reservas = await prisma.booking.findMany({
       where: {
         courtId: Number(courtId),
-        data: new Date(data),
+        data: dataBusca,
         OR: [
           { status: 'pago' },
           { status: 'confirmado' },
@@ -181,9 +188,6 @@ async function horariosDisponiveis(req, res) {
       }
     });
 
-    // ==========================================
-    // CORREÇÃO 1: Pegar a hora real de Brasília (UTC-3) para servidores na nuvem
-    // ==========================================
     const agoraUTC = new Date();
     const agoraBrasilia = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000));
     
@@ -191,12 +195,10 @@ async function horariosDisponiveis(req, res) {
     const mes = String(agoraBrasilia.getUTCMonth() + 1).padStart(2, '0');
     const dia = String(agoraBrasilia.getUTCDate()).padStart(2, '0');
     const hojeString = `${ano}-${mes}-${dia}`;
-    const dataSelecionadaString = data.split('T')[0];
 
     let disponiveis = [...horariosBase];
 
     if (dataSelecionadaString === hojeString) {
-      // Usamos getUTCHours/Minutes com o objeto deslocado para garantir o fuso -3
       const horaAtual = agoraBrasilia.getUTCHours();
       const minutoAtual = agoraBrasilia.getUTCMinutes();
 
@@ -208,13 +210,10 @@ async function horariosDisponiveis(req, res) {
       });
     }
 
-    // ==========================================
-    // CORREÇÃO 2: Filtro de intersecção de horários sem o sufixo "Z"
-    // ==========================================
     disponiveis = disponiveis.filter(horario => {
       const [h, m] = horario.split(':').map(Number);
       
-      const inicioSugerido = new Date(`${dataSelecionadaString}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`);
+      const inicioSugerido = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), h, m, 0));
       const fimSugerido = new Date(inicioSugerido.getTime() + (30 * 60 * 1000)); 
 
       const temConflito = reservas.some(r => {
@@ -226,7 +225,6 @@ async function horariosDisponiveis(req, res) {
       return !temConflito;
     });
 
-    // Remove meias horas isoladas
     disponiveis = disponiveis.filter((h) => {
       const [hora, min] = h.split(':').map(Number);
       
@@ -259,11 +257,11 @@ async function listarTodas(req, res) {
     return res.status(500).json({ error: 'Erro ao listar reservas' });
   }
 }
+
 async function buscarPorId(req, res) {
   try {
     const { id } = req.params;
     
-    // Convertemos para Number, mas tratamos caso venha algo inválido
     const bookingId = Number(id);
     if (isNaN(bookingId)) {
         return res.status(400).json({ error: "ID inválido" });
@@ -273,7 +271,7 @@ async function buscarPorId(req, res) {
       where: { id: bookingId },
       include: { 
         court: true,
-        user: true // Adicionei o user caso o frontend precise
+        user: true 
       }
     });
 

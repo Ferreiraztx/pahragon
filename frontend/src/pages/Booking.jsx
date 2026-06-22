@@ -209,13 +209,15 @@ export default function Booking() {
     const horaFinalCalculada = minFinal === 60 ? hFim + 1 : hFim;
     const minutoFinalCalculada = minFinal === 60 ? 0 : 30;
 
-    const horaInicioISO = `${data}T${primeiroBloco}:00.000Z`;
-    const horaFimISO = `${data}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00.000Z`;
+    const dataLimpa = data.split("T")[0];
+
+    const horaInicioISO = `${dataLimpa}T${primeiroBloco}:00`;
+    const horaFimISO = `${dataLimpa}T${String(horaFinalCalculada).padStart(2, "0")}:${String(minutoFinalCalculada).padStart(2, "0")}:00`;
 
     try {
       const resBooking = await api.post("/bookings", {
         courtId: quadraSelecionada,
-        data,
+        data: dataLimpa,
         horaInicio: horaInicioISO,
         horaFim: horaFimISO,
       });
