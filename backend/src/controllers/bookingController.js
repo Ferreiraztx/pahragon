@@ -2,36 +2,45 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // Criar reserva
-// Criar reserva (Versão Corrigida Timezone)
+// Criar reserva (Versão Corrigida com Validação de Data Local)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim } = req.body;
   const userId = req.userId;
 
   try {
     // ==========================================================
-    // TRAVA DE SEGURANÇA CORRIGIDA: Comparação Direta em UTC
+    // TRAVA DE SEGURANÇA CORRIGIDA: Validação usando Strings Locais
     // ==========================================================
-    const agoraUTC = new Date();
-    const inicioReserva = new Date(horaInicio);
+    // 1. Pega a data e hora atual no fuso de Brasília (UTC-3)
+    const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
+    const ano = agoraBR.getUTCFullYear();
+    const mes = String(agoraBR.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(agoraBR.getUTCDate()).padStart(2, '0');
+    const hojeString = `${ano}-${mes}-${dia}`;
+    
+    const horaAtualStr = `${String(agoraBR.getUTCHours()).padStart(2, '0')}:${String(agoraBR.getUTCMinutes()).padStart(2, '0')}`;
 
-    // Ajustamos apenas o "agora" para refletir o horário de Brasília correspondente na comparação
-    const agoraBrasilia = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000));
+    // 2. Extrai a data e o horário do agendamento enviados pelo Frontend
+    // Mesmo vindo com ".000Z", a gente isola a data e a hora correspondentes
+    const dataAgendamentoString = data.split('T')[0]; 
+    const horaAgendamentoStr = horaInicio.split('T')[1].substring(0, 5); // "20:30"
 
-    // Se o frontend envia em formato UTC fixo (.000Z), criamos um Date puro para o dia
-    // garantindo que a comparação de passado/futuro não desloque as horas
-    if (inicioReserva <= agoraUTC) {
-      return res.status(400).json({ error: 'Não é possível agendar em um horário que já passou.' });
+    // 3. Comparações diretas de texto para evitar flutuações de fuso
+    if (dataAgendamentoString < hojeString) {
+      return res.status(400).json({ error: 'Não é possível agendar em um dia que já passou.' });
+    }
+
+    if (dataAgendamentoString === hojeString && horaAgendamentoStr <= horaAtualStr) {
+      return res.status(400).json({ error: 'Não é possível agendar em um horário que já passou hoje.' });
     }
     // ==========================================================
 
     const booking = await prisma.$transaction(async (tx) => {
-      const lockKey = `${courtId}-${data}-${horaInicio}`;
+      const lockKey = `${courtId}-${dataAgendamentoString}-${horaInicio}`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
 
       const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
-
-      // Criamos a data limpa (Ex: 2026-06-22T00:00:00.000Z) para bater com a busca
-      const dataFormatada = new Date(`${data.split('T')[0]}T00:00:00.000Z`);
+      const dataFormatada = new Date(`${dataAgendamentoString}T00:00:00.000Z`);
 
       const conflito = await tx.booking.findFirst({
         where: {
