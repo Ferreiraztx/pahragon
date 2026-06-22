@@ -25,9 +25,20 @@ export default function PagamentoAguardando() {
       try {
         const resBooking = await api.get(`/bookings/detalhes/${bookingId}`);
 
-        const preco = resBooking.data.court?.precoPorHora || 80;
-        setValorTotal(preco);
+        // 1. Pega os dados da reserva
+        const precoPorHora = resBooking.data.court?.precoPorHora || 80;
+        const inicio = new Date(resBooking.data.horaInicio);
+        const fim = new Date(resBooking.data.horaFim);
 
+        // 2. Calcula a diferença em minutos e converte para horas decimais
+        const diferencaEmMinutos = (fim - inicio) / (1000 * 60);
+        const totalHoras = diferencaEmMinutos / 60;
+
+        // 3. Calcula o valor proporcional real (ex: 1.5 horas * R$ 80 = R$ 120)
+        const valorCalculado = totalHoras * precoPorHora;
+        setValorTotal(valorCalculado);
+
+        // Mantém o fluxo normal do Mercado Pago abaixo
         const resPagamento = await api.post("/payments/criar-preferencia", {
           bookingId,
         });
@@ -119,7 +130,6 @@ export default function PagamentoAguardando() {
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans flex flex-col items-center justify-center px-6 py-12">
       <main className="max-w-md w-full space-y-6">
-        
         {/* Alerta de erro estilo Admin */}
         {erro && (
           <div className="bg-rose-50 border border-rose-100 text-rose-700 text-sm px-4 py-3 rounded-xl text-center font-medium">
@@ -129,11 +139,14 @@ export default function PagamentoAguardando() {
 
         {/* Card Principal */}
         <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-8 shadow-sm relative overflow-hidden">
-          
           {/* Identidade Visual Discreta no topo do card */}
           <div className="flex items-center justify-center gap-1.5 opacity-40">
-            <span className="font-black text-sm tracking-tighter text-[#1e2221]">pahragon</span>
-            <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">arena</span>
+            <span className="font-black text-sm tracking-tighter text-[#1e2221]">
+              pahragon
+            </span>
+            <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">
+              arena
+            </span>
           </div>
 
           <div className="space-y-2">
@@ -141,7 +154,8 @@ export default function PagamentoAguardando() {
               Reserva Quase Pronta!
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed max-w-xs mx-auto">
-              Seguramos o seu horário na areia. Conclua o pagamento antes que o tempo se encerre para não perder a vaga.
+              Seguramos o seu horário na areia. Conclua o pagamento antes que o
+              tempo se encerre para não perder a vaga.
             </p>
           </div>
 
@@ -171,7 +185,6 @@ export default function PagamentoAguardando() {
               ← Cancelar e liberar horário
             </button>
           </div>
-
         </div>
       </main>
     </div>
