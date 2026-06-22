@@ -42,7 +42,8 @@ async function criar(req, res) {
       const [hInicioStr, mInicioStr] = horaAgendamentoStr.split(':');
       const [hFimStr, mFimStr] = horaFim.split('T')[1].substring(0, 5).split(':');
 
-      const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 0, 0, 0));
+// Altere esta linha dentro da transaction na função criar():
+const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 12, 0, 0));
 
       // ATENÇÃO AQUI: Adicionamos +3 horas na conversão para o banco armazenar o UTC equivalente ao horário de Brasília escolhido
       const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicioStr) + 3, Number(mInicioStr), 0));
@@ -174,7 +175,7 @@ async function horariosDisponiveis(req, res) {
     // Ajuste para ler a data sem deslocamento de timezone na busca
     const dataSelecionadaString = data.split('T')[0];
     const [anoD, mesD, diaD] = dataSelecionadaString.split('-');
-    const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 0, 0, 0));
+    const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12, 0, 0));
 
     const reservas = await prisma.booking.findMany({
       where: {
