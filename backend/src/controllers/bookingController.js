@@ -128,6 +128,7 @@ async function cancelar(req, res) {
 }
 
 // Listar horários disponíveis de uma quadra em uma data (Versão 30 min com Expiração)
+// Listar horários disponíveis de uma quadra em uma data (Versão Corrigida Timezone)
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
 
@@ -138,9 +139,6 @@ async function horariosDisponiveis(req, res) {
   ];
 
   try {
-    // ----------------------------------------------------------------===
-    // AJUSTE 1: Limpeza automática de Pix/Reservas abandonadas no Banco
-    // ----------------------------------------------------------------===
     const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
     
     await prisma.booking.updateMany({
@@ -151,9 +149,6 @@ async function horariosDisponiveis(req, res) {
       data: { status: 'cancelado' }
     });
 
-    // ----------------------------------------------------------------===
-    // AJUSTE 2: Filtrar apenas agendamentos realmente válidos ou dentro do prazo
-    // ----------------------------------------------------------------===
     const reservas = await prisma.booking.findMany({
       where: {
         courtId: Number(courtId),
@@ -163,25 +158,30 @@ async function horariosDisponiveis(req, res) {
           { status: 'confirmado' },
           {
             status: 'pendente',
-            createdAt: { gte: dezMinutosAtras } // Se tiver menos de 10 minutos, ainda segura a vaga
+            createdAt: { gte: dezMinutosAtras }
           }
         ]
       }
     });
 
-    // Filtro para não mostrar horários que já passaram (caso seja o dia de hoje)
-    const agoraLocal = new Date();
-    const ano = agoraLocal.getFullYear();
-    const mes = String(agoraLocal.getMonth() + 1).padStart(2, '0');
-    const dia = String(agoraLocal.getDate()).padStart(2, '0');
+    // ==========================================
+    // CORREÇÃO 1: Pegar a hora real de Brasília (UTC-3) para servidores na nuvem
+    // ==========================================
+    const agoraUTC = new Date();
+    const agoraBrasilia = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000));
+    
+    const ano = agoraBrasilia.getUTCFullYear();
+    const mes = String(agoraBrasilia.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(agoraBrasilia.getUTCDate()).padStart(2, '0');
     const hojeString = `${ano}-${mes}-${dia}`;
     const dataSelecionadaString = data.split('T')[0];
 
     let disponiveis = [...horariosBase];
 
     if (dataSelecionadaString === hojeString) {
-      const horaAtual = agoraLocal.getHours();
-      const minutoAtual = agoraLocal.getMinutes();
+      // Usamos getUTCHours/Minutes com o objeto deslocado para garantir o fuso -3
+      const horaAtual = agoraBrasilia.getUTCHours();
+      const minutoAtual = agoraBrasilia.getUTCMinutes();
 
       disponiveis = disponiveis.filter(h => {
         const [hBotao, mBotao] = h.split(':').map(Number);
@@ -191,14 +191,12 @@ async function horariosDisponiveis(req, res) {
       });
     }
 
-    // Filtra os blocos que batem de frente com agendamentos existentes
     // ==========================================
-    // CORREÇÃO DE TIMEZONE: Mantendo a mesma leitura do banco de dados
+    // CORREÇÃO 2: Filtro de intersecção de horários sem o sufixo "Z"
     // ==========================================
     disponiveis = disponiveis.filter(horario => {
       const [h, m] = horario.split(':').map(Number);
       
-      // REMOVIDO O "Z" DO FINAL: Tratando a string de teste exatamente igual à string que foi gravada pelo front
       const inicioSugerido = new Date(`${dataSelecionadaString}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
       const fimSugerido = new Date(inicioSugerido.getTime() + (30 * 60 * 1000)); 
 
