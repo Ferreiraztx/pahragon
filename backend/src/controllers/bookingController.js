@@ -192,10 +192,14 @@ async function horariosDisponiveis(req, res) {
     }
 
     // Filtra os blocos que batem de frente com agendamentos existentes
+    // ==========================================
+    // CORREÇÃO DE TIMEZONE: Mantendo a mesma leitura do banco de dados
+    // ==========================================
     disponiveis = disponiveis.filter(horario => {
       const [h, m] = horario.split(':').map(Number);
       
-      const inicioSugerido = new Date(`${dataSelecionadaString}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`);
+      // REMOVIDO O "Z" DO FINAL: Tratando a string de teste exatamente igual à string que foi gravada pelo front
+      const inicioSugerido = new Date(`${dataSelecionadaString}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
       const fimSugerido = new Date(inicioSugerido.getTime() + (30 * 60 * 1000)); 
 
       const temConflito = reservas.some(r => {
