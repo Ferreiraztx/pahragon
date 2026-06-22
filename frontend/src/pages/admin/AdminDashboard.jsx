@@ -222,12 +222,12 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <header className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between border-b border-slate-200/80">
+      <header className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80">
         <div className="flex items-baseline gap-2.5">
-          <span className="font-black text-3xl tracking-tighter text-[#1e2221]">pahragon</span>
+          <span className="font-black text-2xl sm:text-3xl tracking-tighter text-[#1e2221]">pahragon</span>
           <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">arena</span>
         </div>
-        <div className="flex items-center gap-8 text-sm sm:text-base">
+        <div className="flex items-center gap-4 sm:gap-8 text-sm sm:text-base">
           <span className="text-slate-500">Logado como <span className="font-bold text-slate-800">{admin.nome}</span></span>
           <button
             onClick={() => { localStorage.removeItem('adminToken'); localStorage.removeItem('admin'); navigate('/admin/login') }}
@@ -238,26 +238,26 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {mensagem && (
-          <div className="mb-10 text-base text-teal-900 bg-teal-50 border border-teal-200/60 px-5 py-4 rounded-xl flex items-center justify-between">
+          <div className="mb-8 sm:mb-10 text-base text-teal-900 bg-teal-50 border border-teal-200/60 px-5 py-4 rounded-xl flex items-center justify-between">
             <span className="font-medium">{mensagem}</span>
             <button onClick={() => setMensagem('')} className="opacity-50 hover:opacity-100 text-lg">✕</button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-16 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 lg:gap-16 items-start">
           
           {/* Barra Lateral de Controle */}
-          <div className="lg:col-span-1 space-y-10 sticky top-10">
+          <div className="lg:col-span-1 space-y-10 lg:sticky lg:top-10">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Menu Principal</p>
-              <nav className="flex flex-col gap-2">
+              <nav className="flex flex-row lg:flex-col gap-2 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1">
                 {abas.map(a => (
                   <button
                     key={a.id}
                     onClick={() => { setAba(a.id); setFiltroStatus('todos') }}
-                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${
+                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between gap-3 whitespace-nowrap shrink-0 lg:shrink ${
                       aba === a.id
                         ? 'bg-[#1e2221] text-white shadow-md'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
             {(aba === 'reservas' || aba === 'caixa') && (
               <div className="space-y-5 pt-6 border-t border-slate-200/80">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Filtrar Período</p>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1">
                   {[
                     { id: 'tudo', label: 'Todo o histórico' },
                     { id: 'hoje', label: 'Apenas hoje' },
@@ -287,7 +287,7 @@ export default function AdminDashboard() {
                     <button
                       key={item.id}
                       onClick={() => aplicarFiltroRapido(item.id)}
-                      className={`text-left text-sm px-3 py-2 rounded-lg font-medium transition ${
+                      className={`text-left text-sm px-3 py-2 rounded-lg font-medium transition whitespace-nowrap shrink-0 lg:shrink ${
                         filtroDataAtivo === item.id 
                           ? 'text-teal-700 font-bold bg-teal-50' 
                           : 'text-slate-500 hover:text-slate-900'
@@ -327,22 +327,22 @@ export default function AdminDashboard() {
             {/* RESERVAS */}
             {aba === 'reservas' && (
               <div className="space-y-10">
-                <div className="grid grid-cols-3 gap-8 py-4 border-b border-slate-200/80">
+                <div className="grid grid-cols-3 gap-4 sm:gap-8 py-4 border-b border-slate-200/80">
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Confirmadas</span>
-                    <span className="text-4xl sm:text-5xl font-light text-slate-900 font-mono tracking-tighter">{totalConfirmadasNoPeriodo}</span>
+                    <span className="text-3xl sm:text-5xl font-light text-slate-900 font-mono tracking-tighter">{totalConfirmadasNoPeriodo}</span>
                   </div>
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Pendentes</span>
-                    <span className="text-4xl sm:text-5xl font-light text-amber-600 font-mono tracking-tighter">{totalPendentesNoPeriodo}</span>
+                    <span className="text-3xl sm:text-5xl font-light text-amber-600 font-mono tracking-tighter">{totalPendentesNoPeriodo}</span>
                   </div>
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Canceladas</span>
-                    <span className="text-4xl sm:text-5xl font-light text-slate-400 font-mono tracking-tighter">{totalCanceladasNoPeriodo}</span>
+                    <span className="text-3xl sm:text-5xl font-light text-slate-400 font-mono tracking-tighter">{totalCanceladasNoPeriodo}</span>
                   </div>
                 </div>
 
-                <div className="flex gap-6 text-sm border-b border-slate-200/40 pb-3">
+                <div className="flex gap-4 sm:gap-6 text-sm border-b border-slate-200/40 pb-3 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                   {[
                     { id: 'todos', label: 'Todos os status' },
                     { id: 'confirmado', label: 'Confirmadas' },
@@ -352,7 +352,7 @@ export default function AdminDashboard() {
                     <button
                       key={tab.id}
                       onClick={() => setFiltroStatus(tab.id)}
-                      className={`pb-1.5 transition text-sm font-medium ${filtroStatus === tab.id ? 'text-slate-900 border-b-2 border-slate-900 font-bold' : 'text-slate-400 hover:text-slate-700'}`}
+                      className={`pb-1.5 transition text-sm font-medium whitespace-nowrap shrink-0 ${filtroStatus === tab.id ? 'text-slate-900 border-b-2 border-slate-900 font-bold' : 'text-slate-400 hover:text-slate-700'}`}
                     >
                       {tab.label}
                     </button>
@@ -367,9 +367,9 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     reservasExibidasNaLista.map(r => (
-                      <div key={r.id} className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-slate-300 flex items-center justify-between transition-all">
-                        <div className="flex items-center gap-8">
-                          <span className="text-sm font-mono font-bold text-slate-400 uppercase w-20 tracking-wider">
+                      <div key={r.id} className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-slate-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8">
+                          <span className="text-sm font-mono font-bold text-slate-400 uppercase sm:w-20 tracking-wider">
                             {formatarDataLateral(r.data)}
                           </span>
                           
@@ -411,7 +411,7 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 text-base py-4">Nenhuma quadra listada.</p>
                     ) : (
                       quadras.map(q => (
-                        <div key={q.id} className="p-5 flex items-center justify-between bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-slate-300 transition-all">
+                        <div key={q.id} className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-slate-300 transition-all">
                           <div>
                             <h4 className="font-extrabold text-slate-900 text-lg">{q.nome}</h4>
                             <p className="text-sm text-slate-500 mt-1">
@@ -424,7 +424,7 @@ export default function AdminDashboard() {
                           {/* Botão de texto fixo */}
                           <button 
                             onClick={() => solicitarDeletarQuadra(q.id, q.nome)} 
-                            className="text-sm font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
+                            className="self-start sm:self-auto text-sm font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
                           >
                             Remover
                           </button>
@@ -456,9 +456,9 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 text-base">Sem competições agendadas.</p>
                     ) : (
                       torneios.map(t => (
-                        <div key={t.id} className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-slate-300 flex items-center justify-between transition-all">
-                          <div className="flex items-center gap-5">
-                            <span className="text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">
+                        <div key={t.id} className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-slate-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+                            <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">
                               {formatarDataLateral(t.data)}
                             </span>
                             <div>
@@ -470,7 +470,7 @@ export default function AdminDashboard() {
                           {/* Botão de texto fixo */}
                           <button 
                             onClick={() => solicitarDeletarTorneio(t.id, t.nome)} 
-                            className="text-sm font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
+                            className="self-start sm:self-auto text-sm font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
                           >
                             Cancelar
                           </button>
@@ -486,7 +486,7 @@ export default function AdminDashboard() {
                     <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Nome da Competição" value={novoTorneio.nome} onChange={e => setNovoTorneio({ ...novoTorneio, nome: e.target.value })} required />
                     <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900" placeholder="Categorias envolvidas (Ex: Open Masculino / Mista B)" value={novoTorneio.descricao} onChange={e => setNovoTorneio({ ...novoTorneio, descricao: e.target.value })} />
                     <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 text-slate-500 cursor-pointer" type="datetime-local" value={novoTorneio.data} onChange={e => setNovoTorneio({ ...novoTorneio, data: e.target.value })} required />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono" placeholder="Limite de Vagas" type="number" value={novoTorneio.vagas} onChange={e => setNovoTorneio({ ...novoTorneio, vagas: e.target.value })} required />
                       <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono" placeholder="Valor Inscrição R$ (Ex: 120)" type="number" value={novoTorneio.preco} onChange={e => setNovoTorneio({ ...novoTorneio, preco: e.target.value })} required />
                     </div>
@@ -499,18 +499,18 @@ export default function AdminDashboard() {
             {/* FLUXO DE CAIXA */}
             {aba === 'caixa' && caixa && (
               <div className="space-y-12">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 py-4 border-b border-slate-200/80">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 py-4 border-b border-slate-200/80">
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Período Selecionado</span>
-                    <span className="text-4xl sm:text-5xl font-light text-orange-600 font-mono tracking-tighter">R$ {caixa.totalMes.toFixed(2)}</span>
+                    <span className="text-3xl sm:text-5xl font-light text-orange-600 font-mono tracking-tighter">R$ {caixa.totalMes.toFixed(2)}</span>
                   </div>
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Acumulado Histórico</span>
-                    <span className="text-4xl sm:text-5xl font-light text-slate-900 font-mono tracking-tighter">R$ {caixa.total.toFixed(2)}</span>
+                    <span className="text-3xl sm:text-5xl font-light text-slate-900 font-mono tracking-tighter">R$ {caixa.total.toFixed(2)}</span>
                   </div>
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">Volume de Vendas</span>
-                    <span className="text-4xl sm:text-5xl font-light text-slate-700 font-mono tracking-tighter">{caixa.payments.length} <span className="text-sm text-slate-400 font-normal font-sans">itens</span></span>
+                    <span className="text-3xl sm:text-5xl font-light text-slate-700 font-mono tracking-tighter">{caixa.payments.length} <span className="text-sm text-slate-400 font-normal font-sans">itens</span></span>
                   </div>
                 </div>
 
@@ -571,9 +571,9 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 text-base py-6 font-light">Sem transações no período.</p>
                     ) : (
                       caixa.payments.map(p => (
-                        <div key={p.id} className="py-4.5 px-2 flex items-center justify-between text-base group hover:bg-slate-200/30 rounded-xl transition-colors">
-                          <div className="flex items-center gap-6">
-                            <span className="text-sm font-mono text-slate-400 w-16 font-bold">
+                        <div key={p.id} className="py-4.5 px-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base group hover:bg-slate-200/30 rounded-xl transition-colors">
+                          <div className="flex items-center gap-4 sm:gap-6">
+                            <span className="text-sm font-mono text-slate-400 w-16 font-bold shrink-0">
                               {formatarDataLateral(p.booking.data)}
                             </span>
                             <div>
@@ -581,7 +581,7 @@ export default function AdminDashboard() {
                               <p className="text-sm text-slate-500 mt-0.5">👤 {p.booking.user.nome} <span className="mx-2 text-slate-300">•</span> <span className="font-mono uppercase text-xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">{p.metodo}</span></p>
                             </div>
                           </div>
-                          <span className="font-mono font-extrabold text-orange-600 text-base">
+                          <span className="font-mono font-extrabold text-orange-600 text-base pl-20 sm:pl-0">
                             + R$ {p.valor.toFixed(2)}
                           </span>
                         </div>
