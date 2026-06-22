@@ -97,7 +97,7 @@ export default function AdminDashboard() {
   }
 
   function fecharModal() {
-    setModalConfirmacao({ aberto: false, titulo: '', mensagem: '', acaoConfirmar: null })
+    setModalConfirmacao({ aberto: false, titulo: '', messaging: '', acaoConfirmar: null })
   }
 
   function selecionarAba(id) {
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
       
       {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
       {modalConfirmacao.aberto && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200/80 p-6 max-w-md w-full shadow-2xl space-y-6">
             <div className="space-y-2">
               <h3 className="text-xl font-extrabold text-slate-900">{modalConfirmacao.titulo}</h3>
@@ -357,26 +357,30 @@ export default function AdminDashboard() {
 
                 <div className="space-y-3 pt-2 min-w-0 w-full">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Período Customizado</p>
-                  {/* AJUSTADO: Grid empilhada perfeitamente no mobile com gap correto */}
+                  
+                  {/* AJUSTADO: Inputs "De" e "Até" estruturados em wrappers flex idênticos ao de Novo Torneio */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-4 min-w-0 w-full">
-                    <label className="flex flex-col gap-1.5 min-w-0 w-full">
+                    
+                    <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">De</span>
                       <input
                         type="date"
                         value={dataInicio}
                         onChange={e => { setDataInicio(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm appearance-none items-center justify-center text-left"
                       />
-                    </label>
-                    <label className="flex flex-col gap-1.5 min-w-0 w-full">
+                    </div>
+
+                    <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">Até</span>
                       <input
                         type="date"
                         value={dataFim}
                         onChange={e => { setDataFim(e.target.value); setFiltroDataAtivo('custom') }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm"
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm appearance-none items-center justify-center text-left"
                       />
-                    </label>
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -542,11 +546,10 @@ export default function AdminDashboard() {
                     <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm" placeholder="Nome da Competição" value={novoTorneio.nome} onChange={e => setNovoTorneio({ ...novoTorneio, nome: e.target.value })} required />
                     <input className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm" placeholder="Categorias envolvidas (Ex: Open Masculino / Mista B)" value={novoTorneio.descricao} onChange={e => setNovoTorneio({ ...novoTorneio, descricao: e.target.value })} />
                     
-                    {/* AJUSTADO: Input de data corrigido para mobile (sem ficar transparente ou esmagado) */}
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">Data do Torneio</span>
                       <input 
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm appearance-none" 
+                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm appearance-none items-center justify-center text-left" 
                         type="datetime-local" 
                         value={novoTorneio.data} 
                         onChange={e => setNovoTorneio({ ...novoTorneio, data: e.target.value })} 
