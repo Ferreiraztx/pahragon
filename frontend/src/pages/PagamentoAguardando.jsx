@@ -26,43 +26,54 @@ export default function PagamentoAguardando() {
         const resBooking = await api.get(`/bookings/detalhes/${bookingId}`);
 
         const precoPorHora = resBooking.data.court?.precoPorHora || 80;
+        let valorCalculado = precoPorHora; // Começa com o valor padrão de 1 hora
 
-        // Pegamos as strings brutas enviadas pelo backend (ex: "2026-06-22T21:00:00")
-        const stringInicio = resBooking.data.horaInicio;
-        const stringFim = resBooking.data.horaFim;
+        // Try/Catch isolado para o cálculo: se falhar aqui, não trava o Mercado Pago
+        try {
+          const stringInicio = resBooking.data.horaInicio;
+          const stringFim = resBooking.data.horaFim;
 
-        if (stringInicio && stringFim) {
-          // Extrai apenas o trecho "HH:MM" de dentro da string
-          const [hInicio, mInicio] = stringInicio
-            .split("T")[1]
-            .substring(0, 5)
-            .split(":")
-            .map(Number);
-          const [hFim, mFim] = stringFim
-            .split("T")[1]
-            .substring(0, 5)
-            .split(":")
-            .map(Number);
+          if (
+            stringInicio &&
+            stringFim &&
+            stringInicio.includes("T") &&
+            stringFim.includes("T")
+          ) {
+            // Extrai o trecho "HH:MM" de forma segura
+            const [hInicio, mInicio] = stringInicio
+              .split("T")[1]
+              .substring(0, 5)
+              .split(":")
+              .map(Number);
+            const [hFim, mFim] = stringFim
+              .split("T")[1]
+              .substring(0, 5)
+              .split(":")
+              .map(Number);
 
-          // Converte tudo para minutos totais desde o início do dia
-          const minutosInicio = hInicio * 60 + mInicio;
-          const minutosFim = hFim * 60 + mFim;
+            // Converte para minutos totais desde o início do dia
+            const minutosInicio = hInicio * 60 + mInicio;
+            const minutosFim = hFim * 60 + mFim;
 
-          // Calcula a diferença real em minutos
-          const diferencaEmMinutos = minutosFim - minutosInicio;
+            // Calcula a diferença real em minutos
+            const diferencaEmMinutos = minutosFim - minutosInicio;
 
-          // Converte para horas decimais (ex: 90 minutos = 1.5 horas)
-          const totalHoras = diferencaEmMinutos / 60;
-
-          // Multiplica e atualiza o estado
-          const valorCalculado = totalHoras * precoPorHora;
-          setValorTotal(valorCalculado);
-        } else {
-          // Fallback caso não venham as strings de horário
-          setValorTotal(precoPorHora);
+            if (diferencaEmMinutos > 0) {
+              const totalHoras = diferencaEmMinutos / 60;
+              valorCalculado = totalHoras * precoPorHora;
+            }
+          }
+        } catch (calcError) {
+          console.error(
+            "Erro ao calcular valor proporcional, usando valor padrão:",
+            calcError,
+          );
         }
 
-        // Fluxo normal do Mercado Pago
+        // Define o valor total (seja o calculado ou o padrão)
+        setValorTotal(valorCalculado);
+
+        // Fluxo do Mercado Pago (completamente isolado do cálculo acima)
         const resPagamento = await api.post("/payments/criar-preferencia", {
           bookingId,
         });
@@ -75,7 +86,7 @@ export default function PagamentoAguardando() {
 
         setLoading(false);
       } catch (err) {
-        console.error("Erro detalhado:", err);
+        console.error("Erro geral na inicialização:", err);
         setErro("Erro ao conectar com o Mercado Pago. Tente novamente.");
         setLoading(false);
       }
