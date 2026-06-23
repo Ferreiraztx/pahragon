@@ -174,38 +174,45 @@ async function loginAdmin(req, res) {
 
 const atualizarPerfil = async (req, res) => {
   try {
-    const userId = req.user?.userId || req.user?.id; // Pego pelo seu middleware de autenticação
+    // 👤 Busca o ID onde quer que o middleware o tenha injetado (req.userId ou req.user.userId)
+    const userId = req.userId || req.user?.userId || req.user?.id;
     const dadosAtualizados = req.body;
 
-    // Remove as máscaras visuais caso o seu banco precise salvar apenas os números limpos
-    const cpfLimpo = dadosAtualizados.cpf ? dadosAtualizados.cpf.replace(/\D/g, '') : null;
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuário não autenticado corretamente.' });
+    }
+
+    // Limpa os dados mascarados
     const cepLimpo = dadosAtualizados.cep ? dadosAtualizados.cep.replace(/\D/g, '') : null;
     const celularLimpo = dadosAtualizados.celular ? dadosAtualizados.celular.replace(/\D/g, '') : null;
 
-    // Tratamento para a data de nascimento não quebrar se vier string vazia
-    const dataNascimentoFormatada = dadosAtualizados.dataNascimento 
+    // Tratamento para a data de nascimento
+    const dataNascimentoFormatada = dadosAuthorized?.dataNascimento || dadosAtualizados.dataNascimento 
       ? new Date(dadosAtualizados.dataNascimento) 
       : null;
 
+    // Monta o objeto de dados apenas com as colunas que o Prisma confirmou que existem
+    const dadosParaSalvar = {
+      nome: dadosAtualizados.nome,
+      telefone: celularLimpo, // 📱 Mapeado para 'telefone', que existe no seu banco
+      cep: cepLimpo,
+      rua: dadosAtualizados.rua,
+      numero: dadosAtualizados.numero,
+      complemento: dadosAtualizados.complemento,
+      bairro: dadosAtualizados.bairro,
+      cidade: dadosAtualizados.cidade,
+      estado: dadosAtualizados.estado,
+    };
+
+    // 💡 Se você usa o campo dataNascimento no Prisma, descomente a linha abaixo:
+    // if (dataNascimentoFormatada) dadosParaSalvar.dataNascimento = dataNascimentoFormatada;
+
     // Atualização no Prisma
     const usuarioAtualizado = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        nome: dadosAtualizados.nome,
-        cpf: cpfLimpo, // Corrigido de dadosAuthorized.cpf para a variável limpa
-        dataNascimento: dataNascimentoFormatada,
-        celular: celularLimpo,
-        cep: cepLimpo,
-        rua: dadosAtualizados.rua,
-        numero: dadosAtualizados.numero,
-        complemento: dadosAtualizados.complemento,
-        bairro: dadosAtualizados.bairro,
-        cidade: dadosAtualizados.cidade,
-        estado: dadosAtualizados.estado,
-      },
+      where: { id: Number(userId) }, 
+      data: dadosParaSalvar,
     });
 
-    // Remove a senha do objeto de retorno por segurança
     if (usuarioAtualizado.senha) {
       delete usuarioAtualizado.senha;
     }
