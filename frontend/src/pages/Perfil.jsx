@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
@@ -6,6 +7,7 @@ import api from "../services/api";
 
 export default function Perfil() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   // Funções Auxiliares de Máscaras (Formatação)
   const aplicarMascaraCPF = (value) => {
@@ -450,7 +452,10 @@ export default function Perfil() {
           <div className="border-t border-slate-100 pt-6 flex flex-col sm:flex-row gap-3 sm:justify-between">
             <button
               type="button"
-              onClick={logout}
+              onClick={async () => {
+                await logout();
+                navigate("/");
+              }}
               className="bg-rose-50 border border-rose-100 text-rose-700 font-bold px-5 py-3 rounded-xl hover:bg-rose-100 transition text-sm text-center"
             >
               Sair da Conta
