@@ -175,7 +175,12 @@ async function loginAdmin(req, res) {
 const atualizarPerfil = async (req, res) => {
   try {
     // 👤 Busca o ID onde quer que o middleware o tenha injetado (req.userId ou req.user.userId)
-    const userId = req.userId || req.user?.userId || req.user?.id;
+    // Altere o topo da função atualizarPerfil para capturar o ID de qualquer uma destas formas:
+const userId = req.userId || 
+               req.user?.userId || 
+               req.user?.id || 
+               req.decoded?.userId || 
+               req.auth?.userId;
     const dadosAtualizados = req.body;
 
     if (!userId) {
@@ -193,15 +198,17 @@ const atualizarPerfil = async (req, res) => {
 
     // Monta o objeto de dados apenas com as colunas que o Prisma confirmou que existem
     const dadosParaSalvar = {
-      nome: dadosAtualizados.nome,
-      telefone: celularLimpo, // 📱 Mapeado para 'telefone', que existe no seu banco
-      cep: cepLimpo,
-      rua: dadosAtualizados.rua,
-      numero: dadosAtualizados.numero,
-      complemento: dadosAtualizados.complemento,
-      bairro: dadosAtualizados.bairro,
-      cidade: dadosAtualizados.cidade,
-      estado: dadosAtualizados.estado,
+  nome: dadosAtualizados.nome,
+  cpf: cpfLimpo, // 👈 Garanta que o CPF está aqui para salvar no banco
+  telefone: celularLimpo,
+  cep: cepLimpo,
+  rua: dadosAtualizados.rua,
+  numero: dadosAtualizados.numero,
+  complemento: dadosAtualizados.complemento,
+  bairro: dadosAtualizados.bairro,
+  cidade: dadosAtualizados.cidade,
+  estado: dadosAtualizados.estado,
+};
     };
 
     // 💡 Se você usa o campo dataNascimento no Prisma, descomente a linha abaixo:
