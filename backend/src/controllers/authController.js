@@ -254,4 +254,4 @@ module.exports = {
   // ... outras funções (login, register)
 };
 
-module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil };
+module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil };
