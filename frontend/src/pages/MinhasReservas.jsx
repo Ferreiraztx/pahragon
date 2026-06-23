@@ -6,8 +6,24 @@ export default function MinhasReservas() {
   const [reservas, setReservas] = useState([])
   const navigate = useNavigate()
 
+  // Função isolada para buscar as reservas atualizadas do banco
+  function carregarReservas() {
+    api.get('/bookings/minhas')
+      .then(res => setReservas(res.data))
+      .catch(err => console.error("Erro ao carregar reservas:", err))
+  }
+
   useEffect(() => {
-    api.get('/bookings/minhas').then(res => setReservas(res.data))
+    // 1. Carrega logo quando o componente monta na tela
+    carregarReservas()
+
+    // 2. Evento de segurança: Sempre que o usuário voltar para essa aba/tela, recarrega os dados
+    const dispararNoFoco = () => {
+      carregarReservas()
+    }
+
+    window.addEventListener('focus', dispararNoFoco)
+    return () => window.removeEventListener('focus', dispararNoFoco)
   }, [])
 
   async function cancelar(id) {
