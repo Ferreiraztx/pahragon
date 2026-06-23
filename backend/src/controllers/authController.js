@@ -174,7 +174,7 @@ async function loginAdmin(req, res) {
 
 const atualizarPerfil = async (req, res) => {
   try {
-    const userId = req.user.id; // Pego pelo seu middleware de autenticação
+    const userId = req.user?.userId || req.user?.id; // Pego pelo seu middleware de autenticação
     const dadosAtualizados = req.body;
 
     // Remove as máscaras visuais caso o seu banco precise salvar apenas os números limpos
