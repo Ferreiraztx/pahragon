@@ -100,9 +100,24 @@ export default function MinhasReservas() {
                 </div>
               </div>
 
-              {/* Botão de Cancelamento Discreto no Rodapé do Card */}
+              {/* Rodapé de Ações do Card */}
               {r.status !== 'cancelado' && (
-                <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+                <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end gap-2">
+                  
+                  {/* Botão de Pagar - Visível apenas para pendentes */}
+                  {r.status === 'pendente' && (
+                    <button
+                      onClick={() => navigate(`/pagamento/aguardando?bookingId=${r.id}`)}
+                      className="text-xs font-bold uppercase tracking-wider text-white bg-[#1e2221] hover:bg-black px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                      </svg>
+                      Pagar Horário
+                    </button>
+                  )}
+
+                  {/* Botão de Cancelamento Discreto */}
                   <button
                     onClick={() => cancelar(r.id)}
                     className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 bg-white hover:bg-rose-50/50 px-4 py-2.5 rounded-xl transition"
