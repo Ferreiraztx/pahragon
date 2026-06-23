@@ -2,20 +2,44 @@ import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import api from '../services/api' // Certifique-se de que o caminho para o seu arquivo axios está correto
+import api from '../services/api'
 
 export default function Perfil() {
   const { user, logout } = useAuth()
 
-  // Estados locais para controlar os campos (iniciam com os dados do usuário ou vazios)
+  // Funções Auxiliares de Máscaras (Formatação)
+  const aplicarMascaraCPF = (value) => {
+    return value
+      .replace(/\D/g, '') // Remove tudo o que não é dígito
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+      .substring(0, 14)
+  }
+
+  const aplicarMascaraCEP = (value) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{5})(\d)/, '$1-$2')
+      .substring(0, 9)
+  }
+
+  const aplicarMascaraCelular = (value) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/g, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .substring(0, 15)
+  }
+
+  // Estados locais iniciando com os dados do usuário já formatados se existirem
   const [formData, setFormData] = useState({
     nome: user?.nome || '',
-    cpf: user?.cpf || '',
-    dataNascimento: user?.dataNascimento ? user.dataNascimento.split('T')[0] : '', // Trata se vier formato ISO do banco
-    celular: user?.celular || '',
+    cpf: user?.cpf ? aplicarMascaraCPF(user.cpf) : '',
+    dataNascimento: user?.dataNascimento ? user.dataNascimento.split('T')[0] : '',
+    celular: user?.celular ? aplicarMascaraCelular(user.celular) : '',
     email: user?.email || '',
-    // Endereço
-    cep: user?.cep || '',
+    cep: user?.cep ? aplicarMascaraCEP(user.cep) : '',
     rua: user?.rua || '',
     numero: user?.numero || '',
     complemento: user?.complemento || '',
@@ -24,10 +48,10 @@ export default function Perfil() {
     estado: user?.estado || '',
   })
 
-  // Estados para controle da requisição e feedbacks
   const [carregando, setCarregando] = useState(false)
+  const [buscandoCep, setBuscandoCep] = useState(false)
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' })
-  const [celularVerificado, setCelularVerificado] = useState(user?.celularVerificado || false)
+  const [celularVerificado, setCellularVerificado] = useState(user?.celularVerificado || false)
 
   if (!user) {
     return (
@@ -40,9 +64,42 @@ export default function Perfil() {
     )
   }
 
-  const handleChange = (e) => {
+  // Manipulador de mudanças com aplicação automática de máscaras e busca de CEP
+  const handleChange = async (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    let valorFormatado = value
+
+    if (name === 'cpf') valorFormatado = aplicarMascaraCPF(value)
+    if (name === 'cep') valorFormatado = aplicarMascaraCEP(value)
+    if (name === 'celular') valorFormatado = aplicarMascaraCelular(value)
+
+    setFormData(prev => ({ ...prev, [name]: valorFormatado }))
+
+    // Busca automática de CEP quando o usuário digita os 8 números (ex: 80000-000 tem 9 caracteres com o hífen)
+    if (name === 'cep' && valorFormatado.replace(/\D/g, '').length === 8) {
+      const cepApenasNumeros = valorFormatado.replace(/\D/g, '')
+      setBuscandoCep(true)
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cepApenasNumeros}/json/`)
+        const data = await response.json()
+        
+        if (!data.erro) {
+          setFormData(prev => ({
+            ...prev,
+            rua: data.logradouro || '',
+            bairro: data.bairro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || ''
+          }))
+        } else {
+          setMensagem({ tipo: 'erro', texto: 'CEP não encontrado. Digite o endereço manualmente.' })
+        }
+      } catch (err) {
+        console.error("Erro ao buscar CEP:", err)
+      } finally {
+        setBuscandoCep(false)
+      }
+    }
   }
 
   const handleSalvar = async (e) => {
@@ -51,15 +108,9 @@ export default function Perfil() {
     setMensagem({ tipo: '', texto: '' })
 
     try {
-      // Faz a requisição PUT para a rota do seu Railway
-      const res = await api.put('/auth/perfil', formData)
-      
+      // Envia para o Railway (você pode optar por limpar as máscaras antes de enviar ou salvar formatado no banco)
+      await api.put('/auth/perfil', formData)
       setMensagem({ tipo: 'sucesso', texto: 'Perfil atualizado com sucesso!' })
-      
-      // Opcional: se sua rota retornar o usuário atualizado e você quiser atualizar o contexto na hora:
-      // if (res.data?.user) {
-      //   // chame aqui uma função do seu AuthContext se houver, ex: updateUser(res.data.user)
-      // }
     } catch (err) {
       console.error(err)
       setMensagem({ 
@@ -83,7 +134,6 @@ export default function Perfil() {
             <p className="text-slate-500 text-sm mt-1">Gerencie suas informações pessoais e dados de endereço.</p>
           </div>
 
-          {/* MENSAGENS DE FEEDBACK */}
           {mensagem.texto && (
             <div className={`text-sm px-4 py-3 rounded-xl font-medium text-center transition ${
               mensagem.tipo === 'sucesso' 
@@ -122,7 +172,7 @@ export default function Perfil() {
                   {celularVerificado ? (
                     <span className="text-[9px] bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-bold">Verificado</span>
                   ) : (
-                    <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold cursor-pointer hover:bg-amber-100 transition" onClick={() => alert('Disparar código de verificação por SMS/WhatsApp!')}>Não Verificado</span>
+                    <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold cursor-pointer hover:bg-amber-100 transition" onClick={() => alert('Disparar código de verificação!')}>Não Verificado</span>
                   )}
                 </div>
                 <input type="tel" name="celular" value={formData.celular} onChange={handleChange} placeholder="(41) 99999-9999" className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition" />
@@ -138,7 +188,7 @@ export default function Perfil() {
           {/* SEÇÃO 2: DADOS DE ENDEREÇO */}
           <div className="space-y-5 pt-2">
             <h2 className="text-xs font-bold text-teal-600 uppercase tracking-widest border-b border-slate-100 pb-2">
-              Dados de Endereço
+              Dados de Endereço {buscandoCep && <span className="text-[11px] text-slate-400 normal-case font-normal ml-2">(Buscando CEP...)</span>}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
