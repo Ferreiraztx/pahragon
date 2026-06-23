@@ -172,4 +172,37 @@ async function loginAdmin(req, res) {
   }
 }
 
-module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle };
+const atualizarPerfil = async (req, res) => {
+  try {
+    const userId = req.user.id; // Pego pelo seu middleware de autenticação (JWT)
+    const dadosAtualizados = req.body;
+
+    // Se você usa Prisma:
+    const usuarioAtualizado = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        nome: dadosAtualizados.nome,
+        cpf: dadosAuthorized.cpf,
+        dataNascimento: dadosAtualizados.dataNascimento,
+        celular: dadosAtualizados.celular,
+        cep: dadosAtualizados.cep,
+        rua: dadosAtualizados.rua,
+        numero: dadosAtualizados.numero,
+        complemento: dadosAtualizados.complemento,
+        bairro: dadosAtualizados.bairro,
+        cidade: dadosAtualizados.cidade,
+        estado: dadosAtualizados.estado,
+      },
+    });
+
+    // Remove a senha por segurança antes de retornar
+    delete usuarioAtualizado.senha;
+
+    res.json({ message: 'Perfil atualizado com sucesso!', user: usuarioAtualizado });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao atualizar o perfil.' });
+  }
+};
+
+module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil };
