@@ -1,8 +1,66 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const prisma = new PrismaClient();
+
+async function loginGoogle(req, res) {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: 'Token do Google é obrigatório.' });
+  }
+
+  try {
+    // 1. Valida de forma robusta o token enviado pelo frontend junto ao Google
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    // 2. Busca o usuário pelo e-mail ou cria um novo caso não exista (Upsert)
+    let user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          nome: name,
+          password: "", // Como o login é via Google, deixamos a senha local vazia
+        }
+      });
+    }
+
+    // 3. Gera o SEU token JWT interno da Pahragon Arena usando a sua chave secreta existente
+    // Ajuste o nome da propriedade para bater com o seu Middleware de autenticação (ex: id ou userId)
+    const tokenSistema = jwt.sign(
+      { userId: user.id }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
+
+    // Retorna o token e os dados para o frontend salvar
+    return res.json({
+      token: tokenSistema,
+      user: {
+        id: user.id,
+        nome: user.nome,
+        email: user.email
+      }
+    });
+
+  } catch (err) {
+    console.error('ERRO LOGIN GOOGLE BACKEND:', err.message);
+    return res.status(400).json({ error: 'Falha na autenticação com o Google. Token inválido.' });
+  }
+}
 
 // Cadastro de usuário
 async function register(req, res) {
@@ -114,4 +172,4 @@ async function loginAdmin(req, res) {
   }
 }
 
-module.exports = { register, login, registerAdmin, loginAdmin };
+module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle };

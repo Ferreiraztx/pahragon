@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { GoogleLogin } from '@react-oauth/google'
 import api from '../services/api'
 
 export default function Login() {
@@ -20,6 +21,24 @@ export default function Login() {
       navigate('/')
     } catch (_err) {
       setErro('E-mail ou senha incorretos.')
+    }
+  }
+
+  const lidarComSucessoGoogle = async (credentialResponse) => {
+    setErro('')
+    try {
+      const tokenGoogle = credentialResponse.credential
+
+      // Envia o token obtido para o seu endpoint do backend
+      const res = await api.post('/auth/google', { token: tokenGoogle })
+
+      // Alimenta o seu AuthContext nativo para manter o usuário logado no app todo
+      login(res.data.user, res.data.token)
+      
+      navigate('/')
+    } catch (err) {
+      console.error('Erro no login Google com backend:', err.response?.data || err.message)
+      setErro('Não foi possível entrar com o Google. Tente novamente.')
     }
   }
 
@@ -79,6 +98,26 @@ export default function Login() {
               Entrar
             </button>
           </form>
+
+          {/* Divisor Visual Elegante */}
+          <div className="relative flex py-6 items-center w-full">
+            <div className="flex-grow border-t border-slate-100"></div>
+            <span className="flex-shrink mx-4 text-slate-300 text-[10px] font-bold uppercase tracking-widest">ou</span>
+            <div className="flex-grow border-t border-slate-100"></div>
+          </div>
+
+          {/* Botão Oficial do Google Integrado */}
+          <div className="w-full flex justify-center">
+            <GoogleLogin
+              onSuccess={lidarComSucessoGoogle}
+              onError={() => setErro('Falha na autenticação do Google')}
+              theme="outline"
+              size="large"
+              shape="circle"
+              locale="pt-BR"
+              width="100%"
+            />
+          </div>
 
           <p className="text-center text-slate-400 text-sm mt-6">
             Não tem conta?{' '}
