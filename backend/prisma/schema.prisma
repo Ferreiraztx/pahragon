@@ -14,6 +14,16 @@ model User {
   cpf       String?
   senha     String
   telefone  String?
+  
+  // 👇 NOVOS CAMPOS DE ENDEREÇO ADICIONADOS AQUI:
+  cep         String?
+  rua         String?
+  numero      String?
+  complemento String?
+  bairro      String?
+  cidade      String?
+  estado      String?
+
   createdAt DateTime  @default(now())
   bookings  Booking[]
 }
