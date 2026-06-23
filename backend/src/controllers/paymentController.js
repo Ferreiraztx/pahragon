@@ -27,7 +27,16 @@ async function criarPagamento(req, res) {
     }
 
     // ==========================================================
-    // VALIDAÇÃO COM FUSO HORÁRIO (UTC-3) - Movido para o lugar correto
+    // TRAVA ANTI-DUPLO PAGAMENTO: Bloqueia se já estiver confirmado
+    // ==========================================================
+    if (booking.status === 'confirmado' || booking.status === 'pago') {
+      return res.status(400).json({ 
+        error: 'Esta reserva já foi paga e confirmada. Não é possível pagar novamente.' 
+      })
+    }
+
+    // ==========================================================
+    // VALIDAÇÃO COM FUSO HORÁRIO (UTC-3)
     // ==========================================================
     const agoraUTC = new Date()
     const agoraLocal = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000))
@@ -38,18 +47,13 @@ async function criarPagamento(req, res) {
         error: 'Não é possível realizar o pagamento de uma reserva que já passou ou está acontecendo agora.' 
       })
     }
-    // ==========================================================
 
     const inicio = new Date(booking.horaInicio)
     const fim = new Date(booking.horaFim)
     const horas = (fim - inicio) / (1000 * 60 * 60)
     const valor = booking.court.precoPorHora * horas
 
-    // -----------------------------------------------------------
-    // CONFIGURAÇÃO DA EXPIRAÇÃO DE 10 MINUTOS PARA O MERCADO PAGO
-    // -----------------------------------------------------------
-    // O Mercado Pago exige o formato ISO 8601 completo com o offset do fuso (ex: -03:00)
-    // Para evitar problemas de fuso, adicionamos 10 minutos à data UTC atual e passamos para ISO string.
+    // Configuração de expiração de 10 minutos
     const dataExpiracao = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     const preference = new Preference(client)
@@ -79,9 +83,6 @@ async function criarPagamento(req, res) {
         payment_methods: {
           installments: 1
         },
-        // =========================================================
-        // AQUI ESTÁ A LIMITAÇÃO DO TEMPO DE PAGAMENTO NO MP:
-        // =========================================================
         expires: true,
         expiration_date_to: dataExpiracao
       }
@@ -99,12 +100,11 @@ async function criarPagamento(req, res) {
       }
     })
 
-// Substitua o return final do seu criarPagamento por este:
-return res.json({
-  initPoint: result.init_point, // Renomeado para 'initPoint'
-  sandboxUrl: result.sandbox_init_point,
-  preferenceId: result.id
-})
+    return res.json({
+      initPoint: result.init_point,
+      sandboxUrl: result.sandbox_init_point,
+      preferenceId: result.id
+    })
   } catch (err) {
     console.error('ERRO PAGAMENTO:', err)
     return res.status(500).json({ error: 'Erro ao criar pagamento' })
@@ -114,47 +114,47 @@ return res.json({
 async function webhook(req, res) {
   const { type, data } = req.body
 
-  if (type === 'payment') {
+  // Garante o retorno 200 rápido pro Mercado Pago não travar a sua fila
+  res.sendStatus(200);
+
+  // Captura robusta do ID do pagamento enviado pelo Mercado Pago
+  const paymentId = data?.id || (req.body.resource && req.body.resource.split('/').pop());
+
+  if (type === 'payment' && paymentId) {
     try {
       const paymentClient = new Payment(client)
-      const payment = await paymentClient.get({ id: data.id })
+      const payment = await paymentClient.get({ id: String(paymentId) })
 
       const bookingId = Number(payment.external_reference)
       const status = payment.status
 
       if (status === 'approved') {
-        // 1. Atualiza a RESERVA para confirmado
         const bookingAtualizado = await prisma.booking.update({
           where: { id: bookingId },
           data: { status: 'confirmado' },
           include: { court: true, user: true }
         })
 
-        // 2. Atualiza o PAGAMENTO específico para aprovado
         await prisma.payment.update({
           where: { bookingId },
           data: { status: 'aprovado', metodo: payment.payment_type_id }
         })
 
-        // Envia o e-mail de confirmação
         try {
           await enviarConfirmacaoReserva(bookingAtualizado)
         } catch (emailErr) {
           console.error('Erro ao enviar e-mail via webhook:', emailErr.message)
         }
-      } else if (status === 'rejected' || status === 'cancelled') {
-        // Se foi rejeitado no Mercado Pago, garante que mude o status do pagamento
+      } else if (status === 'rejected') {
         await prisma.payment.update({
           where: { bookingId },
           data: { status: 'rejeitado' }
         })
       }
     } catch (err) {
-      console.error('ERRO WEBHOOK:', err)
+      console.error('ERRO INTERNO PROCESSAMENTO WEBHOOK:', err)
     }
   }
-
-  return res.sendStatus(200)
 }
 
 async function confirmarPagamento(req, res) {
@@ -162,20 +162,17 @@ async function confirmarPagamento(req, res) {
 
   try {
     if (status === 'approved') {
-      // 1. Força a atualização da RESERVA para confirmado
       const bookingAtualizado = await prisma.booking.update({
         where: { id: Number(bookingId) },
         data: { status: 'confirmado' },
         include: { court: true, user: true }
       })
       
-      // 2. Força a atualização do PAGAMENTO para aprovado
       await prisma.payment.update({
         where: { bookingId: Number(bookingId) },
         data: { status: 'aprovado' }
       })
 
-      // Dispara o e-mail de confirmação
       try {
         await enviarConfirmacaoReserva(bookingAtualizado)
       } catch (emailErr) {
@@ -185,7 +182,6 @@ async function confirmarPagamento(req, res) {
       return res.json(bookingAtualizado)
     }
 
-    // Se não estiver aprovado, busca o estado atualizado do booking para responder ao front
     const booking = await prisma.booking.findUnique({
       where: { id: Number(bookingId) },
       include: { court: true, user: true }
