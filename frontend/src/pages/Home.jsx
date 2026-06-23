@@ -70,6 +70,45 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ESTATÍSTICAS ESTILO DASHBOARD */}
+      <section className="max-w-6xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-left py-6 px-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <div>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Estrutura
+            </span>
+            <span className="text-3xl font-light text-[#1e2221] font-mono tracking-tighter">
+              04{" "}
+              <span className="text-base font-sans font-medium text-slate-400">
+                Quadras Cobertas
+              </span>
+            </span>
+          </div>
+          <div className="border-t sm:border-t-0 sm:border-l border-slate-200/80 pt-4 sm:pt-0 sm:pl-8">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Comunidade
+            </span>
+            <span className="text-3xl font-light text-teal-600 font-mono tracking-tighter">
+              +500{" "}
+              <span className="text-base font-sans font-medium text-slate-400">
+                Atletas
+              </span>
+            </span>
+          </div>
+          <div className="border-t sm:border-t-0 sm:border-l border-slate-200/80 pt-4 sm:pt-0 sm:pl-8">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Localização
+            </span>
+            <span className="text-3xl font-light text-slate-900 font-mono tracking-tighter">
+              Próximo{" "}
+              <span className="text-base font-sans font-medium text-slate-400">
+                ao Batel
+              </span>
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* CARD DE AGENDAMENTO — seção própria, sobrepondo a base do vídeo */}
       <section className="max-w-6xl mx-auto px-6 py-12">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden max-w-md mx-auto">
@@ -122,45 +161,6 @@ export default function Home() {
           >
             Clique para ver a grade completa →
           </button>
-        </div>
-      </section>
-
-      {/* ESTATÍSTICAS ESTILO DASHBOARD */}
-      <section className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-left py-6 px-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Estrutura
-            </span>
-            <span className="text-3xl font-light text-[#1e2221] font-mono tracking-tighter">
-              04{" "}
-              <span className="text-base font-sans font-medium text-slate-400">
-                Quadras Cobertas
-              </span>
-            </span>
-          </div>
-          <div className="border-t sm:border-t-0 sm:border-l border-slate-200/80 pt-4 sm:pt-0 sm:pl-8">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Comunidade
-            </span>
-            <span className="text-3xl font-light text-teal-600 font-mono tracking-tighter">
-              +500{" "}
-              <span className="text-base font-sans font-medium text-slate-400">
-                Atletas
-              </span>
-            </span>
-          </div>
-          <div className="border-t sm:border-t-0 sm:border-l border-slate-200/80 pt-4 sm:pt-0 sm:pl-8">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Localização
-            </span>
-            <span className="text-3xl font-light text-slate-900 font-mono tracking-tighter">
-              Próximo{" "}
-              <span className="text-base font-sans font-medium text-slate-400">
-                ao Batel
-              </span>
-            </span>
-          </div>
         </div>
       </section>
 
