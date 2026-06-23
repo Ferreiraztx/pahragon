@@ -55,6 +55,20 @@ export default function Perfil() {
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: "", texto: "" });
 
+  // Campos obrigatórios (complemento e e-mail ficam fora)
+  const camposObrigatorios = [
+    "nome",
+    "cpf",
+    "dataNascimento",
+    "celular",
+    "cep",
+    "rua",
+    "numero",
+    "bairro",
+    "cidade",
+    "estado",
+  ];
+
   // 🔄 BUSCA OS DADOS ATUALIZADOS DO BANCO ASSIM QUE ENTRA NA TELA
   useEffect(() => {
     if (!user) return;
@@ -150,8 +164,22 @@ export default function Perfil() {
 
   const handleSalvar = async (e) => {
     e.preventDefault();
-    setCarregando(true);
     setMensagem({ tipo: "", texto: "" });
+
+    // ✅ Validação dos campos obrigatórios
+    const faltando = camposObrigatorios.filter(
+      (campo) => !formData[campo] || !formData[campo].toString().trim(),
+    );
+
+    if (faltando.length > 0) {
+      setMensagem({
+        tipo: "erro",
+        texto: "Preencha todos os campos obrigatórios antes de salvar.",
+      });
+      return;
+    }
+
+    setCarregando(true);
 
     try {
       // Faz o PUT enviando os dados do formulário
@@ -232,20 +260,21 @@ export default function Perfil() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Nome Completo
+                  Nome Completo *
                 </label>
                 <input
                   type="text"
                   name="nome"
                   value={formData.nome}
                   onChange={handleChange}
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  CPF
+                  CPF *
                 </label>
                 <input
                   type="text"
@@ -253,30 +282,36 @@ export default function Perfil() {
                   value={formData.cpf}
                   onChange={handleChange}
                   placeholder="000.000.000-00"
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Data de Nascimento
+                  Data de Nascimento *
                 </label>
                 <input
                   type="date"
                   name="dataNascimento"
                   value={formData.dataNascimento}
                   onChange={handleChange}
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
 
               <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
+                  Celular *
+                </label>
                 <input
                   type="tel"
                   name="celular"
                   value={formData.celular}
                   onChange={handleChange}
                   placeholder="(41) 99999-9999"
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
@@ -310,7 +345,7 @@ export default function Perfil() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  CEP
+                  CEP *
                 </label>
                 <input
                   type="text"
@@ -318,32 +353,35 @@ export default function Perfil() {
                   value={formData.cep}
                   onChange={handleChange}
                   placeholder="00000-000"
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Nome da Rua / Av
+                  Nome da Rua / Av *
                 </label>
                 <input
                   type="text"
                   name="rua"
                   value={formData.rua}
                   onChange={handleChange}
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Número
+                  Número *
                 </label>
                 <input
                   type="text"
                   name="numero"
                   value={formData.numero}
                   onChange={handleChange}
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
@@ -364,33 +402,35 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Bairro
+                  Bairro *
                 </label>
                 <input
                   type="text"
                   name="bairro"
                   value={formData.bairro}
                   onChange={handleChange}
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Cidade
+                  Cidade *
                 </label>
                 <input
                   type="text"
                   name="cidade"
                   value={formData.cidade}
                   onChange={handleChange}
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Estado (UF)
+                  Estado (UF) *
                 </label>
                 <input
                   type="text"
@@ -399,6 +439,7 @@ export default function Perfil() {
                   onChange={handleChange}
                   placeholder="PR"
                   maxLength="2"
+                  required
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition uppercase"
                 />
               </div>
