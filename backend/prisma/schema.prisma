@@ -14,8 +14,7 @@ model User {
   cpf       String?
   senha     String
   telefone  String?
-  
-  // 👇 NOVOS CAMPOS DE ENDEREÇO ADICIONADOS AQUI:
+  dataNascimento DateTime?
   cep         String?
   rua         String?
   numero      String?
