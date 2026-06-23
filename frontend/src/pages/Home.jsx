@@ -71,8 +71,8 @@ export default function Home() {
       </section>
 
       {/* CARD DE AGENDAMENTO — seção própria, sobrepondo a base do vídeo */}
-      <section className="max-w-6xl mx-auto px-6 -mt-12 relative z-20 pb-16">
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden max-w-md mx-auto sm:mx-0">
+      <section className="max-w-6xl mx-auto px-6 py-12">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden max-w-md mx-auto">
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50/50 rounded-full blur-3xl -z-10"></div>
 
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
