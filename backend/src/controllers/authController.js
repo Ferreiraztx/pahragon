@@ -189,19 +189,30 @@ const atualizarPerfil = async (req, res) => {
     // Tratamento seguro para ID (tenta usar número, se falhar ou se o banco for string/UUID, usa string)
     const idFormatado = isNaN(Number(userId)) ? userId : Number(userId);
 
-    // Monta o objeto de alteração dinamicamente
-    const dadosParaSalvar = {
-      nome: dadosAtualizados.nome,
-      cpf: cpfLimpo,
-      telefone: celularLimpo, // Alinhado com o campo 'telefone' existente no banco
-      cep: cepLimpo,
-      rua: dadosAtualizados.rua,
-      numero: dadosAtualizados.numero,
-      complemento: dadosAtualizados.complemento,
-      bairro: dadosAtualizados.bairro,
-      cidade: dadosAtualizados.cidade,
-      estado: dadosAtualizados.estado,
-    };
+// Dentro de atualizarPerfil no authController.js:
+
+// 1. Captura a data que vem do req.body (front-end)
+const dataNascimentoFormatada = dadosAtualizados.dataNascimento 
+  ? new Date(dadosAtualizados.dataNascimento) 
+  : null;
+
+const dadosParaSalvar = {
+  nome: dadosAtualizados.nome,
+  cpf: cpfLimpo,
+  telefone: celularLimpo,
+  cep: cepLimpo,
+  rua: dadosAtualizados.rua,
+  numero: dadosAtualizados.numero,
+  complemento: dadosAtualizados.complemento,
+  bairro: dadosAtualizados.bairro,
+  cidade: dadosAtualizados.cidade,
+  estado: dadosAtualizados.estado,
+};
+
+// 2. Só injeta no objeto se a data for válida para o formato do Postgres
+if (dataNascimentoFormatada && !isNaN(dataNascimentoFormatada.getTime())) {
+  dadosParaSalvar.dataNascimento = dataNascimentoFormatada;
+}
 
     // Executa a atualização no Prisma
     const usuarioAtualizado = await prisma.user.update({

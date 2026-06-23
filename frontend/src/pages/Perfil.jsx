@@ -171,13 +171,13 @@ export default function Perfil() {
           cpf: atualizado.cpf ? aplicarMascaraCPF(atualizado.cpf) : prev.cpf,
           dataNascimento: atualizado.dataNascimento
             ? atualizado.dataNascimento.split("T")[0]
-            : prev.dataNascimento,
+            : prev.dataNascimento, // 📅 100% Corrigido aqui!
           celular: atualizado.telefone
             ? aplicarMascaraCelular(atualizado.telefone)
             : prev.celular,
           cep: atualizado.cep ? aplicarMascaraCEP(atualizado.cep) : prev.cep,
           rua: atualizado.rua || prev.rua,
-          numero: atualizado.numero || prev.numero, // 💡 CORRIGIDO AQUI!
+          numero: atualizado.numero || prev.numero,
           complemento: atualizado.complemento || prev.complemento,
           bairro: atualizado.bairro || prev.bairro,
           cidade: atualizado.cidade || prev.cidade,
