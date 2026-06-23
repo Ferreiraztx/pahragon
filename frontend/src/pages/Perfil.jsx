@@ -260,7 +260,7 @@ export default function Perfil() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Nome Completo *
+                  Nome Completo <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -274,7 +274,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  CPF *
+                  CPF <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -289,7 +289,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Data de Nascimento *
+                  Data de Nascimento <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -303,7 +303,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Celular *
+                  Celular <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -318,7 +318,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  E-mail
+                  E-mail <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -345,7 +345,7 @@ export default function Perfil() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  CEP *
+                  CEP <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -360,7 +360,7 @@ export default function Perfil() {
 
               <div className="sm:col-span-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Nome da Rua / Av *
+                  Nome da Rua / Av <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -374,7 +374,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Número *
+                  Número <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -402,7 +402,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Bairro *
+                  Bairro <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -416,7 +416,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Cidade *
+                  Cidade <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -430,7 +430,7 @@ export default function Perfil() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                  Estado (UF) *
+                  Estado (UF) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
