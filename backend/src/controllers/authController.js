@@ -174,48 +174,38 @@ async function loginAdmin(req, res) {
 
 const atualizarPerfil = async (req, res) => {
   try {
-    // 👤 Busca o ID onde quer que o middleware o tenha injetado (req.userId ou req.user.userId)
-    // Altere o topo da função atualizarPerfil para capturar o ID de qualquer uma destas formas:
-const userId = req.userId || 
-               req.user?.userId || 
-               req.user?.id || 
-               req.decoded?.userId || 
-               req.auth?.userId;
+    const userId = req.userId || req.user?.userId || req.user?.id;
     const dadosAtualizados = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado corretamente.' });
     }
 
-    // Limpa os dados mascarados
+    // Limpa as máscaras visuais (garante que salve apenas números limpos se o banco exigir)
+    const cpfLimpo = dadosAtualizados.cpf ? dadosAtualizados.cpf.replace(/\D/g, '') : null;
     const cepLimpo = dadosAtualizados.cep ? dadosAtualizados.cep.replace(/\D/g, '') : null;
     const celularLimpo = dadosAtualizados.celular ? dadosAtualizados.celular.replace(/\D/g, '') : null;
 
-    // Tratamento para a data de nascimento
-    const dataNascimentoFormatada = dadosAuthorized?.dataNascimento || dadosAtualizados.dataNascimento 
-      ? new Date(dadosAtualizados.dataNascimento) 
-      : null;
+    // Tratamento seguro para ID (tenta usar número, se falhar ou se o banco for string/UUID, usa string)
+    const idFormatado = isNaN(Number(userId)) ? userId : Number(userId);
 
-    // Monta o objeto de dados apenas com as colunas que o Prisma confirmou que existem
+    // Monta o objeto de alteração dinamicamente
     const dadosParaSalvar = {
-  nome: dadosAtualizados.nome,
-  cpf: cpfLimpo, // 👈 Garanta que o CPF está aqui para salvar no banco
-  telefone: celularLimpo,
-  cep: cepLimpo,
-  rua: dadosAtualizados.rua,
-  numero: dadosAtualizados.numero,
-  complemento: dadosAtualizados.complemento,
-  bairro: dadosAtualizados.bairro,
-  cidade: dadosAtualizados.cidade,
-  estado: dadosAtualizados.estado,
-};
+      nome: dadosAtualizados.nome,
+      cpf: cpfLimpo,
+      telefone: celularLimpo, // Alinhado com o campo 'telefone' existente no banco
+      cep: cepLimpo,
+      rua: dadosAtualizados.rua,
+      numero: dadosAtualizados.numero,
+      complemento: dadosAtualizados.complemento,
+      bairro: dadosAtualizados.bairro,
+      cidade: dadosAtualizados.cidade,
+      estado: dadosAtualizados.estado,
+    };
 
-    // 💡 Se você usa o campo dataNascimento no Prisma, descomente a linha abaixo:
-    // if (dataNascimentoFormatada) dadosParaSalvar.dataNascimento = dataNascimentoFormatada;
-
-    // Atualização no Prisma
+    // Executa a atualização no Prisma
     const usuarioAtualizado = await prisma.user.update({
-      where: { id: Number(userId) }, 
+      where: { id: idFormatado }, 
       data: dadosParaSalvar,
     });
 
@@ -223,10 +213,12 @@ const userId = req.userId ||
       delete usuarioAtualizado.senha;
     }
 
-    res.json({ message: 'Perfil atualizado com sucesso!', user: usuarioAtualizado });
+    return res.json({ message: 'Perfil atualizado com sucesso!', user: usuarioAtualizado });
+
   } catch (error) {
-    console.error("Erro interno no controller de perfil:", error);
-    res.status(500).json({ error: 'Erro interno ao atualizar os dados no banco.' });
+    // Esse log detalhado no console do Railway vai nos dizer exatamente qual coluna reclamou
+    console.error("ERRO CRÍTICO NO BANCO (PRISMA):", error.message || error);
+    return res.status(500).json({ error: 'Erro interno ao atualizar os dados no banco.' });
   }
 };
 
