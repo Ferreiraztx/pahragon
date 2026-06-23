@@ -4,6 +4,8 @@ import api from '../services/api'
 
 export default function MinhasReservas() {
   const [reservas, setReservas] = useState([])
+  const [modalAberto, setModalAberto] = useState(false)
+  const [reservaParaCancelar, setReservaParaCancelar] = useState(null)
   const navigate = useNavigate()
 
   // Função isolada para buscar as reservas atualizadas do banco
@@ -26,10 +28,25 @@ export default function MinhasReservas() {
     return () => window.removeEventListener('focus', dispararNoFoco)
   }, [])
 
-  async function cancelar(id) {
-    if (!confirm('Deseja cancelar esta reserva?')) return
-    await api.patch(`/bookings/${id}/cancelar`)
-    setReservas(reservas.map(r => r.id === id ? { ...r, status: 'cancelado' } : r))
+  // Apenas abre o modal e guarda o ID da reserva alvo
+  function abrirModalCancelamento(id) {
+    setReservaParaCancelar(id)
+    setModalAberto(true)
+  }
+
+  // Executa o cancelamento real após a confirmação no modal customizado
+  async function executarCancelamento() {
+    if (!reservaParaCancelar) return
+
+    try {
+      await api.patch(`/bookings/${reservaParaCancelar}/cancelar`)
+      setReservas(reservas.map(r => r.id === reservaParaCancelar ? { ...r, status: 'cancelado' } : r))
+    } catch (err) {
+      console.error("Erro ao cancelar reserva:", err)
+    } finally {
+      setModalAberto(false)
+      setReservaParaCancelar(null)
+    }
   }
 
   // Mapeamento de estilos usando tons pastéis elegantes e bordas finas idênticas ao Admin
@@ -40,7 +57,7 @@ export default function MinhasReservas() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base">
+    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base relative">
       
       {/* Cabeçalho Minimalista Integrado */}
       <header className="border-b border-slate-200/80 bg-white sticky top-0 z-10">
@@ -135,7 +152,7 @@ export default function MinhasReservas() {
 
                   {/* Botão de Cancelamento Discreto */}
                   <button
-                    onClick={() => cancelar(r.id)}
+                    onClick={() => abrirModalCancelamento(r.id)}
                     className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 bg-white hover:bg-rose-50/50 px-4 py-2.5 rounded-xl transition"
                   >
                     Cancelar reserva
@@ -147,6 +164,48 @@ export default function MinhasReservas() {
           ))
         )}
       </main>
+
+      {/* Modal de Confirmação de Cancelamento Customizado */}
+      {modalAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity duration-200">
+          <div className="bg-white border border-slate-200 w-full max-w-sm rounded-2xl p-6 text-center space-y-6 shadow-xl transform scale-100 transition-all duration-200">
+            
+            {/* Ícone de Alerta Minimalista */}
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 border border-amber-100">
+              <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-[#1e2221] font-black text-xl tracking-tighter">
+                Cancelar Reserva?
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed max-w-xs mx-auto font-medium">
+                Tem certeza de que deseja cancelar este agendamento? O horário ficará disponível para outros jogadores.
+              </p>
+            </div>
+
+            {/* Ações Alinhadas ao Design do Sistema */}
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={executarCancelamento}
+                className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl transition text-xs uppercase tracking-wider active:scale-[0.99]"
+              >
+                Sim, Cancelar Horário
+              </button>
+              <button
+                onClick={() => { setModalAberto(false); setReservaParaCancelar(null); }}
+                className="w-full text-slate-400 hover:text-slate-600 font-bold py-2.5 transition text-xs uppercase tracking-wider"
+              >
+                Voltar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
