@@ -37,15 +37,6 @@ export default function Navbar() {
               <Link to="/minhas-reservas" className="text-slate-500 hover:text-slate-900 font-semibold transition">
                 Minhas Reservas
               </Link>
-              
-              {/* Link para o Perfil adicionado de forma elegante */}
-              <Link 
-                to="/perfil" 
-                className="text-slate-600 hover:text-teal-600 font-bold transition flex items-center gap-1.5"
-              >
-                <span>👤</span>
-                <span>{user.nome ? user.nome.split(' ')[0] : 'Perfil'}</span>
-              </Link>
 
               <Link 
                 to="/agendar" 
@@ -53,12 +44,15 @@ export default function Navbar() {
               >
                 Agendar
               </Link>
-              <button 
-                onClick={handleLogout} 
-                className="text-slate-400 hover:text-rose-600 font-semibold transition pl-2"
+
+                            {/* Link para o Perfil adicionado de forma elegante */}
+              <Link 
+                to="/perfil" 
+                className="text-slate-600 hover:text-teal-600 font-bold transition flex items-center gap-1.5"
               >
-                Sair
-              </button>
+                <span>👤</span>
+                <span>{user.nome ? user.nome.split(' ')[0] : 'Perfil'}</span>
+              </Link>
             </>
           ) : (
             <>
