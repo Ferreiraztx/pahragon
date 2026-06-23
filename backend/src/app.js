@@ -25,7 +25,7 @@ app.use(cors({
   optionsSuccessStatus: 204 // Responde com sucesso imediatamente para o teste OPTIONS do navegador
 }));
 
-app.options('*', cors());
+app.options(/(.*)/, cors());
 
 app.use(express.json());
 
