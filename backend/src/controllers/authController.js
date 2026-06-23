@@ -209,7 +209,6 @@ const userId = req.userId ||
   cidade: dadosAtualizados.cidade,
   estado: dadosAtualizados.estado,
 };
-    };
 
     // 💡 Se você usa o campo dataNascimento no Prisma, descomente a linha abaixo:
     // if (dataNascimentoFormatada) dadosParaSalvar.dataNascimento = dataNascimentoFormatada;
