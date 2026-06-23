@@ -54,7 +54,6 @@ export default function Perfil() {
   const [carregando, setCarregando] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: "", texto: "" });
-  const [celularVerificado, setCellularVerificado] = useState(false);
 
   // 🔄 BUSCA OS DADOS ATUALIZADOS DO BANCO ASSIM QUE ENTRA NA TELA
   useEffect(() => {
@@ -83,9 +82,6 @@ export default function Perfil() {
             cidade: dadosDoBanco.cidade || "",
             estado: dadosDoBanco.estado || "",
           });
-          if (dadosDoBanco.celularVerificado) {
-            setCellularVerificado(dadosDoBanco.celularVerificado);
-          }
         }
       } catch (err) {
         console.error("Erro ao buscar dados do perfil:", err);
@@ -273,25 +269,6 @@ export default function Perfil() {
                   className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
                 />
               </div>
-
-              <div>
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">
-                    Celular
-                  </label>
-                  {celularVerificado ? (
-                    <span className="text-[9px] bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-bold">
-                      Verificado
-                    </span>
-                  ) : (
-                    <span
-                      className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold cursor-pointer hover:bg-amber-100 transition"
-                      onClick={() => alert("Disparar código de verificação!")}
-                    >
-                      Não Verificado
-                    </span>
-                  )}
-                </div>
                 <input
                   type="tel"
                   name="celular"
