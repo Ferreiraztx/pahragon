@@ -9,7 +9,22 @@ export default function Home() {
       <Navbar />
 
       {/* HERO SECTION — GRID ASSETRICO (UPGRADE VISUAL) */}
-      <section className="max-w-6xl mx-auto px-6 py-16 md:py-24 border-b border-slate-200/80">
+      <section className="relative overflow-hidden max-w-6xl mx-auto px-6 py-16 md:py-24 border-b border-slate-200/80 rounded-3xl">
+
+        {/* VÍDEO DE FUNDO (apenas na seção Hero) */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute top-0 left-0 w-full h-full object-cover -z-20"
+        >
+          <source src="/videos/pahragon.mp4" type="video/mp4" />
+        </video>
+
+        {/* OVERLAY para manter legibilidade do conteúdo sobre o vídeo */}
+        <div className="absolute top-0 left-0 w-full h-full bg-[#faf9f6]/90 -z-10"></div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
           {/* Lado Esquerdo: Mensagem Forte e Editorial */}
