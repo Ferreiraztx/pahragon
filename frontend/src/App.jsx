@@ -13,6 +13,7 @@ import PagamentoFalha from './pages/PagamentoFalha'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import PagamentoAguardando from './pages/PagamentoAguardando';
+import Perfil from './pages/Perfil' // 👈 Importe a página nova aqui
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/pagamento/pendente" element={<PrivateRoute><PagamentoSucesso /></PrivateRoute>} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/perfil" element={<Perfil />} />
     </Routes>
   )
 }
