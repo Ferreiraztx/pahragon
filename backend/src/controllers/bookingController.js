@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Criar reserva (Versão Corrigida com Validação Local e Date.UTC)
+// Criar reserva (Versão Corrigida com Validação Local e Lógica de Conflito Blindada)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim } = req.body;
   const userId = req.userId;
@@ -47,19 +47,24 @@ async function criar(req, res) {
       const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicioStr) + 3, Number(mInicioStr), 0));
       const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFimStr) + 3, Number(mFimStr), 0));
 
-      // CORREÇÃO DA QUERY DE CONFLITO: Cobre todas as possibilidades de interseção de horários
+      // ==========================================================
+      // CORREÇÃO CRÍTICA: QUERY DE CONFLITO BLINDADA
+      // ==========================================================
       const conflito = await tx.booking.findFirst({
         where: {
           courtId: Number(courtId),
           data: dataFormatada,
+          // 1. Só gera conflito se o status for realmente ativo
           OR: [
             { status: 'pago' },
             { status: 'confirmado' },
             {
+              // Se for pendente, só gera conflito se foi criado nos últimos 10 minutos
               status: 'pendente',
               createdAt: { gte: dezMinutosAtras }
             }
           ],
+          // 2. Verifica a interseção de horários de forma isolada
           AND: [
             {
               OR: [
@@ -225,7 +230,6 @@ async function horariosDisponiveis(req, res) {
     disponiveis = disponiveis.filter(horario => {
       const [h, m] = horario.split(':').map(Number);
       
-      // Ajustado adicionando +3 horas para bater exatamente com a checagem do banco
       const inicioSugerido = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), h + 3, m, 0));
       const fimSugerido = new Date(inicioSugerido.getTime() + (30 * 60 * 1000)); 
 
