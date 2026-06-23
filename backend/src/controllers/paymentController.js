@@ -123,24 +123,27 @@ async function webhook(req, res) {
       const status = payment.status
 
       if (status === 'approved') {
+        // 1. Atualiza a RESERVA para confirmado
         const bookingAtualizado = await prisma.booking.update({
           where: { id: bookingId },
           data: { status: 'confirmado' },
           include: { court: true, user: true }
         })
 
+        // 2. Atualiza o PAGAMENTO específico para aprovado
         await prisma.payment.update({
           where: { bookingId },
           data: { status: 'aprovado', metodo: payment.payment_type_id }
         })
 
-        // Envia o e-mail de confirmação pelo webhook se aprovado por lá
+        // Envia o e-mail de confirmação
         try {
           await enviarConfirmacaoReserva(bookingAtualizado)
         } catch (emailErr) {
           console.error('Erro ao enviar e-mail via webhook:', emailErr.message)
         }
-      } else if (status === 'rejected') {
+      } else if (status === 'rejected' || status === 'cancelled') {
+        // Se foi rejeitado no Mercado Pago, garante que mude o status do pagamento
         await prisma.payment.update({
           where: { bookingId },
           data: { status: 'rejeitado' }
@@ -159,12 +162,14 @@ async function confirmarPagamento(req, res) {
 
   try {
     if (status === 'approved') {
+      // 1. Força a atualização da RESERVA para confirmado
       const bookingAtualizado = await prisma.booking.update({
         where: { id: Number(bookingId) },
         data: { status: 'confirmado' },
         include: { court: true, user: true }
       })
       
+      // 2. Força a atualização do PAGAMENTO para aprovado
       await prisma.payment.update({
         where: { bookingId: Number(bookingId) },
         data: { status: 'aprovado' }
@@ -180,6 +185,7 @@ async function confirmarPagamento(req, res) {
       return res.json(bookingAtualizado)
     }
 
+    // Se não estiver aprovado, busca o estado atualizado do booking para responder ao front
     const booking = await prisma.booking.findUnique({
       where: { id: Number(bookingId) },
       include: { court: true, user: true }
