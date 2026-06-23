@@ -3,7 +3,7 @@ import Navbar from '../components/Navbar'
 export default function Contato() {
   const infos = [
     { icon: '📍', title: 'Endereço', info: 'R. João Alencar Guimarães, 574\nSta. Quitéria — Curitiba, PR' },
-    { icon: '🕐', title: 'Horário', info: 'Seg a Sex: 7h às 22h\nSáb: 8h em diante' },
+    { icon: '🕐', title: 'Horário', info: 'Seg a Sex: 7h às 22h\nSáb: 8h às 19h' },
     { icon: '📱', title: 'WhatsApp', info: '(41) 99999-9999' },
     { icon: '📸', title: 'Instagram', info: '@pahragon' },
   ]
