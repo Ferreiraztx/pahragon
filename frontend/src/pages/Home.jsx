@@ -20,6 +20,7 @@ export default function Home() {
           disableRemotePlayback
           controls={false}
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
+          style={{ objectPosition: "center center" }}
         >
           <source src="/videos/pahragon.mp4" type="video/mp4" />
         </video>
@@ -240,16 +241,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FOOTER INSTITUCIONAL */}
-      <footer className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200/80 text-sm text-slate-400">
-        <div className="flex items-center gap-2 flex-wrap justify-center">
-          <span className="font-bold text-slate-800">pahragon arena</span>
-          <span className="opacity-40">•</span>
-          <span>Santa Quitéria — Curitiba</span>
+      <footer className="bg-[#1e2221] text-slate-300">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between text-sm">
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <span className="font-bold text-white">pahragon arena</span>
+            <span className="opacity-40">•</span>
+            <span>Santa Quitéria — Curitiba</span>
+          </div>
+          <p className="mt-2 sm:mt-0 text-xs font-mono text-slate-400">
+            © 2026 — Premium Sand Experience
+          </p>
         </div>
-        <p className="mt-2 sm:mt-0 text-xs font-mono">
-          © 2026 — Premium Sand Experience
-        </p>
       </footer>
     </div>
   );
