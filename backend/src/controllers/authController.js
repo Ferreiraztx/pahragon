@@ -174,18 +174,28 @@ async function loginAdmin(req, res) {
 
 const atualizarPerfil = async (req, res) => {
   try {
-    const userId = req.user.id; // Pego pelo seu middleware de autenticação (JWT)
+    const userId = req.user.id; // Pego pelo seu middleware de autenticação
     const dadosAtualizados = req.body;
 
-    // Se você usa Prisma:
+    // Remove as máscaras visuais caso o seu banco precise salvar apenas os números limpos
+    const cpfLimpo = dadosAtualizados.cpf ? dadosAtualizados.cpf.replace(/\D/g, '') : null;
+    const cepLimpo = dadosAtualizados.cep ? dadosAtualizados.cep.replace(/\D/g, '') : null;
+    const celularLimpo = dadosAtualizados.celular ? dadosAtualizados.celular.replace(/\D/g, '') : null;
+
+    // Tratamento para a data de nascimento não quebrar se vier string vazia
+    const dataNascimentoFormatada = dadosAtualizados.dataNascimento 
+      ? new Date(dadosAtualizados.dataNascimento) 
+      : null;
+
+    // Atualização no Prisma
     const usuarioAtualizado = await prisma.user.update({
       where: { id: userId },
       data: {
         nome: dadosAtualizados.nome,
-        cpf: dadosAuthorized.cpf,
-        dataNascimento: dadosAtualizados.dataNascimento,
-        celular: dadosAtualizados.celular,
-        cep: dadosAtualizados.cep,
+        cpf: cpfLimpo, // Corrigido de dadosAuthorized.cpf para a variável limpa
+        dataNascimento: dataNascimentoFormatada,
+        celular: celularLimpo,
+        cep: cepLimpo,
         rua: dadosAtualizados.rua,
         numero: dadosAtualizados.numero,
         complemento: dadosAtualizados.complemento,
@@ -195,13 +205,15 @@ const atualizarPerfil = async (req, res) => {
       },
     });
 
-    // Remove a senha por segurança antes de retornar
-    delete usuarioAtualizado.senha;
+    // Remove a senha do objeto de retorno por segurança
+    if (usuarioAtualizado.senha) {
+      delete usuarioAtualizado.senha;
+    }
 
     res.json({ message: 'Perfil atualizado com sucesso!', user: usuarioAtualizado });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao atualizar o perfil.' });
+    console.error("Erro interno no controller de perfil:", error);
+    res.status(500).json({ error: 'Erro interno ao atualizar os dados no banco.' });
   }
 };
 
