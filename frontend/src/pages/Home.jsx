@@ -9,7 +9,8 @@ export default function Home() {
       <Navbar />
 
       {/* HERO SECTION — GRID ASSETRICO (UPGRADE VISUAL) */}
-      <section className="relative overflow-hidden max-w-6xl mx-auto px-6 py-16 md:py-24 border-b border-slate-200/80 rounded-3xl">
+      <section className="relative overflow-hidden min-h-[600px] max-w-6xl mx-auto px-6 py-16 md:py-24 border-b border-slate-200/80 rounded-3xl">
+        {/* VÍDEO DE FUNDO */}
         <video
           autoPlay
           loop
@@ -18,15 +19,15 @@ export default function Home() {
           disablePictureInPicture
           disableRemotePlayback
           controls={false}
-          className="absolute top-0 left-0 w-full h-full object-cover -z-20 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
         >
-          <source src="/videos/pahragon.mp4" type="video/mp4" />
+          <source src="/videos/arena-bg.mp4" type="video/mp4" />
         </video>
 
-        {/* OVERLAY para manter legibilidade do conteúdo sobre o vídeo */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[#faf9f6]/90 -z-10"></div>
+        {/* OVERLAY */}
+        <div className="absolute inset-0 bg-[#faf9f6]/60 z-0"></div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Lado Esquerdo: Mensagem Forte e Editorial */}
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 border border-teal-200/60 rounded-full">
