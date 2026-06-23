@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
@@ -9,8 +9,9 @@ export default function Perfil() {
 
   // Funções Auxiliares de Máscaras (Formatação)
   const aplicarMascaraCPF = (value) => {
+    if (!value) return ''
     return value
-      .replace(/\D/g, '') // Remove tudo o que não é dígito
+      .replace(/\D/g, '')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
@@ -18,6 +19,7 @@ export default function Perfil() {
   }
 
   const aplicarMascaraCEP = (value) => {
+    if (!value) return ''
     return value
       .replace(/\D/g, '')
       .replace(/^(\d{5})(\d)/, '$1-$2')
@@ -25,6 +27,7 @@ export default function Perfil() {
   }
 
   const aplicarMascaraCelular = (value) => {
+    if (!value) return ''
     return value
       .replace(/\D/g, '')
       .replace(/^(\d{2})(\d)/g, '($1) $2')
@@ -32,26 +35,61 @@ export default function Perfil() {
       .substring(0, 15)
   }
 
-  // Estados locais iniciando com os dados do usuário já formatados se existirem
+  // Estado inicial limpo
   const [formData, setFormData] = useState({
-    nome: user?.nome || '',
-    cpf: user?.cpf ? aplicarMascaraCPF(user.cpf) : '',
-    dataNascimento: user?.dataNascimento ? user.dataNascimento.split('T')[0] : '',
-    celular: user?.celular ? aplicarMascaraCelular(user.celular) : '',
-    email: user?.email || '',
-    cep: user?.cep ? aplicarMascaraCEP(user.cep) : '',
-    rua: user?.rua || '',
-    numero: user?.numero || '',
-    complemento: user?.complemento || '',
-    bairro: user?.bairro || '',
-    cidade: user?.cidade || '',
-    estado: user?.estado || '',
+    nome: '',
+    cpf: '',
+    dataNascimento: '',
+    celular: '',
+    email: '',
+    cep: '',
+    rua: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
   })
 
   const [carregando, setCarregando] = useState(false)
   const [buscandoCep, setBuscandoCep] = useState(false)
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' })
-  const [celularVerificado, setCellularVerificado] = useState(user?.celularVerificado || false)
+  const [celularVerificado, setCellularVerificado] = useState(false)
+
+  // 🔄 BUSCA OS DADOS ATUALIZADOS DO BANCO ASSIM QUE ENTRA NA TELA
+  useEffect(() => {
+    if (!user) return
+
+    const carregarDadosPerfil = async () => {
+      try {
+        const response = await api.get('/auth/perfil')
+        if (response.data) {
+          const dadosDoBanco = response.data
+          setFormData({
+            nome: dadosDoBanco.nome || '',
+            cpf: dadosDoBanco.cpf ? aplicarMascaraCPF(dadosDoBanco.cpf) : '',
+            dataNascimento: dadosDoBanco.dataNascimento ? dadosDoBanco.dataNascimento.split('T')[0] : '',
+            celular: dadosDoBanco.telefone ? aplicarMascaraCelular(dadosDoBanco.telefone) : '', // mapeado de 'telefone'
+            email: dadosDoBanco.email || '',
+            cep: dadosDoBanco.cep ? aplicarMascaraCEP(dadosDoBanco.cep) : '',
+            rua: dadosDoBanco.rua || '',
+            numero: dadosDoBanco.numero || '',
+            complemento: dadosDoBanco.complemento || '',
+            bairro: dadosDoBanco.bairro || '',
+            cidade: dadosDoBanco.cidade || '',
+            estado: dadosDoBanco.estado || '',
+          })
+          if (dadosDoBanco.celularVerificado) {
+            setCellularVerificado(dadosDoBanco.celularVerificado)
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao buscar dados do perfil:", err)
+      }
+    }
+
+    carregarDadosPerfil()
+  }, [user])
 
   if (!user) {
     return (
@@ -64,7 +102,6 @@ export default function Perfil() {
     )
   }
 
-  // Manipulador de mudanças com aplicação automática de máscaras e busca de CEP
   const handleChange = async (e) => {
     const { name, value } = e.target
     let valorFormatado = value
@@ -75,7 +112,6 @@ export default function Perfil() {
 
     setFormData(prev => ({ ...prev, [name]: valorFormatado }))
 
-    // Busca automática de CEP quando o usuário digita os 8 números (ex: 80000-000 tem 9 caracteres com o hífen)
     if (name === 'cep' && valorFormatado.replace(/\D/g, '').length === 8) {
       const cepApenasNumeros = valorFormatado.replace(/\D/g, '')
       setBuscandoCep(true)
@@ -108,9 +144,29 @@ export default function Perfil() {
     setMensagem({ tipo: '', texto: '' })
 
     try {
-      // Envia para o Railway (você pode optar por limpar as máscaras antes de enviar ou salvar formatado no banco)
-      await api.put('/auth/perfil', formData)
+      // Faz o PUT enviando os dados do formulário
+      const response = await api.put('/auth/perfil', formData)
+      
       setMensagem({ tipo: 'sucesso', texto: 'Perfil atualizado com sucesso!' })
+
+      // Atualiza o estado local com o retorno do backend para garantir consistência visual
+      if (response.data?.user) {
+        const atualizado = response.data.user
+        setFormData(prev => ({
+          ...prev,
+          nome: atualizado.nome || prev.nome,
+          cpf: atualizado.cpf ? aplicarMascaraCPF(atualizado.cpf) : prev.cpf,
+          dataNascimento: atualizado.dataNascimento ? atualizado.dataNascimento.split('T')[0] : prev.dataNascimento,
+          celular: updated.telefone ? aplicarMascaraCelular(atualizado.telefone) : prev.celular,
+          cep: atualizado.cep ? aplicarMascaraCEP(atualizado.cep) : prev.cep,
+          rua: atualizado.rua || prev.rua,
+          numero: atualizado.numero || prev.numero,
+          complemento: atualizado.complemento || prev.complemento,
+          bairro: atualizado.bairro || prev.bairro,
+          cidade: updated.cidade || prev.cidade,
+          estado: atualizado.estado || prev.estado
+        }))
+      }
     } catch (err) {
       console.error(err)
       setMensagem({ 

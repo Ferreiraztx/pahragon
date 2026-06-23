@@ -221,5 +221,37 @@ const atualizarPerfil = async (req, res) => {
     return res.status(500).json({ error: 'Erro interno ao atualizar os dados no banco.' });
   }
 };
+const obterPerfil = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?.userId || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    const usuario = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    // Remove a senha por segurança antes de enviar para o front
+    if (usuario.senha) delete usuario.senha;
+
+    return res.json(usuario);
+  } catch (error) {
+    console.error("Erro ao buscar perfil:", error);
+    return res.status(500).json({ error: 'Erro interno ao buscar dados do perfil.' });
+  }
+};
+
+// Não esqueça de exportar a nova função no final do arquivo:
+module.exports = {
+  atualizarPerfil,
+  obterPerfil, // Certifique-se de incluir aqui
+  // ... outras funções (login, register)
+};
 
 module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil };
