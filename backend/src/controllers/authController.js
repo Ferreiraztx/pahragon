@@ -23,25 +23,29 @@ async function loginGoogle(req, res) {
     const payload = ticket.getPayload();
     const { email, name } = payload;
 
-    // 2. Busca o usuário pelo e-mail ou cria um novo caso não exista (Upsert)
+    // 2. Busca o usuário pelo e-mail
     let user = await prisma.user.findUnique({
       where: { email }
     });
 
+    // 3. Se não existir, cria inserindo o campo correto do banco ('senha') preenchido
     if (!user) {
+      // Cria um hash de uma string qualquer para manter o campo obrigatório seguro e preenchido
+      const senhaInutilizada = await bcrypt.hash(Math.random().toString(36).substring(2), 8);
+
       user = await prisma.user.create({
         data: {
           email,
           nome: name,
-          password: "", // Como o login é via Google, deixamos a senha local vazia
+          senha: senhaInutilizada, // 💡 Corrigido: 'senha' em vez de 'password'
+          telefone: ""            // Evita quebras caso seu banco exija string no telefone
         }
       });
     }
 
-    // 3. Gera o SEU token JWT interno da Pahragon Arena usando a sua chave secreta existente
-    // Ajuste o nome da propriedade para bater com o seu Middleware de autenticação (ex: id ou userId)
+    // 4. Gera o token interno padronizado com os outros métodos do sistema ({ id, role })
     const tokenSistema = jwt.sign(
-      { userId: user.id }, 
+      { id: user.id, role: 'user' }, 
       process.env.JWT_SECRET, 
       { expiresIn: '7d' }
     );
