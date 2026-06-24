@@ -4,7 +4,10 @@ const prisma = new PrismaClient();
 // Criar reserva (Versão Corrigida com Validação Local e Lógica de Conflito Blindada)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim } = req.body;
-  const userId = req.userId;
+  
+  // 💡 CORREÇÃO AQUI: Lê do objeto decodificado pelo middleware e garante que seja número
+  const rawUserId = req.user?.id || req.userId;
+  const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
   try {
     // ==========================================================
@@ -95,7 +98,7 @@ async function criar(req, res) {
 
       return tx.booking.create({
         data: {
-          userId,
+          userId, // 💡 Agora vai o ID numérico correto!
           courtId: Number(courtId),
           data: dataFormatada,
           horaInicio: inicioFormatado,
@@ -118,7 +121,9 @@ async function criar(req, res) {
 
 // Listar reservas do usuário logado (Versão Corrigida com ordenação invertida)
 async function minhasReservas(req, res) {
-  const userId = req.userId;
+  // 💡 CORREÇÃO AQUI
+  const rawUserId = req.user?.id || req.userId;
+  const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
   try {
     const bookings = await prisma.booking.findMany({
@@ -138,7 +143,9 @@ async function minhasReservas(req, res) {
 // Cancelar reserva
 async function cancelar(req, res) {
   const { id } = req.params;
-  const userId = req.userId;
+  // 💡 CORREÇÃO AQUI
+  const rawUserId = req.user?.id || req.userId;
+  const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
   try {
     const booking = await prisma.booking.findUnique({
