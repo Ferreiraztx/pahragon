@@ -10,7 +10,10 @@ const client = new MercadoPagoConfig({
 
 async function criarPagamento(req, res) {
   const { bookingId } = req.body
-  const userId = req.userId
+  
+  // 💡 CORREÇÃO CRÍTICA: Captura o ID decodificado corretamente para evitar o erro 403
+  const rawUserId = req.user?.id || req.userId;
+  const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
   try {
     const booking = await prisma.booking.findUnique({
@@ -58,6 +61,9 @@ async function criarPagamento(req, res) {
 
     const preference = new Preference(client)
 
+    // 💡 Ajuste preventivo dos dados do comprador
+    const nomeComprador = booking.user.nome || 'Cliente Pahragon';
+
     const result = await preference.create({
       body: {
         items: [
@@ -71,7 +77,7 @@ async function criarPagamento(req, res) {
           }
         ],
         payer: {
-          name: booking.user.nome,
+          name: nomeComprador,
           email: booking.user.email
         },
         back_urls: {
@@ -114,10 +120,8 @@ async function criarPagamento(req, res) {
 async function webhook(req, res) {
   const { type, data } = req.body
 
-  // Garante o retorno 200 rápido pro Mercado Pago não travar a sua fila
   res.sendStatus(200);
 
-  // Captura robusta do ID do pagamento enviado pelo Mercado Pago
   const paymentId = data?.id || (req.body.resource && req.body.resource.split('/').pop());
 
   if (type === 'payment' && paymentId) {
