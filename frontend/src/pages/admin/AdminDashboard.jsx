@@ -59,19 +59,31 @@ export default function AdminDashboard() {
 
   async function carregarDados() {
     const headers = { Authorization: `Bearer ${token}` };
+    const resultados = await Promise.allSettled([
+      api.get("/bookings/todas", { headers }),
+      api.get("/courts"),
+      api.get("/tournaments"),
+      api.get("/tournaments/caixa", { headers }),
+      api.get("/auth/usuarios", { headers }),
+    ]);
+
     const [resReservas, resQuadras, resTorneios, resCaixa, resAtletas] =
-      await Promise.all([
-        api.get("/bookings/todas", { headers }),
-        api.get("/courts"),
-        api.get("/tournaments"),
-        api.get("/tournaments/caixa", { headers }),
-        api.get("/auth/usuarios", { headers }),
-      ]);
-    setReservas(resReservas.data);
-    setQuadras(resQuadras.data);
-    setTorneios(resTorneios.data);
-    setCaixa(resCaixa.data);
-    setAtletas(resAtletas.data);
+      resultados;
+
+    if (resReservas.status === "fulfilled") setReservas(resReservas.value.data);
+    if (resQuadras.status === "fulfilled") setQuadras(resQuadras.value.data);
+    if (resTorneios.status === "fulfilled") setTorneios(resTorneios.value.data);
+    if (resCaixa.status === "fulfilled") setCaixa(resCaixa.value.data);
+    if (resAtletas.status === "fulfilled") setAtletas(resAtletas.value.data);
+
+    resultados.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.error(
+          `Falha ao carregar dados [${i}]:`,
+          r.reason?.response?.data || r.reason?.message,
+        );
+      }
+    });
   }
 
   async function criarQuadra(e) {
