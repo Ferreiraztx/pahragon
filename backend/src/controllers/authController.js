@@ -263,6 +263,7 @@ const obterPerfil = async (req, res) => {
 };
 
 const listarAtletas = async (req, res) => {
+    console.log('USER DO TOKEN:', req.user);
   try {
     // Apenas admin pode listar
     if (req.user?.role !== 'admin') {
