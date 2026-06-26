@@ -262,11 +262,33 @@ const obterPerfil = async (req, res) => {
   }
 };
 
-// Não esqueça de exportar a nova função no final do arquivo:
-module.exports = {
-  atualizarPerfil,
-  obterPerfil, // Certifique-se de incluir aqui
-  // ... outras funções (login, register)
+const listarAtletas = async (req, res) => {
+  try {
+    // Apenas admin pode listar
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso restrito ao administrador.' });
+    }
+
+    const atletas = await prisma.user.findMany({
+      orderBy: { id: 'desc' },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        telefone: true,
+        cpf: true,
+        cidade: true,
+        estado: true,
+        dataNascimento: true,
+        // senha NÃO é selecionada, então nunca vai pro frontend
+      }
+    });
+
+    return res.json(atletas);
+  } catch (error) {
+    console.error('Erro ao listar atletas:', error);
+    return res.status(500).json({ error: 'Erro interno ao buscar atletas.' });
+  }
 };
 
-module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil };
+module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil, listarAtletas };
