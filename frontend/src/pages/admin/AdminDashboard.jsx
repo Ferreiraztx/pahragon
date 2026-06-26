@@ -50,6 +50,33 @@ export default function AdminDashboard() {
   const admin = JSON.parse(localStorage.getItem("admin") || "{}");
   const token = localStorage.getItem("adminToken");
 
+  // Função para o nascimento com o mês abreviado + ano (sem erro de fuso)
+  const formatarNascimentoCompleto = (dataStr) => {
+    if (!dataStr) return "—";
+
+    // Pega apenas a data pura caso venha com horas (ex: "2007-08-30T00:00:00")
+    const dataPura = dataStr.split("T")[0];
+    const [ano, mes, dia] = dataPura.split("-");
+
+    const meses = [
+      "jan",
+      "fev",
+      "mar",
+      "abr",
+      "mai",
+      "jun",
+      "jul",
+      "ago",
+      "set",
+      "out",
+      "nov",
+      "dez",
+    ];
+    const nomeMes = meses[parseInt(mes, 10) - 1];
+
+    return `${parseInt(dia, 10)} ${nomeMes} ${ano}`;
+  };
+
   useEffect(() => {
     if (!token) {
       navigate("/admin/login");
@@ -397,7 +424,7 @@ export default function AdminDashboard() {
                     </span>
                     <span className="text-slate-800 font-semibold">
                       {atletaSelecionado.dataNascimento
-                        ? formatarDataLateral(atletaSelecionado.dataNascimento)
+                        ? formatarNascimentoCompleto(atletaSelecionado.dataNascimento)
                         : "—"}
                     </span>
                   </div>
