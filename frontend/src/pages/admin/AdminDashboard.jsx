@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [caixa, setCaixa] = useState(null);
   const [aba, setAba] = useState("reservas");
   const [atletas, setAtletas] = useState([]);
+  const [atletaSelecionado, setAtletaSelecionado] = useState(null);
 
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -267,6 +268,18 @@ export default function AdminDashboard() {
       })
     : [];
 
+  function estatisticasAtleta(userId) {
+    const reservasDoAtleta = reservas.filter((r) => r.user?.id === userId);
+    const totalReservas = reservasDoAtleta.length;
+    const ultimaReserva = totalReservas
+      ? reservasDoAtleta.reduce((maisRecente, r) =>
+          new Date(r.data) > new Date(maisRecente.data) ? r : maisRecente,
+        )
+      : null;
+
+    return { totalReservas, ultimaReserva };
+  }
+
   const statusStyle = {
     pendente:
       "text-amber-800 bg-amber-100/80 px-3 py-1 rounded-lg text-xs font-bold tracking-wide uppercase",
@@ -324,6 +337,119 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE DETALHE DO ATLETA */}
+      {atletaSelecionado &&
+        (() => {
+          const { totalReservas, ultimaReserva } = estatisticasAtleta(
+            atletaSelecionado.id,
+          );
+          return (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-6 max-w-md w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-extrabold text-slate-900">
+                      {atletaSelecionado.nome}
+                    </h3>
+                    <p className="text-sm text-slate-500 font-mono">
+                      {atletaSelecionado.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setAtletaSelecionado(null)}
+                    className="opacity-40 hover:opacity-100 text-xl leading-none px-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm border-t border-slate-100 pt-4">
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block mb-0.5">
+                      Telefone
+                    </span>
+                    <span className="text-slate-800 font-semibold">
+                      {atletaSelecionado.telefone || "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block mb-0.5">
+                      CPF
+                    </span>
+                    <span className="text-slate-800 font-semibold">
+                      {atletaSelecionado.cpf || "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block mb-0.5">
+                      Cidade
+                    </span>
+                    <span className="text-slate-800 font-semibold">
+                      {atletaSelecionado.cidade
+                        ? `${atletaSelecionado.cidade}${atletaSelecionado.estado ? "/" + atletaSelecionado.estado : ""}`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block mb-0.5">
+                      Nascimento
+                    </span>
+                    <span className="text-slate-800 font-semibold">
+                      {atletaSelecionado.dataNascimento
+                        ? formatarDataLateral(atletaSelecionado.dataNascimento)
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-4 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                    Atividade na Arena
+                  </p>
+                  <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+                    <span className="text-sm font-semibold text-slate-600">
+                      Total de reservas
+                    </span>
+                    <span className="text-lg font-extrabold text-slate-900 font-mono">
+                      {totalReservas}
+                    </span>
+                  </div>
+
+                  {ultimaReserva ? (
+                    <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1">
+                      <span className="text-xs font-bold text-slate-400 block">
+                        Última reserva
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">
+                          {ultimaReserva.court?.nome}
+                        </span>
+                        <span className="text-sm font-mono text-slate-500">
+                          {formatarDataLateral(ultimaReserva.data)}
+                        </span>
+                      </div>
+                      <span className={statusStyle[ultimaReserva.status]}>
+                        {ultimaReserva.status}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 px-1">
+                      Ainda não fez nenhuma reserva.
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setAtletaSelecionado(null)}
+                  className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
       {/* CABEÇALHO */}
       <header className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 flex items-center justify-between border-b border-slate-200/80">
@@ -858,7 +984,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ATLETAS */}
             {aba === "atletas" && (
               <div className="space-y-12">
                 <div>
@@ -871,44 +996,72 @@ export default function AdminDashboard() {
                         Nenhum atleta cadastrado ainda.
                       </p>
                     ) : (
-                      atletas.map((at) => (
-                        <div
-                          key={at.id}
-                          className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-slate-300 transition-all"
-                        >
-                          <div>
-                            <h4 className="font-extrabold text-slate-900 text-lg">
-                              {at.nome}
-                            </h4>
-                            <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-x-2">
-                              <span className="font-mono text-slate-400 text-xs sm:text-sm">
-                                {at.email}
-                              </span>
-                              {at.telefone && (
-                                <>
-                                  <span className="opacity-40">•</span>
-                                  <span>{at.telefone}</span>
-                                </>
-                              )}
-                              {at.cidade && (
-                                <>
-                                  <span className="opacity-40">•</span>
-                                  <span>
-                                    {at.cidade}
-                                    {at.estado ? `/${at.estado}` : ""}
-                                  </span>
-                                </>
-                              )}
-                            </p>
+                      // Mudamos para chaves {} aqui para permitir lógica interna antes do return
+                      atletas.map((at) => {
+                        // Buscando as estatísticas do atleta antes de renderizar o JSX
+                        const { totalReservas, ultimaReserva } =
+                          estatisticasAtleta(at.id);
+
+                        return (
+                          <div
+                            key={at.id}
+                            onClick={() => setAtletaSelecionado(at)}
+                            className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-slate-300 hover:shadow-md cursor-pointer transition-all"
+                          >
+                            <div>
+                              <h4 className="font-extrabold text-slate-900 text-lg">
+                                {at.nome}
+                              </h4>
+                              <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-x-2">
+                                <span className="font-mono text-slate-400 text-xs sm:text-sm">
+                                  {at.email}
+                                </span>
+                                {at.telefone && (
+                                  <>
+                                    <span className="opacity-40">•</span>
+                                    <span>{at.telefone}</span>
+                                  </>
+                                )}
+                                {at.cidade && (
+                                  <>
+                                    <span className="opacity-40">•</span>
+                                    <span>
+                                      {at.cidade}
+                                      {at.estado ? `/${at.estado}` : ""}
+                                    </span>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-6 sm:gap-8">
+                              <div className="text-center sm:text-right">
+                                <span className="text-xs font-bold text-slate-400 block">
+                                  Reservas
+                                </span>
+                                <span className="text-xl font-extrabold text-slate-900 font-mono">
+                                  {totalReservas}
+                                </span>
+                              </div>
+                              <div className="text-center sm:text-right min-w-[80px]">
+                                <span className="text-xs font-bold text-slate-400 block">
+                                  Última
+                                </span>
+                                <span className="text-sm font-bold text-teal-700">
+                                  {ultimaReserva
+                                    ? formatarDataLateral(ultimaReserva.data)
+                                    : "—"}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
               </div>
             )}
-
             {/* FLUXO DE CAIXA */}
             {aba === "caixa" && caixa && (
               <div className="space-y-12">
