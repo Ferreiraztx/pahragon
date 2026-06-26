@@ -6,7 +6,10 @@ const api = axios.create({
 
 // Adiciona o token automaticamente em todas as requisições
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const adminToken = localStorage.getItem('adminToken');
+  const userToken = localStorage.getItem('token');
+  const token = adminToken || userToken;
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
