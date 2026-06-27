@@ -13,11 +13,13 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
   const [dadosForm, setDadosForm] = useState({ atleta: "", data: "", horario: "", quadraId: "" });
   const [visaoAtual, setVisaoAtual] = useState("dayGridMonth");
 
+  // Mapeia as quadras do banco para as colunas do calendário diário
   const resourcesCalendar = quadras.map((q) => ({
     id: q.id,
     title: q.nome,
   }));
 
+  // Filtra e mapeia apenas reservas com status "confirmado" para a grade visual
   const eventsCalendar = reservas
     .filter((r) => r.status === "confirmado")
     .map((r) => ({
@@ -31,7 +33,7 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
       borderColor: "#99f6e4",
     }));
 
-  // 1. Trata especificamente o clique no quadradinho do dia (Visão de Mês)
+  // Ação ao clicar no quadradinho de um dia (Na visão de MÊS)
   const handleCliqueNoDiaDoMes = (info) => {
     const calendarApi = calendarRef.current.getApi();
     if (calendarApi.view.type === "dayGridMonth") {
@@ -41,7 +43,7 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     }
   };
 
-  // 2. Trata o clique nos espaços em branco dos horários (Visão Diária)
+  // Ação ao clicar em um horário vago na grade (Na visão DIÁRIA por quadras)
   const handleSelecaoHorarioVazio = (info) => {
     const calendarApi = calendarRef.current.getApi();
     if (calendarApi.view.type === "resourceTimeGridDay") {
@@ -59,12 +61,25 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     }
   };
 
-  const voltarParaMes = () => {
+  // Ação do botão fixo superior "+ Nova Reserva Manual"
+  const handleAbrirReservaManualFixa = () => {
+    setDadosForm({
+      atleta: "",
+      data: new Date().toISOString().split("T")[0], 
+      horario: "08:00", 
+      quadraId: quadras[0]?.id || "", 
+    });
+    setModalAberto(true);
+  };
+
+  // Volta para o modo de exibição mensal
+  const volverParaMes = () => {
     const calendarApi = calendarRef.current.getApi();
     calendarApi.changeView("dayGridMonth");
     setVisaoAtual("dayGridMonth");
   };
 
+  // Dispara o envio dos dados da reserva manual ao backend no Railway
   const handleSalvarReserva = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -85,7 +100,7 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
 
       if (response.status === 200 || response.status === 201) {
         setModalAberto(false);
-        aoAtualizarDados();
+        aoAtualizarDados(); // Dispara o carregarDados() do arquivo pai
       }
     } catch (error) {
       alert(error.response?.data?.error || "Erro ao criar reserva manual.");
@@ -94,20 +109,33 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     }
   };
 
-  const nomeQuadraSelecionada = quadras.find((q) => q.id === dadosForm.quadraId)?.nome;
-
   return (
     <div className="bg-white p-6 border border-slate-200 rounded-2xl shadow-sm calendar-container space-y-4">
       
-      {visaoAtual === "resourceTimeGridDay" && (
-        <button
-          onClick={voltarParaMes}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition"
-        >
-          ← Voltar para Visão Mensal
-        </button>
-      )}
+      {/* BARRA DE AÇÕES SUPERIOR */}
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          {visaoAtual === "resourceTimeGridDay" ? (
+            <button
+              onClick={volverParaMes}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition"
+            >
+              ← Voltar para Visão Mensal
+            </button>
+          ) : (
+            <span className="text-sm text-slate-400 font-medium">Visão Geral da Arena</span>
+          )}
+        </div>
 
+        <button
+          onClick={handleAbrirReservaManualFixa}
+          className="px-5 py-2.5 bg-[#1e2221] hover:bg-black text-white text-sm font-bold rounded-xl transition shadow-md flex items-center gap-2"
+        >
+          <span className="text-lg leading-none">+</span> Nova Reserva Manual
+        </button>
+      </div>
+
+      {/* CALENDÁRIO COMPLETO */}
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, resourceTimeGridPlugin, interactionPlugin]}
@@ -118,13 +146,10 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         locale={ptBrLocale}
         resources={resourcesCalendar}
         events={eventsCalendar}
-        
         schedulerLicenseKey="GPL-My-Project-Is-Open-Source" 
-        
         selectable={true}
-        dateClick={handleCliqueNoDiaDoMes} // Evento para clique no dia do mês
-        select={handleSelecaoHorarioVazio} // Evento para seleção de bloco de horário vago
-        
+        dateClick={handleCliqueNoDiaDoMes}
+        select={handleSelecaoHorarioVazio}
         headerToolbar={{
           left: "prev,next today",
           center: "title",
@@ -132,21 +157,17 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         }}
       />
 
-      {/* MODAL DE RESERVA MANUAL */}
+      {/* MODAL DE FORMULÁRIO DE RESERVA MANUAL */}
       {modalAberto && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-6 animate-in zoom-in-95 duration-200">
             <div className="space-y-1">
               <h3 className="text-lg font-extrabold text-slate-900">Nova Reserva Manual</h3>
               <p className="text-xs text-slate-400">Agendamento direto pelo balcão da arena</p>
             </div>
 
-            <div className="bg-slate-50 p-3.5 rounded-xl text-xs space-y-1 text-slate-600 font-medium">
-              <p>📍 <span className="font-bold text-slate-800">Quadra:</span> {nomeQuadraSelecionada}</p>
-              <p>📅 <span className="font-bold text-slate-800">Horário:</span> {dadosForm.data.split("-").reverse().join("/")} às {dadosForm.horario}h</p>
-            </div>
-
             <form onSubmit={handleSalvarReserva} className="space-y-4">
+              {/* Campo Nome do Atleta */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 ml-0.5">Nome do Atleta</label>
                 <input
@@ -159,7 +180,50 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              {/* Seleção de Quadras */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 ml-0.5">Quadra</label>
+                <select
+                  required
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                  value={dadosForm.quadraId}
+                  onChange={(e) => setDadosForm({ ...dadosForm, quadraId: e.target.value })}
+                >
+                  <option value="" disabled>Selecione a quadra</option>
+                  {quadras.map((q) => (
+                    <option key={q.id} value={q.id}>{q.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Seleção de Data */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 ml-0.5">Data</label>
+                  <input
+                    type="date"
+                    required
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                    value={dadosForm.data}
+                    onChange={(e) => setDadosForm({ ...dadosForm, data: e.target.value })}
+                  />
+                </div>
+
+                {/* Seleção de Horário */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 ml-0.5">Horário de Início</label>
+                  <input
+                    type="time"
+                    required
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                    value={dadosForm.horario}
+                    onChange={(e) => setDadosForm({ ...dadosForm, horario: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="grid grid-cols-2 gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setModalAberto(false)}

@@ -150,6 +150,108 @@ async function criar(req, res) {
   }
 }
 
+// 💡 NOVA FUNÇÃO: Cria agendamentos manuais vindos do Painel do Admin
+async function criarManual(req, res) {
+  const { nomeAtleta, data, horarioInicio, courtId } = req.body;
+
+  // Recupera o ID do administrador logado para associar à tabela de transações obrigatória
+  const rawAdminId = req.user?.id || req.userId;
+  const adminId = isNaN(Number(rawAdminId)) ? rawAdminId : Number(rawAdminId);
+
+  try {
+    const dataAgendamentoString = data.split('T')[0];
+    const [horas, minutos] = horarioInicio.split(':');
+    
+    // Define a duração padrão de 1 hora para o encerramento do bloco
+    const horaTermino = `${String(Number(horas) + 1).padStart(2, '0')}:${minutos}`;
+
+    const checkFuncionamento = await validarFuncionamento(dataAgendamentoString, horarioInicio);
+    if (!checkFuncionamento.liberado) {
+      return res.status(400).json({ error: checkFuncionamento.motivo });
+    }
+
+    // Valida se não existe nenhum bloqueio geral de manutenção ativo na quadra
+    const bloqueiosAtivos = await prisma.bloqueioQuadra.findMany({
+      where: {
+        quadraId: Number(courtId),
+        data: dataAgendamentoString
+      }
+    });
+
+    const estaNoBloqueio = bloqueiosAtivos.some(bloqueio => {
+      return horarioInicio >= bloqueio.horaInicio && horarioInicio < bloqueio.horaFim;
+    });
+
+    if (estaNoBloqueio) {
+      return res.status(400).json({ error: 'Este horário está bloqueado para a administração.' });
+    }
+
+    // Executa a transação utilizando travas e converte os fusos idêntico à sua função original
+    const booking = await prisma.$transaction(async (tx) => {
+      const lockKey = `${courtId}-${dataAgendamentoString}-${horarioInicio}`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
+
+      const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
+      const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 12, 0, 0));
+
+      const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(horas) + 3, Number(minutos), 0));
+      const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(horas) + 4, Number(minutos), 0));
+
+      const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
+
+      const conflito = await tx.booking.findFirst({
+        where: {
+          courtId: Number(courtId),
+          data: dataFormatada,
+          OR: [
+            { status: 'pago' },
+            { status: 'confirmado' },
+            {
+              status: 'pendente',
+              createdAt: { gte: dezMinutosAtras }
+            }
+          ],
+          AND: [
+            {
+              OR: [
+                { horaInicio: { lte: inicioFormatado }, horaFim: { gt: inicioFormatado } },
+                { horaInicio: { lt: fimFormatado }, horaFim: { gte: fimFormatado } },
+                { horaInicio: { gte: inicioFormatado }, horaFim: { lte: fimFormatado } }
+              ]
+            }
+          ]
+        }
+      });
+
+      if (conflito) {
+        throw new Error('SLOT_TAKEN');
+      }
+
+      // Se seu banco aceitar o nome do atleta avulso em string, você pode mapear
+      // o campo 'nomeAtleta' aqui nas propriedades.
+      return tx.booking.create({
+        data: {
+          userId: adminId, 
+          courtId: Number(courtId),
+          data: dataFormatada,
+          horaInicio: inicioFormatado,
+          horaFim: fimFormatado,
+          status: 'confirmado'
+        },
+        include: { court: true, user: true }
+      });
+    });
+
+    return res.status(201).json(booking);
+  } catch (err) {
+    if (err.message === 'SLOT_TAKEN') {
+      return res.status(409).json({ error: 'Este horário já está reservado.' });
+    }
+    console.error('ERRO AO CRIAR RESERVA MANUAL:', err);
+    return res.status(500).json({ error: 'Erro ao criar reserva no balcão.' });
+  }
+}
+
 // Listar reservas do usuário logado
 async function minhasReservas(req, res) {
   const rawUserId = req.user?.id || req.userId;
@@ -259,12 +361,8 @@ async function horariosDisponiveis(req, res) {
       return res.json({ data, courtId, disponiveis: [], fechado: true });
     }
 
-    // 1. Aplica o filtro padrão do horário de funcionamento
     let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
 
-    // ==========================================================
-    // NOVA LOGICA: Filtragem por Bloqueios Específicos do Administrador
-    // ==========================================================
     const bloqueios = await prisma.bloqueioQuadra.findMany({
       where: {
         quadraId: Number(courtId),
@@ -280,7 +378,6 @@ async function horariosDisponiveis(req, res) {
         return !estaBloqueado;
       });
     }
-    // ==========================================================
 
     if (dataSelecionadaString === hojeString) {
       const horaAtual = agoraBrasilia.getUTCHours();
@@ -348,9 +445,9 @@ async function criarBloqueio(req, res) {
     const bloqueio = await prisma.bloqueioQuadra.create({
       data: {
         quadraId: Number(quadraId),
-        data, // "2026-06-30"
-        horaInicio, // "14:00"
-        horaFim, // "16:00"
+        data, 
+        horaInicio, 
+        horaFim, 
         motivo
       }
     });
@@ -416,4 +513,15 @@ async function buscarPorId(req, res) {
   }
 }
 
-module.exports = { criar, minhasReservas, cancelar, horariosDisponiveis, listarTodas, buscarPorId, criarBloqueio, listarBloqueios, deletarBloqueio };
+module.exports = { 
+  criar, 
+  criarManual,
+  minhasReservas, 
+  cancelar, 
+  horariosDisponiveis, 
+  listarTodas, 
+  buscarPorId, 
+  criarBloqueio, 
+  listarBloqueios, 
+  deletarBloqueio 
+};

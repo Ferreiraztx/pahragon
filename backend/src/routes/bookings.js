@@ -1,7 +1,18 @@
 const express = require('express');
 const router = express.Router();
-// Adicionei 'criarBloqueio' na lista abaixo
-const { criar, minhasReservas, cancelar, horariosDisponiveis, listarTodas, buscarPorId, criarBloqueio, listarBloqueios, deletarBloqueio } = require('../controllers/bookingController');
+// 💡 ADICIONADO: 'criarManual' na lista de importações abaixo
+const { 
+  criar, 
+  minhasReservas, 
+  cancelar, 
+  horariosDisponiveis, 
+  listarTodas, 
+  buscarPorId, 
+  criarBloqueio, 
+  listarBloqueios, 
+  deletarBloqueio,
+  criarManual 
+} = require('../controllers/bookingController');
 const auth = require('../middlewares/auth');
 
 router.get('/disponiveis', horariosDisponiveis);
@@ -13,5 +24,7 @@ router.get('/detalhes/:id', auth, buscarPorId);
 router.post('/bloqueios', auth, criarBloqueio);
 router.get('/bloqueios', auth, listarBloqueios);
 router.delete('/bloqueios/:id', auth, deletarBloqueio);
+
+router.post('/manual', auth, criarManual);
 
 module.exports = router;
