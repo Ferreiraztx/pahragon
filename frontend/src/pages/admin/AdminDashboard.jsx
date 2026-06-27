@@ -470,10 +470,26 @@ export default function AdminDashboard() {
     }
   }
 
-  const reservasFiltradasPorData = reservas.filter((r) => {
-    const dataReservaISO = new Date(r.data).toISOString().split("T")[0];
+  const reservasFiltradasPorData = (reservas || []).filter((r) => {
+    if (!r || !r.data) return false;
+
+    // Se o item for um bloqueio ou torneio que já injetamos a string formatada, pegamos direto
+    let dataReservaISO;
+    if (typeof r.data === "string") {
+      dataReservaISO = r.data.split("T")[0];
+    } else {
+      // Se for um objeto Date nativo das reservas comuns, tratamos sem deixar o fuso retroceder o dia
+      const d = new Date(r.data);
+      const ano = d.getUTCFullYear();
+      const mes = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const dia = String(d.getUTCDate()).padStart(2, "0");
+      dataReservaISO = `${ano}-${mes}-${dia}`;
+    }
+
+    // Mantém a sua lógica de range do Admin se você usar inputs de filtro, mas sem distorcer o dia
     if (dataInicio && dataReservaISO < dataInicio) return false;
     if (dataFim && dataReservaISO > dataFim) return false;
+
     return true;
   });
 
@@ -945,7 +961,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <AgendaAdmin
-                  reservas={[...reservasFiltradasPorData, ...torneios]}
+                  reservas={reservasFiltradasPorData}
                   quadras={quadras}
                   token={token}
                   aoAtualizarDados={carregarDados}
