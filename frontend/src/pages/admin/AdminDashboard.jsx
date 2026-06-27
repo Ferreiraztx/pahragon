@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   const [atletas, setAtletas] = useState([]);
   const [atletaSelecionado, setAtletaSelecionado] = useState(null);
   const [horarios, setHorarios] = useState([]);
+  const [quadrasDisponiveis, setQuadrasDisponiveis] = useState([]);
 
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -37,9 +38,11 @@ export default function AdminDashboard() {
     nome: "",
     descricao: "",
     data: "",
+    dataFim: "",
     vagas: "",
     preco: "",
     whatsapp: "",
+    quadras:[],
   });
   const [mensagem, setMensagem] = useState("");
   const navigate = useNavigate();
@@ -313,6 +316,7 @@ export default function AdminDashboard() {
         nome: novoTorneio.nome,
         descricao: novoTorneio.descricao,
         data: novoTorneio.data,
+        dataFim: novoTorneio.dataFim, // 👈 ADICIONADO
         vagas: Number(novoTorneio.vagas),
         preco: Number(novoTorneio.preco),
         whatsapp: whatsappLimpo,
@@ -327,17 +331,14 @@ export default function AdminDashboard() {
         nome: "",
         descricao: "",
         data: "",
+        dataFim: "", // 👈 Limpa o campo
         vagas: "",
         preco: "",
         whatsapp: "",
       });
       carregarDados();
     } catch (error) {
-      console.error(
-        "Erro ao publicar torneio:",
-        error.response?.data || error.message,
-      );
-      setMensagem("❌ Erro ao publicar torneio. Verifique os dados.");
+      setMensagem("❌ Erro ao publicar torneio.");
     }
   }
 
@@ -1098,10 +1099,14 @@ export default function AdminDashboard() {
                     ) : (
                       torneios.map((t) => {
                         const irParaWhatsappDoTorneio = () => {
-                          let numeroDestino = t.whatsapp ? String(t.whatsapp).replace(/\D/g, "") : "";
-                          
+                          let numeroDestino = t.whatsapp
+                            ? String(t.whatsapp).replace(/\D/g, "")
+                            : "";
+
                           if (!numeroDestino) {
-                            alert("Este torneio não possui um número de contato cadastrado.");
+                            alert(
+                              "Este torneio não possui um número de contato cadastrado.",
+                            );
                             return;
                           }
 
@@ -1130,17 +1135,26 @@ export default function AdminDashboard() {
                                 <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-y-1">
                                   <span>👥 {t.vagas} duplas/vagas totais</span>
                                   <span className="mx-2 text-slate-300">•</span>
-                                  <span>Inscrição: <span className="font-mono text-slate-700 font-bold">R$ {Number(t.preco).toFixed(2)}</span></span>
+                                  <span>
+                                    Inscrição:{" "}
+                                    <span className="font-mono text-slate-700 font-bold">
+                                      R$ {Number(t.preco).toFixed(2)}
+                                    </span>
+                                  </span>
                                   {t.whatsapp && (
                                     <>
-                                      <span className="mx-2 text-slate-300">•</span>
-                                      <span className="text-slate-600 font-medium">📞 {t.whatsapp}</span>
+                                      <span className="mx-2 text-slate-300">
+                                        •
+                                      </span>
+                                      <span className="text-slate-600 font-medium">
+                                        📞 {t.whatsapp}
+                                      </span>
                                     </>
                                   )}
                                 </p>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                               <button
                                 onClick={irParaWhatsappDoTorneio}
@@ -1149,7 +1163,9 @@ export default function AdminDashboard() {
                                 Inscrição
                               </button>
                               <button
-                                onClick={() => solicitarDeletarTorneio(t.id, t.nome)}
+                                onClick={() =>
+                                  solicitarDeletarTorneio(t.id, t.nome)
+                                }
                                 className="text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
                               >
                                 Cancelar
@@ -1188,22 +1204,42 @@ export default function AdminDashboard() {
                       }
                     />
 
-                    <div className="flex flex-col gap-1 w-full">
-                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
-                        Data do Torneio
-                      </span>
-                      <input
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm appearance-none items-center justify-center text-left"
-                        type="datetime-local"
-                        value={novoTorneio.data}
-                        onChange={(e) =>
-                          setNovoTorneio({
-                            ...novoTorneio,
-                            data: e.target.value,
-                          })
-                        }
-                        required
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1 w-full">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
+                          Início do Torneio
+                        </span>
+                        <input
+                          className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm"
+                          type="datetime-local"
+                          value={novoTorneio.data}
+                          onChange={(e) =>
+                            setNovoTorneio({
+                              ...novoTorneio,
+                              data: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1 w-full">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
+                          Término do Torneio
+                        </span>
+                        <input
+                          className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm"
+                          type="datetime-local"
+                          value={novoTorneio.dataFim}
+                          onChange={(e) =>
+                            setNovoTorneio({
+                              ...novoTorneio,
+                              dataFim: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1350,8 +1386,7 @@ export default function AdminDashboard() {
                     Horário de Funcionamento
                   </h2>
                   <p className="text-slate-400 text-sm font-light">
-                    Desative um dia para fechar as reservas nele
-                    completamente.
+                    Desative um dia para fechar as reservas nele completamente.
                   </p>
                 </div>
 

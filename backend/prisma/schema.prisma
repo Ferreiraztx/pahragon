@@ -74,11 +74,13 @@ model Tournament {
   nome        String
   descricao   String?
   data        DateTime
+  dataFim     DateTime
   vagas       Int
   preco       Float
   status      String   @default("aberto")
   createdAt   DateTime @default(now())
   whatsapp    String?
+  quadras     String[]
 }
 
 model HorarioFuncionamento {
