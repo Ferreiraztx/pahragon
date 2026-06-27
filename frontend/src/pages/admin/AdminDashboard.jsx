@@ -33,7 +33,6 @@ export default function AdminDashboard() {
     precoPorHora: "",
   });
 
-  // 💡 ATUALIZADO: Adicionado a propriedade 'whatsapp' no estado inicial do formulário
   const [novoTorneio, setNovoTorneio] = useState({
     nome: "",
     descricao: "",
@@ -46,7 +45,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [modalConfirmacao, setModalConfirmacao] = useState({
-    aberto: false,
+    open: false,
     titulo: "",
     mensagem: "",
     acaoConfirmar: null,
@@ -175,7 +174,7 @@ export default function AdminDashboard() {
         carregarBloqueios();
       } else {
         setAviso({
-          alert: true,
+          aberto: true,
           tipo: "erro",
           mensagem: "Erro ao cancelar o bloqueio.",
         });
@@ -303,12 +302,9 @@ export default function AdminDashboard() {
     }
   }
 
-  // 💡 FUNÇÃO ATUALIZADA: Agora despacha corretamente o whatsapp para a API
-  // 💡 FUNÇÃO ATUALIZADA: Envia explicitamente o whatsapp para a API
   async function criarTorneio(e) {
     e.preventDefault();
     try {
-      // Remove espaços, parênteses e traços caso o usuário digite formatado
       const whatsappLimpo = novoTorneio.whatsapp
         ? novoTorneio.whatsapp.replace(/\D/g, "")
         : "";
@@ -319,7 +315,7 @@ export default function AdminDashboard() {
         data: novoTorneio.data,
         vagas: Number(novoTorneio.vagas),
         preco: Number(novoTorneio.preco),
-        whatsapp: whatsappLimpo, // 👈 Enviando o campo sanitizado
+        whatsapp: whatsappLimpo,
       };
 
       await api.post("/tournaments", dadosParaEnviar, {
@@ -403,7 +399,7 @@ export default function AdminDashboard() {
 
     switch (tipo) {
       case "hoje":
-        setDataInicio(isoString(hoje));
+        setDataInicio(isoString(open));
         setDataFim(isoString(hoje));
         break;
       case "semana": {
@@ -1100,39 +1096,83 @@ export default function AdminDashboard() {
                         Sem competições agendadas.
                       </p>
                     ) : (
-                      torneios.map((t) => (
-                        <div
-                          key={t.id}
-                          className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-slate-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all"
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-                            <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">
-                              {formatarDataLateral(t.data)}
-                            </span>
-                            <div>
-                              <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
-                                {t.nome}
-                              </h4>
-                              <p className="text-sm text-slate-500 mt-1">
-                                👥 {t.vagas} duplas/vagas totais{" "}
-                                <span className="mx-2 text-slate-300">•</span>{" "}
-                                Inscrição:{" "}
-                                <span className="font-mono text-slate-700 font-bold">
-                                  R$ {Number(t.preco).toFixed(2)}
-                                </span>
-                              </p>
+                      torneios.map((t) => {
+                        const irParaWhatsappDoTorneio = () => {
+                          let numeroDestino = t.whatsapp
+                            ? String(t.whatsapp).replace(/\D/g, "")
+                            : "";
+
+                          if (!numeroDestino) {
+                            alert(
+                              "Este torneio não possui um número de contato cadastrado.",
+                            );
+                            return;
+                          }
+
+                          if (!numeroDestino.startsWith("55")) {
+                            numeroDestino = `55${numeroDestino}`;
+                          }
+
+                          const mensagem = `Olá! Vi o torneio "${t.nome}" no painel da arena e gostaria de saber se ainda restam vagas disponíveis para inscrição?`;
+                          const link = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(mensagem)}`;
+                          window.open(link, "_blank");
+                        };
+
+                        return (
+                          <div
+                            key={t.id}
+                            className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-slate-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+                              <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">
+                                {formatarDataLateral(t.data)}
+                              </span>
+                              <div>
+                                <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
+                                  {t.nome}
+                                </h4>
+                                <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-y-1">
+                                  <span>👥 {t.vagas} duplas/vagas totais</span>
+                                  <span className="mx-2 text-slate-300">•</span>
+                                  <span>
+                                    Inscrição:{" "}
+                                    <span className="font-mono text-slate-700 font-bold">
+                                      R$ {Number(t.preco).toFixed(2)}
+                                    </span>
+                                  </span>
+                                  {t.whatsapp && (
+                                    <>
+                                      <span className="mx-2 text-slate-300">
+                                        •
+                                      </span>
+                                      <span className="text-slate-600 font-medium">
+                                        📞 {t.whatsapp}
+                                      </span>
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                              <button
+                                onClick={irParaWhatsappDoTorneio}
+                                className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-3 py-2 rounded-xl hover:bg-emerald-100 transition-colors"
+                              >
+                                Inscrição
+                              </button>
+                              <button
+                                onClick={() =>
+                                  solicitarDeletarTorneio(t.id, t.nome)
+                                }
+                                className="text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
+                              >
+                                Cancelar
+                              </button>
                             </div>
                           </div>
-                          <button
-                            onClick={() =>
-                              solicitarDeletarTorneio(t.id, t.nome)
-                            }
-                            className="self-start sm:self-auto text-sm font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -1211,15 +1251,14 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
-                        WhatsApp de Contato
+                        WhatsApp de Contato *
                       </span>
                       <input
                         className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
-                        placeholder="Ex: 41999999999 (Sem espaços ou traços)"
+                        placeholder="Ex: 41999999999 (DDD + Número)"
                         type="text"
-                        // 1. Altera o value para ler do objeto
+                        required
                         value={novoTorneio.whatsapp}
-                        // 2. Altera o onChange para atualizar a propriedade certa do objeto
                         onChange={(e) =>
                           setNovoTorneio({
                             ...novoTorneio,
@@ -1326,8 +1365,7 @@ export default function AdminDashboard() {
                     Horário de Funcionamento
                   </h2>
                   <p className="text-slate-400 text-sm font-light">
-                    Desative um dia para fechar as reservas nele
-                    automaticamente.
+                    Desative um dia para fechar as reservas nele completamente.
                   </p>
                 </div>
 

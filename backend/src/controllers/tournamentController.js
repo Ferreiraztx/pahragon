@@ -11,8 +11,13 @@ async function listar(req, res) {
 }
 
 async function criar(req, res) {
-  // 💡 ADICIONADO: whatsapp recebido do front-end
   const { nome, descricao, data, vagas, preco, whatsapp } = req.body 
+
+  // 💡 VALIDAÇÃO: Impede a criação se o whatsapp estiver em branco
+  if (!whatsapp || whatsapp.trim() === "") {
+    return res.status(400).json({ error: 'O número de WhatsApp é obrigatório para criar um torneio.' })
+  }
+
   try {
     const tournament = await prisma.tournament.create({
       data: { 
@@ -21,8 +26,7 @@ async function criar(req, res) {
         data: new Date(data), 
         vagas: Number(vagas), 
         preco: Number(preco),
-        // 💡 ADICIONADO: Salva o número ou deixa null se estiver vazio
-        whatsapp: whatsapp || null 
+        whatsapp: whatsapp
       }
     })
     return res.status(201).json(tournament)
