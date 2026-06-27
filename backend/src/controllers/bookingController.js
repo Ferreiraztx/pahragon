@@ -20,11 +20,10 @@ async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
   return { liberado: true };
 }
 
-// Criar reserva (Versão Corrigida com Validação Local e Lógica de Conflito Blindada)
+// Criar reserva (Versão Corrigida com Validação Local e Lógica de Conflito Blindada + Trava de Bloqueios)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim } = req.body;
   
-  // 💡 CORREÇÃO AQUI: Lê do objeto decodificado pelo middleware e garante que seja número
   const rawUserId = req.user?.id || req.userId;
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
@@ -57,56 +56,64 @@ async function criar(req, res) {
       return res.status(400).json({ error: checkFuncionamento.motivo });
     }
 
+    // ==========================================================
+    // TRAVA COMPLEMENTAR: Verifica se o horário escolhido não está bloqueado
+    // ==========================================================
+    const bloqueiosAtivos = await prisma.bloqueioQuadra.findMany({
+      where: {
+        quadraId: Number(courtId),
+        data: dataAgendamentoString
+      }
+    });
+
+    const estaNoBloqueio = bloqueiosAtivos.some(bloqueio => {
+      return horaAgendamentoStr >= bloqueio.horaInicio && horaAgendamentoStr < bloqueio.horaFim;
+    });
+
+    if (estaNoBloqueio) {
+      return res.status(400).json({ error: 'Este horário está indisponível ou bloqueado para manutenção.' });
+    }
+    // ==========================================================
+
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horaInicio}`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
 
       const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
 
-      // Desestruturando os pedaços da data e hora para forçar o UTC puro
       const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
       const [hInicioStr, mInicioStr] = horaAgendamentoStr.split(':');
       const [hFimStr, mFimStr] = horaFim.split('T')[1].substring(0, 5).split(':');
 
       const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 12, 0, 0));
 
-      // ATENÇÃO: Salvando os horários em UTC correspondentes ao horário selecionado
       const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicioStr) + 3, Number(mInicioStr), 0));
       const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFimStr) + 3, Number(mFimStr), 0));
 
-      // ==========================================================
-      // CORREÇÃO CRÍTICA: QUERY DE CONFLITO BLINDADA
-      // ==========================================================
       const conflito = await tx.booking.findFirst({
         where: {
           courtId: Number(courtId),
           data: dataFormatada,
-          // 1. Só gera conflito se o status for realmente ativo
           OR: [
             { status: 'pago' },
             { status: 'confirmado' },
             {
-              // Se for pendente, só gera conflito se foi criado nos últimos 10 minutos
               status: 'pendente',
               createdAt: { gte: dezMinutosAtras }
             }
           ],
-          // 2. Verifica a interseção de horários de forma isolada
           AND: [
             {
               OR: [
                 {
-                  // Caso 1: O início da nova reserva cai dentro de uma existente
                   horaInicio: { lte: inicioFormatado },
                   horaFim: { gt: inicioFormatado }
                 },
                 {
-                  // Caso 2: O fim da nova reserva cai dentro de uma existente
                   horaInicio: { lt: fimFormatado },
                   horaFim: { gte: fimFormatado }
                 },
                 {
-                  // Caso 3: A nova reserva engloba completamente uma existente por fora
                   horaInicio: { gte: inicioFormatado },
                   horaFim: { lte: fimFormatado }
                 }
@@ -122,7 +129,7 @@ async function criar(req, res) {
 
       return tx.booking.create({
         data: {
-          userId, // 💡 Agora vai o ID numérico correto!
+          userId, 
           courtId: Number(courtId),
           data: dataFormatada,
           horaInicio: inicioFormatado,
@@ -143,9 +150,8 @@ async function criar(req, res) {
   }
 }
 
-// Listar reservas do usuário logado (Versão Corrigida com ordenação invertida)
+// Listar reservas do usuário logado
 async function minhasReservas(req, res) {
-  // 💡 CORREÇÃO AQUI
   const rawUserId = req.user?.id || req.userId;
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
@@ -167,7 +173,6 @@ async function minhasReservas(req, res) {
 // Cancelar reserva
 async function cancelar(req, res) {
   const { id } = req.params;
-  // 💡 CORREÇÃO AQUI
   const rawUserId = req.user?.id || req.userId;
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
@@ -195,7 +200,7 @@ async function cancelar(req, res) {
   }
 }
 
-// Listar horários disponíveis de uma quadra em uma data
+// Listar horários disponíveis de uma quadra em uma data (Injetada lógica de bloqueios)
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
 
@@ -244,16 +249,38 @@ async function horariosDisponiveis(req, res) {
     const dia = String(agoraBrasilia.getUTCDate()).padStart(2, '0');
     const hojeString = `${ano}-${mes}-${dia}`;
 
-      const diaSemanaConsulta = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12)).getUTCDay();
-const horarioDoDia = await prisma.horarioFuncionamento.findUnique({
-  where: { diaSemana: diaSemanaConsulta }
-});
+    const diaSemanaConsulta = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12)).getUTCDay();
+    
+    const horarioDoDia = await prisma.horarioFuncionamento.findUnique({
+      where: { diaSemana: diaSemanaConsulta }
+    });
 
-if (!horarioDoDia || !horarioDoDia.ativo) {
-  return res.json({ data, courtId, disponiveis: [], fechado: true });
-}
+    if (!horarioDoDia || !horarioDoDia.ativo) {
+      return res.json({ data, courtId, disponiveis: [], fechado: true });
+    }
 
-let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
+    // 1. Aplica o filtro padrão do horário de funcionamento
+    let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
+
+    // ==========================================================
+    // NOVA LOGICA: Filtragem por Bloqueios Específicos do Administrador
+    // ==========================================================
+    const bloqueios = await prisma.bloqueioQuadra.findMany({
+      where: {
+        quadraId: Number(courtId),
+        data: dataSelecionadaString
+      }
+    });
+
+    if (bloqueios.length > 0) {
+      disponiveis = disponiveis.filter(hora => {
+        const estaBloqueado = bloqueios.some(bloqueio => {
+          return hora >= bloqueio.horaInicio && hora < bloqueio.horaFim;
+        });
+        return !estaBloqueado;
+      });
+    }
+    // ==========================================================
 
     if (dataSelecionadaString === hojeString) {
       const horaAtual = agoraBrasilia.getUTCHours();
@@ -315,6 +342,24 @@ async function listarTodas(req, res) {
   }
 }
 
+async function criarBloqueio(req, res) {
+  const { quadraId, data, horaInicio, horaFim, motivo } = req.body;
+  try {
+    const bloqueio = await prisma.bloqueioQuadra.create({
+      data: {
+        quadraId: Number(quadraId),
+        data, // "2026-06-30"
+        horaInicio, // "14:00"
+        horaFim, // "16:00"
+        motivo
+      }
+    });
+    return res.status(201).json(bloqueio);
+  } catch (err) {
+    return res.status(500).json({ error: "Erro ao criar bloqueio" });
+  }
+}
+
 async function buscarPorId(req, res) {
   try {
     const { id } = req.params;
@@ -343,4 +388,4 @@ async function buscarPorId(req, res) {
   }
 }
 
-module.exports = { criar, minhasReservas, cancelar, horariosDisponiveis, listarTodas, buscarPorId };
+module.exports = { criar, minhasReservas, cancelar, horariosDisponiveis, listarTodas, buscarPorId, criarBloqueio };

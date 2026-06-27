@@ -54,6 +54,8 @@ model Booking {
   status     String   @default("pendente")
   createdAt  DateTime @default(now())
   payment    Payment?
+
+  bloqueios BloqueioQuadra[]
 }
 
 model Payment {
@@ -84,4 +86,14 @@ model HorarioFuncionamento {
   horaAbertura   String   @default("08:00") // "HH:mm"
   horaFechamento String   @default("23:00") // "HH:mm"
   updatedAt      DateTime @updatedAt
+}
+model BloqueioQuadra {
+  id          Int      @id @default(autoincrement())
+  quadraId    Int
+  data        String   // Salva no formato "YYYY-MM-DD" para evitar fuso horário
+  horaInicio  String   // Ex: "08:00"
+  horaFim     String   // Ex: "12:00"
+  motivo      String?  // Ex: "Manutenção da Areia"
+  
+  quadra      Booking   @relation(fields: [quadraId], references: [id])
 }
