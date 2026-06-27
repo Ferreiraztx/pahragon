@@ -1,5 +1,18 @@
 const express = require('express');
 const cors = require('cors');
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
+        connectSrc: ["'self'", "https://accounts.google.com", "*.railway.app"], // mude para a url real da sua api se necessário
+        frameSrc: ["'self'", "https://accounts.google.com"],
+        imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com"], // Permite fotos de perfil do Google
+      },
+    },
+  })
+);
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
