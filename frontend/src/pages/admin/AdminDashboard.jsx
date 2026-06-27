@@ -1211,12 +1211,6 @@ export default function AdminDashboard() {
 
                             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                               <button
-                                onClick={irParaWhatsappDoTorneio}
-                                className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-3 py-2 rounded-xl hover:bg-emerald-100 transition-colors"
-                              >
-                                Inscrição
-                              </button>
-                              <button
                                 onClick={() =>
                                   solicitarDeletarTorneio(t.id, t.nome)
                                 }
