@@ -42,7 +42,7 @@ export default function AdminDashboard() {
     vagas: "",
     preco: "",
     whatsapp: "",
-    quadras:[],
+    quadras: [],
   });
   const [mensagem, setMensagem] = useState("");
   const navigate = useNavigate();
@@ -307,6 +307,12 @@ export default function AdminDashboard() {
 
   async function criarTorneio(e) {
     e.preventDefault();
+
+    if (novoTorneio.quadras.length === 0) {
+      alert("❌ Por favor, selecione pelo menos uma quadra para o torneio.");
+      return;
+    }
+
     try {
       const whatsappLimpo = novoTorneio.whatsapp
         ? novoTorneio.whatsapp.replace(/\D/g, "")
@@ -316,10 +322,11 @@ export default function AdminDashboard() {
         nome: novoTorneio.nome,
         descricao: novoTorneio.descricao,
         data: novoTorneio.data,
-        dataFim: novoTorneio.dataFim, // 👈 ADICIONADO
+        dataFim: novoTorneio.dataFim,
         vagas: Number(novoTorneio.vagas),
         preco: Number(novoTorneio.preco),
         whatsapp: whatsappLimpo,
+        quadras: novoTorneio.quadras, // 👈 Enviando o array de IDs das quadras
       };
 
       await api.post("/tournaments", dadosParaEnviar, {
@@ -331,16 +338,47 @@ export default function AdminDashboard() {
         nome: "",
         descricao: "",
         data: "",
-        dataFim: "", // 👈 Limpa o campo
+        dataFim: "",
         vagas: "",
         preco: "",
         whatsapp: "",
+        quadras: [],
       });
       carregarDados();
     } catch (error) {
-      setMensagem("❌ Erro ao publicar torneio.");
+      console.error(
+        "Erro ao publicar torneio:",
+        error.response?.data || error.message,
+      );
+      setMensagem("❌ Erro ao publicar torneio. Verifique os dados.");
     }
   }
+
+  const lidarSelecaoQuadraTorneio = (courtId) => {
+    const idTexto = String(courtId);
+    setNovoTorneio((prev) => {
+      const jaSelecionada = prev.quadras.includes(idTexto);
+      if (jaSelecionada) {
+        return {
+          ...prev,
+          quadras: prev.quadras.filter((id) => id !== idTexto),
+        };
+      } else {
+        return { ...prev, quadras: [...prev.quadras, idTexto] };
+      }
+    });
+  };
+
+  const selecionarTodasAsQuadrasTorneio = () => {
+    if (novoTorneio.quadras.length === quadras.length) {
+      setNovoTorneio((prev) => ({ ...prev, quadras: [] }));
+    } else {
+      setNovoTorneio((prev) => ({
+        ...prev,
+        quadras: quadras.map((q) => String(q.id)),
+      }));
+    }
+  };
 
   function solicitarDeletarQuadra(id, nome) {
     setModalConfirmacao({
@@ -1270,6 +1308,7 @@ export default function AdminDashboard() {
                         required
                       />
                     </div>
+
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
                         WhatsApp de Contato *
@@ -1287,6 +1326,49 @@ export default function AdminDashboard() {
                           })
                         }
                       />
+                    </div>
+
+                    {/* 💡 SEÇÃO ADICIONADA: Seleção visual de quais quadras travar */}
+                    <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
+                          Quadras Usadas no Torneio (Bloqueio automático) *
+                        </span>
+                        <button
+                          type="button"
+                          onClick={selecionarTodasAsQuadrasTorneio}
+                          className="text-xs font-bold text-teal-600 hover:text-teal-700 transition-colors"
+                        >
+                          {novoTorneio.quadras.length === quadras.length
+                            ? "Desmarcar Todas"
+                            : "Selecionar Todas"}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-1">
+                        {quadras.map((q) => {
+                          const estaSelecionada = novoTorneio.quadras.includes(
+                            String(q.id),
+                          );
+                          return (
+                            <button
+                              key={q.id}
+                              type="button"
+                              onClick={() => lidarSelecaoQuadraTorneio(q.id)}
+                              className={`flex items-center justify-center p-3 rounded-xl border text-sm font-bold transition-all ${
+                                estaSelecionada
+                                  ? "bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm"
+                                  : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                              }`}
+                            >
+                              <span className="mr-2">
+                                {estaSelecionada ? "✅" : "⬜"}
+                              </span>
+                              {q.nome}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <button
