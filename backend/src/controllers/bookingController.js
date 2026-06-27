@@ -411,13 +411,10 @@ async function cancelar(req, res) {
   }
 }
 
-// Listar horários disponíveis de uma quadra em uma data (Injetada lógica de bloqueios)
-// Listar horários disponíveis de uma quadra em uma data (Corrigido fuso horário dos Torneios)
-// Listar horários disponíveis de uma quadra em uma data (Versão Ultra Blindada)
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
 
-  const horariocut = Number(courtId); // Garante a versão numérica se necessário
+  const horariocut = Number(courtId);
 
   const horariosBase = [
     '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -437,7 +434,7 @@ async function horariosDisponiveis(req, res) {
       data: { status: 'cancelado' }
     });
 
-    const dataSelecionadaString = data.split('T')[0]; // "2026-06-30"
+    const dataSelecionadaString = data.split('T')[0];
     const [anoD, mesD, diaD] = dataSelecionadaString.split('-');
     const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12, 0, 0));
 
@@ -483,20 +480,21 @@ async function horariosDisponiveis(req, res) {
     }
 
     // ==========================================================
-    // 💡 SOLUÇÃO GLOBAL PARA TORNEIOS (Tratamento de string agnóstico)
+    // 🏆 CORREÇÃO DEFINITIVA: Bloqueio estrito de Torneios por String ISO
     // ==========================================================
-    // Puxa todos os torneios ativos do sistema para fazer a filtragem local via JS (mais seguro contra divergência de tipos do banco)
     const todosTorneios = await prisma.tournament.findMany();
 
-    // Filtra os torneios que pertencem a este dia e que afetam esta quadra
     const torneiosDoDiaDessaQuadra = todosTorneios.filter(t => {
       const quadrasArray = t.quadras || [];
-      // Aceita se o ID estiver salvo como texto "1" ou número 1
-      const pertenceAEstaQuadra = quadrasArray.includes(String(courtId)) || quadrasArray.includes(String(horariocut));
+      const afetaTodasAsQuadras = quadrasArray.length === 0;
+      
+      const pertenceAEstaQuadra = afetaTodasAsQuadras || 
+                                  quadrasArray.includes(String(courtId)) || 
+                                  quadrasArray.includes(String(horariocut));
       
       if (!pertenceAEstaQuadra) return false;
 
-      // Verifica se a data do torneio bate com o dia selecionado (comparando ano-mes-dia puro)
+      // Extração segura baseada nas strings ISO nativas do banco
       const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
       const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
       
@@ -508,14 +506,13 @@ async function horariosDisponiveis(req, res) {
         const [h, m] = hora.split(':').map(Number);
         const horaMinutoTexto = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
-        const estaTrancadoPorTorneio = torneiosDoDiaDessaQuadra.some(t => {
-          const incioTexto = new Date(t.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-          const fimTexto = new Date(t.dataFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        return !torneiosDoDiaDessaQuadra.some(t => {
+          // Captura "HH:MM" puro direto da gravação original (independente de OS ou Timezone)
+          const incioTexto = new Date(t.data).toISOString().substring(11, 16);
+          const fimTexto = new Date(t.dataFim).toISOString().substring(11, 16);
           
           return horaMinutoTexto >= incioTexto && horaMinutoTexto < fimTexto;
         });
-
-        return !estaTrancadoPorTorneio;
       });
     }
     // ==========================================================
