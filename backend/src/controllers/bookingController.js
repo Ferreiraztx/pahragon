@@ -561,13 +561,92 @@ async function horariosDisponiveis(req, res) {
 // Admin: listar todas as reservas
 async function listarTodas(req, res) {
   try {
+    // 1. Busca as reservas tradicionais dos atletas
     const bookings = await prisma.booking.findMany({
       include: { court: true, user: true },
       orderBy: { data: 'asc' }
     });
-    return res.json(bookings);
+
+    // 2. Busca os bloqueios de manutenção normais
+    const bloqueios = await prisma.bloqueioQuadra.findMany({
+      include: { quadra: true }
+    });
+
+    // 3. Busca todos os torneios agendados
+    const torneios = await prisma.tournament.findMany();
+
+    // 4. Formata as reservas comuns
+    const agendaCompleta = bookings.map(b => {
+      // Força a extração de strings limpas para evitar distorções no FullCalendar
+      const dataApenasStr = new Date(b.data).toISOString().split('T')[0];
+      const horaInic = new Date(b.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+      const horaFim = new Date(b.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+      return {
+        id: b.id,
+        data: dataApenasStr,
+        horaInicioStr: horaInic, // 👈 String limpa "08:00"
+        horaFimStr: horaFim,     // 👈 String limpa "09:00"
+        courtId: b.courtId,
+        status: b.status,
+        nomeAvulso: b.nomeAvulso || b.user?.name || b.user?.nome || 'Atleta',
+        tipo: 'reserva',
+        court: b.court,
+        user: b.user
+      };
+    });
+
+    // 5. Injeta os Bloqueios de Manutenção na lista
+    bloqueios.forEach(b => {
+      agendaCompleta.push({
+        id: `bloqueio-${b.id}`,
+        data: b.data, 
+        horaInicioStr: b.horaInicio, // Já é string "08:00" do banco
+        horaFimStr: b.horaFim,       // Já é string "12:00" do banco
+        courtId: b.quadraId,
+        status: 'confirmado',
+        nomeAvulso: `🚧 Bloqueio: ${b.motivo || 'Manutenção'}`,
+        tipo: 'bloqueio',
+        court: b.quadra
+      });
+    });
+
+    // 6. Injeta os Torneios mapeando por quadra afetada com string pura
+    torneios.forEach(t => {
+      const dataInicioStr = new Date(t.data).toISOString().split('T')[0];
+      
+      // Extrai os caracteres de hora idênticos ao que foi digitado no formulário
+      const horaInic = new Date(t.data).toISOString().substring(11, 16);
+      const horaFim = new Date(t.dataFim).toISOString().substring(11, 16);
+      
+      const quadrasArray = t.quadras || [];
+
+      const criarObjetoTorneio = (qId) => ({
+        id: `torneio-${t.id}-${qId}`,
+        data: dataInicioStr,
+        horaInicioStr: horaInic, // 👈 String limpa "09:00"
+        horaFimStr: horaFim,   // 👈 String limpa "13:00"
+        courtId: Number(qId),
+        status: 'confirmado',
+        nomeAvulso: `🏆 Torneio: ${t.nome}`,
+        tipo: 'torneio'
+      });
+
+      if (quadrasArray.length === 0) {
+        [1, 2, 3, 4].forEach(qId => {
+          agendaCompleta.push(criarObjetoTorneio(qId));
+        });
+      } else {
+        quadrasArray.forEach(qId => {
+          agendaCompleta.push(criarObjetoTorneio(qId));
+        });
+      }
+    });
+
+    return res.json(agendaCompleta);
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao listar reservas' });
+    console.error('Erro ao montar lista completa do calendário:', err);
+    return res.status(500).json({ error: 'Erro ao listar reservas da agenda.' });
   }
 }
 

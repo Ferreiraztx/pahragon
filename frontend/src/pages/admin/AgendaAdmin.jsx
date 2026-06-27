@@ -16,7 +16,12 @@ const CORES_QUADRAS = {
   5: { bg: "#ffe4e6", text: "#9f1239", border: "#fecdd3" }, // Rosa (Quadra 6)
 };
 
-export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados }) {
+export default function AgendaAdmin({
+  reservas,
+  quadras,
+  token,
+  aoAtualizarDados,
+}) {
   const calendarRef = useRef(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
@@ -38,7 +43,10 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
   const [visaoAtual, setVisaoAtual] = useState("dayGridMonth");
 
   const resourcesCalendar = quadras
-    .filter((q) => quadraFiltrada === "todas" || String(q.id) === String(quadraFiltrada))
+    .filter(
+      (q) =>
+        quadraFiltrada === "todas" || String(q.id) === String(quadraFiltrada),
+    )
     .map((q) => ({
       id: q.id,
       title: q.nome,
@@ -48,60 +56,71 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     .filter((r) => {
       if (!r) return false;
       const idDaQuadraReserva = r.court?.id || r.courtId;
-      const quadraValida = quadraFiltrada === "todas" || String(idDaQuadraReserva) === String(quadraFiltrada);
+      const quadraValida =
+        quadraFiltrada === "todas" ||
+        String(idDaQuadraReserva) === String(quadraFiltrada);
 
-      if (r.tipo === 'bloqueio' || r.tipo === 'torneio') {
+      if (r.tipo === "bloqueio" || r.tipo === "torneio") {
         return quadraValida;
       }
 
-      const statusValido = r.status && (r.status.startsWith("confirmado") || r.status.startsWith("pendente") || r.status.startsWith("pago"));
+      const statusValido =
+        r.status &&
+        (r.status.startsWith("confirmado") ||
+          r.status.startsWith("pendente") ||
+          r.status.startsWith("pago"));
       return statusValido && quadraValida;
     })
     .map((r) => {
       const idDaQuadraReserva = r.court?.id || r.courtId;
-      
-      // Garante que a data seja uma string no formato YYYY-MM-DD com segurança
-      let dataApenas = new Date().toISOString().split("T")[0];
-      if (r.data) {
-        dataApenas = typeof r.data === "string" ? r.data.split("T")[0] : new Date(r.data).toISOString().split("T")[0];
-      }
 
-      // Converte horaInicio e horaFim com segurança para HH:MM
-      const obterHoraFormatada = (dataHora) => {
-        if (!dataHora) return "00:00";
-        return new Date(dataHora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      };
+      // Captura com segurança a data YYYY-MM-DD
+      const dataApenas = r.data
+        ? r.data.split("T")[0]
+        : new Date().toISOString().split("T")[0];
 
-      const hInicio = obterHoraFormatada(r.horaInicio);
-      const hFim = obterHoraFormatada(r.horaFim);
+      // Pega as strings limpas vindas do back-end ou faz fallback seguro
+      const hInicio =
+        r.horaInicioStr ||
+        new Date(r.horaInicio).toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      const hFim =
+        r.horaFimStr ||
+        new Date(r.horaFim).toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
 
-      // 1. Customização visual se o item for um TORNEIO
-      if (r.tipo === 'torneio') {
+      // 1. Customização visual: TORNEIO
+      if (r.tipo === "torneio") {
         return {
           id: r.id,
           resourceId: idDaQuadraReserva,
           start: `${dataApenas}T${hInicio}:00`,
           end: `${dataApenas}T${hFim}:00`,
           title: r.nomeAvulso || "🏆 Torneio Ativo",
-          backgroundColor: "#065f46", 
+          backgroundColor: "#065f46",
           textColor: "#ffffff",
           borderColor: "#047857",
-          extendedProps: { r, desativarClique: true }
+          extendedProps: { r, desativarClique: true },
         };
       }
 
-      // 2. Customização visual se o item for um BLOQUEIO MANUAL
-      if (r.tipo === 'bloqueio') {
+      // 2. Customização visual: BLOQUEIO MANUAL
+      if (r.tipo === "bloqueio") {
         return {
           id: r.id,
           resourceId: idDaQuadraReserva,
           start: `${dataApenas}T${hInicio}:00`,
           end: `${dataApenas}T${hFim}:00`,
           title: r.nomeAvulso || "🚧 Horário Bloqueado",
-          backgroundColor: "repeating-linear-gradient(45deg, #ffedd5, #ffedd5 10px, #fff7ed 10px, #fff7ed 20px)",
+          backgroundColor:
+            "repeating-linear-gradient(45deg, #ffedd5, #ffedd5 10px, #fff7ed 10px, #fff7ed 20px)",
           textColor: "#9a3412",
           borderColor: "#fdba74",
-          extendedProps: { r, desativarClique: true }
+          extendedProps: { r, desativarClique: true },
         };
       }
 
@@ -120,17 +139,17 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         start: `${dataApenas}T${hInicio}:00`,
         end: `${dataApenas}T${hFim}:00`,
         title: isPendente
-          ? `⚠️ [PENDENTE] ${r.nomeAvulso || r.user?.nome || r.user?.name || "Agendamento"}`
-          : (quadraFiltrada === "todas" && visaoAtual === "dayGridMonth"
-              ? `${r.nomeAvulso || r.user?.nome || r.user?.name || "Agendamento"} (${r.court?.nome || "Quadra"})`
-              : r.nomeAvulso || r.user?.nome || r.user?.name || "Agendamento"),
+          ? `⚠️ [PENDENTE] ${r.nomeAvulso || "Agendamento"}`
+          : quadraFiltrada === "todas" && visaoAtual === "dayGridMonth"
+            ? `${r.nomeAvulso || "Agendamento"} (${r.court?.nome || "Quadra"})`
+            : r.nomeAvulso || "Agendamento",
         backgroundColor: backgroundColor,
         textColor: estileteCor.text,
-        borderColor: isPendente ? "#ef4444" : estileteCor.border, 
+        borderColor: isPendente ? "#ef4444" : estileteCor.border,
         extendedProps: {
           r,
           isPendente,
-          desativarClique: false
+          desativarClique: false,
         },
       };
     });
@@ -148,7 +167,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     const calendarApi = calendarRef.current.getApi();
     if (calendarApi.view.type === "resourceTimeGridDay") {
       if (info.start < new Date()) {
-        setErroMensagem("Não é possível realizar agendamentos em horários passados.");
+        setErroMensagem(
+          "Não é possível realizar agendamentos em horários passados.",
+        );
         setTimeout(() => setErroMensagem(""), 4000);
         return;
       }
@@ -182,16 +203,25 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     const r = info.event.extendedProps.r;
     const isPendente = info.event.extendedProps.isPendente;
 
-    const dataFormatada = typeof r.data === "string" ? r.data.split("T")[0] : new Date(r.data).toISOString().split("T")[0];
-    const hInicio = new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const hFim = new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const dataFormatada =
+      typeof r.data === "string"
+        ? r.data.split("T")[0]
+        : new Date(r.data).toISOString().split("T")[0];
+    const hInicio = new Date(r.horaInicio).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const hFim = new Date(r.horaFim).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     setModoEdicao(true);
     setReservaIdAtual(r.id);
     setErroMensagem("");
     setConfirmarExclusao(false);
     setDadosForm({
-      atleta: r.nomeAvulso || r.user?.nome || r.user?.name || "", 
+      atleta: r.nomeAvulso || r.user?.nome || r.user?.name || "",
       data: dataFormatada,
       horario: hInicio,
       horarioFim: hFim,
@@ -210,7 +240,8 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
       data: new Date().toISOString().split("T")[0],
       horario: "08:00",
       horarioFim: "09:00",
-      quadraId: quadraFiltrada === "todas" ? quadras[0]?.id || "" : quadraFiltrada,
+      quadraId:
+        quadraFiltrada === "todas" ? quadras[0]?.id || "" : quadraFiltrada,
       statusPagamento: "pago",
     });
     setModalAberto(true);
@@ -228,13 +259,17 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     setErroMensagem("");
 
     if (dadosForm.horarioFim <= dadosForm.horario) {
-      setErroMensagem("O horário de término precisa ser maior que o horário de início.");
+      setErroMensagem(
+        "O horário de término precisa ser maior que o horário de início.",
+      );
       setLoading(false);
       return;
     }
 
     try {
-      const url = modoEdicao ? `/bookings/manual/${reservaIdAtual}` : "/bookings/manual";
+      const url = modoEdicao
+        ? `/bookings/manual/${reservaIdAtual}`
+        : "/bookings/manual";
       const method = modoEdicao ? "PUT" : "POST";
 
       const response = await api({
@@ -256,7 +291,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         aoAtualizarDados();
       }
     } catch (error) {
-      setErroMensagem(error.response?.data?.error || "Erro ao processar agendamento.");
+      setErroMensagem(
+        error.response?.data?.error || "Erro ao processar agendamento.",
+      );
     } finally {
       setLoading(false);
     }
@@ -276,7 +313,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         aoAtualizarDados();
       }
     } catch (error) {
-      setErroMensagem(error.response?.data?.error || "Erro ao remover reserva.");
+      setErroMensagem(
+        error.response?.data?.error || "Erro ao remover reserva.",
+      );
     } finally {
       setLoading(false);
     }
@@ -424,7 +463,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                       placeholder="Digite o nome completo"
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                       value={dadosForm.atleta}
-                      onChange={(e) => setDadosForm({ ...dadosForm, atleta: e.target.value })}
+                      onChange={(e) =>
+                        setDadosForm({ ...dadosForm, atleta: e.target.value })
+                      }
                     />
                   </div>
 
@@ -436,7 +477,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                       required
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                       value={dadosForm.quadraId}
-                      onChange={(e) => setDadosForm({ ...dadosForm, quadraId: e.target.value })}
+                      onChange={(e) =>
+                        setDadosForm({ ...dadosForm, quadraId: e.target.value })
+                      }
                     >
                       <option value="" disabled>
                         Selecione a quadra
@@ -460,7 +503,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                         min={modoEdicao ? "" : hojeStringParaInput}
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                         value={dadosForm.data}
-                        onChange={(e) => setDadosForm({ ...dadosForm, data: e.target.value })}
+                        onChange={(e) =>
+                          setDadosForm({ ...dadosForm, data: e.target.value })
+                        }
                       />
                     </div>
 
@@ -473,7 +518,12 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                         required
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                         value={dadosForm.horario}
-                        onChange={(e) => setDadosForm({ ...dadosForm, horario: e.target.value })}
+                        onChange={(e) =>
+                          setDadosForm({
+                            ...dadosForm,
+                            horario: e.target.value,
+                          })
+                        }
                       />
                     </div>
 
@@ -486,7 +536,12 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                         required
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                         value={dadosForm.horarioFim}
-                        onChange={(e) => setDadosForm({ ...dadosForm, horarioFim: e.target.value })}
+                        onChange={(e) =>
+                          setDadosForm({
+                            ...dadosForm,
+                            horarioFim: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -498,14 +553,24 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                     <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
                       <button
                         type="button"
-                        onClick={() => setDadosForm({ ...dadosForm, statusPagamento: "pago" })}
+                        onClick={() =>
+                          setDadosForm({
+                            ...dadosForm,
+                            statusPagamento: "pago",
+                          })
+                        }
                         className={`py-2 rounded-lg text-xs font-extrabold transition-all ${dadosForm.statusPagamento === "pago" ? "bg-emerald-600 text-white shadow" : "text-slate-500 hover:text-slate-800"}`}
                       >
                         ✓ JÁ FOI PAGO
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDadosForm({ ...dadosForm, statusPagamento: "pendente" })}
+                        onClick={() =>
+                          setDadosForm({
+                            ...dadosForm,
+                            statusPagamento: "pendente",
+                          })
+                        }
                         className={`py-2 rounded-lg text-xs font-extrabold transition-all ${dadosForm.statusPagamento === "pendente" ? "bg-amber-500 text-white shadow" : "text-slate-500 hover:text-slate-800"}`}
                       >
                         ⚠ PENDENTE
