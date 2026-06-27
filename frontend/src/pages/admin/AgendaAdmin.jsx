@@ -1,45 +1,68 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import api from "../../services/api";
 
 export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados }) {
+  const calendarRef = useRef(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dadosForm, setDadosForm] = useState({ atleta: "", data: "", horario: "", quadraId: "" });
+  const [visaoAtual, setVisaoAtual] = useState("dayGridMonth");
 
-  // Mapeia suas quadras para o formato que o FullCalendar exige
   const resourcesCalendar = quadras.map((q) => ({
     id: q.id,
     title: q.nome,
   }));
 
-  // Mapeia suas reservas existentes para aparecerem como blocos na grade
-  const eventsCalendar = reservas.map((r) => ({
-    id: r.id,
-    resourceId: r.court?.id || r.courtId,
-    start: `${r.data.split("T")[0]}T${new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
-    end: `${r.data.split("T")[0]}T${new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
-    title: r.user?.nome || "Reservado",
-    backgroundColor: r.status === "confirmado" ? "#ccfbf1" : "#fef3c7",
-    textColor: r.status === "confirmado" ? "#115e59" : "#92400e",
-    borderColor: r.status === "confirmado" ? "#99f6e4" : "#fde68a",
-  }));
+  const eventsCalendar = reservas
+    .filter((r) => r.status === "confirmado")
+    .map((r) => ({
+      id: r.id,
+      resourceId: r.court?.id || r.courtId,
+      start: `${r.data.split("T")[0]}T${new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
+      end: `${r.data.split("T")[0]}T${new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
+      title: r.user?.nome || "Confirmado",
+      backgroundColor: "#ccfbf1",
+      textColor: "#115e59",
+      borderColor: "#99f6e4",
+    }));
 
-  const handleCliqueGrade = (info) => {
-    const dataSelecionada = info.startStr.split("T")[0];
-    const horarioSelecionado = info.startStr.split("T")[1].substring(0, 5);
-    const idDaQuadra = info.resource.id;
+  // 1. Trata especificamente o clique no quadradinho do dia (Visão de Mês)
+  const handleCliqueNoDiaDoMes = (info) => {
+    const calendarApi = calendarRef.current.getApi();
+    if (calendarApi.view.type === "dayGridMonth") {
+      calendarApi.gotoDate(info.dateStr); 
+      calendarApi.changeView("resourceTimeGridDay"); 
+      setVisaoAtual("resourceTimeGridDay");
+    }
+  };
 
-    setDadosForm({
-      atleta: "",
-      data: dataSelecionada,
-      horario: horarioSelecionado,
-      quadraId: idDaQuadra,
-    });
-    setModalAberto(true);
+  // 2. Trata o clique nos espaços em branco dos horários (Visão Diária)
+  const handleSelecaoHorarioVazio = (info) => {
+    const calendarApi = calendarRef.current.getApi();
+    if (calendarApi.view.type === "resourceTimeGridDay") {
+      const dataSelecionada = info.startStr.split("T")[0];
+      const horarioSelecionado = info.startStr.split("T")[1].substring(0, 5);
+      const idDaQuadra = info.resource.id;
+
+      setDadosForm({
+        atleta: "",
+        data: dataSelecionada,
+        horario: horarioSelecionado,
+        quadraId: idDaQuadra,
+      });
+      setModalAberto(true);
+    }
+  };
+
+  const voltarParaMes = () => {
+    const calendarApi = calendarRef.current.getApi();
+    calendarApi.changeView("dayGridMonth");
+    setVisaoAtual("dayGridMonth");
   };
 
   const handleSalvarReserva = async (e) => {
@@ -47,7 +70,6 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     setLoading(true);
 
     try {
-      // Ajuste o endpoint conforme a regra do seu backend
       const response = await api.post(
         "/bookings/manual",
         {
@@ -63,7 +85,7 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
 
       if (response.status === 200 || response.status === 201) {
         setModalAberto(false);
-        aoAtualizarDados(); // Recarrega os dados na tela principal
+        aoAtualizarDados();
       }
     } catch (error) {
       alert(error.response?.data?.error || "Erro ao criar reserva manual.");
@@ -75,18 +97,34 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
   const nomeQuadraSelecionada = quadras.find((q) => q.id === dadosForm.quadraId)?.nome;
 
   return (
-    <div className="bg-white p-6 border border-slate-200 rounded-2xl shadow-sm calendar-container">
+    <div className="bg-white p-6 border border-slate-200 rounded-2xl shadow-sm calendar-container space-y-4">
+      
+      {visaoAtual === "resourceTimeGridDay" && (
+        <button
+          onClick={voltarParaMes}
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition"
+        >
+          ← Voltar para Visão Mensal
+        </button>
+      )}
+
       <FullCalendar
-        plugins={[resourceTimeGridPlugin, interactionPlugin]}
-        initialView="resourceTimeGridDay"
+        ref={calendarRef}
+        plugins={[dayGridPlugin, resourceTimeGridPlugin, interactionPlugin]}
+        initialView="dayGridMonth"
         allDaySlot={false}
         slotMinTime="07:00:00"
         slotMaxTime="23:00:00"
         locale={ptBrLocale}
         resources={resourcesCalendar}
         events={eventsCalendar}
+        
+        schedulerLicenseKey="GPL-My-Project-Is-Open-Source" 
+        
         selectable={true}
-        select={handleCliqueGrade}
+        dateClick={handleCliqueNoDiaDoMes} // Evento para clique no dia do mês
+        select={handleSelecaoHorarioVazio} // Evento para seleção de bloco de horário vago
+        
         headerToolbar={{
           left: "prev,next today",
           center: "title",
@@ -94,7 +132,7 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         }}
       />
 
-      {/* MODAL DE RESERVA MANUAL COM SEU DESIGN */}
+      {/* MODAL DE RESERVA MANUAL */}
       {modalAberto && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-6">
