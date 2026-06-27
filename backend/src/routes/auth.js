@@ -12,5 +12,6 @@ router.post('/google', loginGoogle);
 router.put('/perfil', requireAuth, atualizarPerfil);
 router.get('/perfil', requireAuth, obterPerfil);
 router.get('/usuarios', requireAuth, listarAtletas);
+router.post('/logout', authController.logout);
 
 module.exports = router;
