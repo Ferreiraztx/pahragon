@@ -1392,6 +1392,7 @@ export default function AdminDashboard() {
             )}
 
             {/* GESTÃO DE QUADRAS (BLOQUEIOS) */}
+            {/* GESTÃO DE QUADRAS (BLOQUEIOS) */}
             {aba === "gestao" && (
               <div className="space-y-8 animate-in fade-in duration-500">
                 <div>
@@ -1545,49 +1546,63 @@ export default function AdminDashboard() {
                         Nenhum horário está bloqueado no momento.
                       </p>
                     ) : (
-                      bloqueios.map((b) => (
-                        <div
-                          key={b.id}
-                          className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all"
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-                            <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg shrink-0">
-                              {formatarDataLateral(b.data.replace(/-/g, "/"))}
-                            </span>
-                            <div>
-                              <h4 className="font-extrabold text-slate-900 text-base">
-                                {b.quadra?.nome || `Quadra #${b.quadraId}`}
-                              </h4>
-                              <p className="text-sm text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2">
-                                <span className="font-mono text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded text-xs">
-                                  ⏰ {b.horaInicio} às {b.horaFim}
-                                </span>
-                                {b.motivo && (
-                                  <>
-                                    <span className="text-slate-300">•</span>
-                                    <span className="italic text-slate-400 text-xs">
-                                      {b.motivo}
-                                    </span>
-                                  </>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeletarBloqueio(
-                                b.id,
-                                formatarDataLateral(b.data),
-                                b.quadra?.nome,
-                              )
-                            }
-                            className="self-start sm:self-auto text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
+                      bloqueios.map((b) => {
+                        // Força a formatação segura da data com barras locais antes de renderizar
+                        const dataFormatadaSegura = formatarDataLateral(
+                          b.data.replace(/-/g, "/"),
+                        );
+
+                        // Busca o nome real da quadra baseado no ID para evitar o 'undefined'
+                        const nomeDaQuadra =
+                          b.quadra?.nome ||
+                          quadras.find((q) => q.id === b.quadraId)?.nome ||
+                          `Quadra #${b.quadraId}`;
+
+                        return (
+                          <div
+                            key={b.id}
+                            className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all"
                           >
-                            Remover Bloqueio
-                          </button>
-                        </div>
-                      ))
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+                              <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg shrink-0">
+                                {dataFormatadaSegura}
+                              </span>
+                              <div>
+                                <h4 className="font-extrabold text-slate-900 text-base">
+                                  {nomeDaQuadra}
+                                </h4>
+                                <p className="text-sm text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2">
+                                  <span className="font-mono text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded text-xs">
+                                    ⏰ {b.horaInicio} às {b.horaFim}
+                                  </span>
+                                  {b.motivo && (
+                                    <>
+                                      <span className="text-slate-300">•</span>
+                                      <span className="italic text-slate-400 text-xs">
+                                        {b.motivo}
+                                      </span>
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              // Passa os valores já formatados e sem erro de fuso para o modal de confirmação
+                              onClick={() =>
+                                setModalConfirmar({
+                                  aberto: true,
+                                  id: b.id,
+                                  texto: `Deseja realmente cancelar o bloqueio da ${nomeDaQuadra} no dia ${dataFormatadaSegura}?`,
+                                })
+                              }
+                              className="self-start sm:self-auto text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
+                            >
+                              Remover Bloqueio
+                            </button>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
