@@ -1682,15 +1682,16 @@ export default function AdminDashboard() {
                   </form>
                 </div>
 
+                {/* SEÇÃO 1: BLOQUEIOS MANUAIS */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">
-                    Bloqueios Ativos
+                    Bloqueios Manuais Ativos
                   </h3>
 
                   <div className="grid grid-cols-1 gap-3">
                     {bloqueios.length === 0 ? (
                       <p className="text-slate-400 text-sm font-light pl-1 bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
-                        Nenhum horário está bloqueado no momento.
+                        Nenhum horário de manutenção bloqueado no momento.
                       </p>
                     ) : (
                       bloqueios.map((b) => {
@@ -1743,6 +1744,81 @@ export default function AdminDashboard() {
                             >
                               Remover Bloqueio
                             </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 💡 SEÇÃO 2: BLOQUEIOS DINÂMICOS POR TORNEIO */}
+                <div className="space-y-4 pt-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">
+                    Bloqueios Gerados por Torneios
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {torneios.length === 0 ? (
+                      <p className="text-slate-400 text-sm font-light pl-1 bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
+                        Nenhum torneio ativo ocupando quadras no momento.
+                      </p>
+                    ) : (
+                      torneios.map((t) => {
+                        const dataInicioTxt = new Date(
+                          t.data,
+                        ).toLocaleDateString("pt-BR");
+                        const horaInicTxt = new Date(t.data).toLocaleTimeString(
+                          "pt-BR",
+                          { hour: "2-digit", minute: "2-digit" },
+                        );
+                        const horaFimTxt = new Date(
+                          t.dataFim,
+                        ).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        });
+
+                        // Transforma os IDs das quadras do torneio em nomes legíveis
+                        const nomesDasQuadras =
+                          t.quadras && t.quadras.length > 0
+                            ? t.quadras
+                                .map(
+                                  (qId) =>
+                                    quadras.find(
+                                      (q) => String(q.id) === String(qId),
+                                    )?.nome || `#${qId}`,
+                                )
+                                .join(", ")
+                            : "Todas as quadras";
+
+                        return (
+                          <div
+                            key={t.id}
+                            className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+                              <span className="self-start text-xs sm:text-sm font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-3 py-1.5 rounded-lg shrink-0">
+                                🏆 Evento
+                              </span>
+                              <div>
+                                <h4 className="font-extrabold text-slate-900 text-base">
+                                  {t.nome}
+                                </h4>
+                                <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-y-1 gap-x-2">
+                                  <span className="font-mono text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded text-xs">
+                                    ⏰ {dataInicioTxt} • {horaInicTxt} às{" "}
+                                    {horaFimTxt}
+                                  </span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="text-xs text-slate-600 font-semibold bg-slate-100 px-2 py-0.5 rounded">
+                                    📍 {nomesDasQuadras}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-slate-400 bg-slate-50 border border-slate-200/60 px-3 py-2 rounded-xl self-start sm:self-auto">
+                              Gerenciado em Torneios
+                            </span>
                           </div>
                         );
                       })

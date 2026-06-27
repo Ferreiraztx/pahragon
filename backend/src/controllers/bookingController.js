@@ -413,8 +413,11 @@ async function cancelar(req, res) {
 
 // Listar horários disponíveis de uma quadra em uma data (Injetada lógica de bloqueios)
 // Listar horários disponíveis de uma quadra em uma data (Corrigido fuso horário dos Torneios)
+// Listar horários disponíveis de uma quadra em uma data (Versão Ultra Blindada)
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
+
+  const horariocut = Number(courtId); // Garante a versão numérica se necessário
 
   const horariosBase = [
     '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -434,7 +437,7 @@ async function horariosDisponiveis(req, res) {
       data: { status: 'cancelado' }
     });
 
-    const dataSelecionadaString = data.split('T')[0];
+    const dataSelecionadaString = data.split('T')[0]; // "2026-06-30"
     const [anoD, mesD, diaD] = dataSelecionadaString.split('-');
     const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12, 0, 0));
 
@@ -445,21 +448,13 @@ async function horariosDisponiveis(req, res) {
         OR: [
           { status: 'pago' },
           { status: 'confirmado' },
-          {
-            status: 'pendente',
-            createdAt: { gte: dezMinutosAtras }
-          }
+          { status: 'pendente', createdAt: { gte: dezMinutosAtras } }
         ]
       }
     });
 
-    const agoraUTC = new Date();
-    const agoraBrasilia = new Date(agoraUTC.getTime() - (3 * 60 * 60 * 1000));
-    
-    const ano = agoraBrasilia.getUTCFullYear();
-    const mes = String(agoraBrasilia.getUTCMonth() + 1).padStart(2, '0');
-    const dia = String(agoraBrasilia.getUTCDate()).padStart(2, '0');
-    const hojeString = `${ano}-${mes}-${dia}`;
+    const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
+    const hojeString = `${agoraBR.getUTCFullYear()}-${String(agoraBR.getUTCMonth() + 1).padStart(2, '0')}-${String(agoraBR.getUTCDate()).padStart(2, '0')}`;
 
     const diaSemanaConsulta = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12)).getUTCDay();
     
@@ -467,14 +462,13 @@ async function horariosDisponiveis(req, res) {
       where: { diaSemana: diaSemanaConsulta }
     });
 
-    // Ajustado de gridDoDia para horarioDoDia para corrigir o bug de inicialização
     if (!horarioDoDia || !horarioDoDia.ativo) {
       return res.json({ data, courtId, disponiveis: [], fechado: true });
     }
 
     let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
 
-    // 1. Filtro de Bloqueios manuais de manutenção
+    // 1. Filtro de Bloqueios de manutenção normais
     const bloqueios = await prisma.bloqueioQuadra.findMany({
       where: {
         quadraId: Number(courtId),
@@ -484,54 +478,51 @@ async function horariosDisponiveis(req, res) {
 
     if (bloqueios.length > 0) {
       disponiveis = disponiveis.filter(hora => {
-        const estaBloqueado = bloqueios.some(bloqueio => {
-          return hora >= bloqueio.horaInicio && hora < bloqueio.horaFim;
-        });
-        return !estaBloqueado;
+        return !bloqueios.some(b => hora >= b.horaInicio && hora < b.horaFim);
       });
     }
 
     // ==========================================================
-    // 💡 INJETADO E CORRIGIDO: Alinhamento de Fuso Horário do Torneio
+    // 💡 SOLUÇÃO GLOBAL PARA TORNEIOS (Tratamento de string agnóstico)
     // ==========================================================
-    // Criamos o início e fim do dia considerando a data selecionada na mesma timezone do banco
-    const dataInicioDia = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 0, 0, 0));
-    const dataFimDia = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 23, 59, 59));
+    // Puxa todos os torneios ativos do sistema para fazer a filtragem local via JS (mais seguro contra divergência de tipos do banco)
+    const todosTorneios = await prisma.tournament.findMany();
 
-    const torneiosDoDia = await prisma.tournament.findMany({
-      where: {
-        quadras: { has: String(courtId) },
-        AND: [
-          { data: { lte: dataFimDia } },
-          { dataFim: { gte: dataInicioDia } }
-        ]
-      }
+    // Filtra os torneios que pertencem a este dia e que afetam esta quadra
+    const torneiosDoDiaDessaQuadra = todosTorneios.filter(t => {
+      const quadrasArray = t.quadras || [];
+      // Aceita se o ID estiver salvo como texto "1" ou número 1
+      const pertenceAEstaQuadra = quadrasArray.includes(String(courtId)) || quadrasArray.includes(String(horariocut));
+      
+      if (!pertenceAEstaQuadra) return false;
+
+      // Verifica se a data do torneio bate com o dia selecionado (comparando ano-mes-dia puro)
+      const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
+      const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
+      
+      return dataSelecionadaString >= dataTorneioStr && dataSelecionadaString <= dataFimTorneioStr;
     });
 
-    if (torneiosDoDia.length > 0) {
+    if (torneiosDoDiaDessaQuadra.length > 0) {
       disponiveis = disponiveis.filter(hora => {
         const [h, m] = hora.split(':').map(Number);
-        
-        // Convertemos o slot de horário atual do loop para String "HH:MM" puro para comparar direto 
-        // com o horário salvo do torneio convertido para texto local (Horário de Brasília)
         const horaMinutoTexto = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
-        const estaNoTorneio = torneiosDoDia.some(t => {
-          // Obtém as strings de hora local (HH:MM) baseadas nos objetos Date salvos no banco
+        const estaTrancadoPorTorneio = torneiosDoDiaDessaQuadra.some(t => {
           const incioTexto = new Date(t.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
           const fimTexto = new Date(t.dataFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
           
           return horaMinutoTexto >= incioTexto && horaMinutoTexto < fimTexto;
         });
 
-        return !estaNoTorneio;
+        return !estaTrancadoPorTorneio;
       });
     }
     // ==========================================================
 
     if (dataSelecionadaString === hojeString) {
-      const horaAtual = agoraBrasilia.getUTCHours();
-      const minutoAtual = agoraBrasilia.getUTCMinutes();
+      const horaAtual = agoraBR.getUTCHours();
+      const minutoAtual = agoraBR.getUTCMinutes();
 
       disponiveis = disponiveis.filter(h => {
         const [hBotao, mBotao] = h.split(':').map(Number);
@@ -543,30 +534,21 @@ async function horariosDisponiveis(req, res) {
 
     disponiveis = disponiveis.filter(horario => {
       const [h, m] = horario.split(':').map(Number);
-      
       const inicioSugerido = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), h + 3, m, 0));
       const fimSugerido = new Date(inicioSugerido.getTime() + (30 * 60 * 1000)); 
 
-      const temConflito = reservas.some(r => {
+      return !reservas.some(r => {
         const rInicio = new Date(r.horaInicio);
         const rFim = new Date(r.horaFim);
         return (inicioSugerido < rFim && fimSugerido > rInicio);
       });
-
-      return !temConflito;
     });
 
     disponiveis = disponiveis.filter((h) => {
       const [hora, min] = h.split(':').map(Number);
-      
       const blocoAnterior = min === 30 ? `${String(hora).padStart(2, '0')}:00` : `${String(hora - 1).padStart(2, '0')}:30`;
       const blocoProximo = min === 30 ? `${String(hora + 1).padStart(2, '0')}:00` : `${String(hora).padStart(2, '0')}:30`;
-      
-      const temAnterior = disponiveis.includes(blocoAnterior);
-      const temProximo = disponiveis.includes(blocoProximo);
-
-      if (!temAnterior && !temProximo) return false; 
-      return true;
+      return disponiveis.includes(blocoAnterior) || disponiveis.includes(blocoProximo);
     });
 
     return res.json({ data, courtId, disponiveis });
