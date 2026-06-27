@@ -6,6 +6,16 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const prisma = new PrismaClient();
 
+// 💡 FUNÇÃO AUXILIAR: Centraliza a configuração de segurança do cookie
+function enviarCookieToken(res, token) {
+  res.cookie('token', token, {
+    httpOnly: true, // 🔒 Impede o JavaScript (front-end) de ler o token. Proteção máxima contra XSS!
+    secure: true,   // 🌐 Força o uso em HTTPS (essencial para Railway/Vercel)
+    sameSite: 'None', // 🔄 Permite cross-origin se o seu front estiver na Vercel e o back no Railway
+    maxAge: 7 * 24 * 60 * 60 * 1000, // Tempo de vida: 7 dias
+  });
+}
+
 async function loginGoogle(req, res) {
   const { token } = req.body;
 
@@ -14,7 +24,6 @@ async function loginGoogle(req, res) {
   }
 
   try {
-    // 1. Valida de forma robusta o token enviado pelo frontend junto ao Google
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
@@ -23,40 +32,39 @@ async function loginGoogle(req, res) {
     const payload = ticket.getPayload();
     const { email, name } = payload;
 
-    // 2. Busca o usuário pelo e-mail
     let user = await prisma.user.findUnique({
       where: { email }
     });
 
-    // 3. Se não existir, cria inserindo o campo correto do banco ('senha') preenchido
     if (!user) {
-      // Cria um hash de uma string qualquer para manter o campo obrigatório seguro e preenchido
       const senhaInutilizada = await bcrypt.hash(Math.random().toString(36).substring(2), 8);
 
       user = await prisma.user.create({
         data: {
           email,
           nome: name,
-          senha: senhaInutilizada, // 💡 Corrigido: 'senha' em vez de 'password'
-          telefone: ""            // Evita quebras caso seu banco exija string no telefone
+          senha: senhaInutilizada,
+          telefone: "" 
         }
       });
     }
 
-    // 4. Gera o token interno padronizado com os outros métodos do sistema ({ id, role })
     const tokenSistema = jwt.sign(
       { id: user.id, role: 'user' }, 
       process.env.JWT_SECRET, 
       { expiresIn: '7d' }
     );
 
-    // Retorna o token e os dados para o frontend salvar
+    // 🍪 Envia o token trancado via Cookie seguro
+    enviarCookieToken(res, tokenSistema);
+
+    // O JSON agora só envia os dados do usuário; o token vai oculto pelos cabeçalhos do navegador
     return res.json({
-      token: tokenSistema,
       user: {
         id: user.id,
         nome: user.nome,
-        email: user.email
+        email: user.email,
+        role: 'user'
       }
     });
 
@@ -88,7 +96,9 @@ async function register(req, res) {
       { expiresIn: '7d' }
     );
 
-    return res.status(201).json({ user: { id: user.id, nome, email }, token });
+    enviarCookieToken(res, token);
+
+    return res.status(201).json({ user: { id: user.id, nome, email, role: 'user' } });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao cadastrar usuário' });
   }
@@ -115,7 +125,9 @@ async function login(req, res) {
       { expiresIn: '7d' }
     );
 
-    return res.json({ user: { id: user.id, nome: user.nome, email }, token });
+    enviarCookieToken(res, token);
+
+    return res.json({ user: { id: user.id, nome: user.nome, email, role: 'user' } });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao fazer login' });
   }
@@ -143,7 +155,9 @@ async function registerAdmin(req, res) {
       { expiresIn: '7d' }
     );
 
-    return res.status(201).json({ admin: { id: admin.id, nome, email }, token });
+    enviarCookieToken(res, token);
+
+    return res.status(201).json({ admin: { id: admin.id, nome, email, role: 'admin' } });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao cadastrar admin' });
   }
@@ -170,55 +184,60 @@ async function loginAdmin(req, res) {
       { expiresIn: '7d' }
     );
 
-    return res.json({ admin: { id: admin.id, nome: admin.nome, email }, token });
+    enviarCookieToken(res, token);
+
+    return res.json({ admin: { id: admin.id, nome: admin.nome, email, role: 'admin' } });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao fazer login' });
   }
 }
 
+// Rota de Logout: Limpa o cookie trancado do navegador
+async function logout(req, res) {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None'
+  });
+  return res.json({ message: 'Sessão encerrada com sucesso.' });
+}
+
 const atualizarPerfil = async (req, res) => {
   try {
-    const userId = req.userId || req.user?.userId || req.user?.id;
+    const userId = req.userId || req.user?.id;
     const dadosAtualizados = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado corretamente.' });
     }
 
-    // Limpa as máscaras visuais (garante que salve apenas números limpos se o banco exigir)
     const cpfLimpo = dadosAtualizados.cpf ? dadosAtualizados.cpf.replace(/\D/g, '') : null;
     const cepLimpo = dadosAtualizados.cep ? dadosAtualizados.cep.replace(/\D/g, '') : null;
     const celularLimpo = dadosAtualizados.celular ? dadosAtualizados.celular.replace(/\D/g, '') : null;
 
-    // Tratamento seguro para ID (tenta usar número, se falhar ou se o banco for string/UUID, usa string)
     const idFormatado = isNaN(Number(userId)) ? userId : Number(userId);
 
-// Dentro de atualizarPerfil no authController.js:
+    const dataNascimentoFormatada = dadosAtualizados.dataNascimento 
+      ? new Date(dadosAtualizados.dataNascimento) 
+      : null;
 
-// 1. Captura a data que vem do req.body (front-end)
-const dataNascimentoFormatada = dadosAtualizados.dataNascimento 
-  ? new Date(dadosAtualizados.dataNascimento) 
-  : null;
+    const dadosParaSalvar = {
+      nome: dadosAtualizados.nome,
+      cpf: cpfLimpo,
+      telefone: celularLimpo,
+      cep: cepLimpo,
+      rua: dadosAtualizados.rua,
+      numero: dadosAtualizados.numero,
+      complemento: dadosAtualizados.complemento,
+      bairro: dadosAtualizados.bairro,
+      cidade: dadosAtualizados.cidade,
+      estado: dadosAtualizados.estado,
+    };
 
-const dadosParaSalvar = {
-  nome: dadosAtualizados.nome,
-  cpf: cpfLimpo,
-  telefone: celularLimpo,
-  cep: cepLimpo,
-  rua: dadosAtualizados.rua,
-  numero: dadosAtualizados.numero,
-  complemento: dadosAtualizados.complemento,
-  bairro: dadosAtualizados.bairro,
-  cidade: dadosAtualizados.cidade,
-  estado: dadosAtualizados.estado,
-};
+    if (dataNascimentoFormatada && !isNaN(dataNascimentoFormatada.getTime())) {
+      dadosParaSalvar.dataNascimento = dataNascimentoFormatada;
+    }
 
-// 2. Só injeta no objeto se a data for válida para o formato do Postgres
-if (dataNascimentoFormatada && !isNaN(dataNascimentoFormatada.getTime())) {
-  dadosParaSalvar.dataNascimento = dataNascimentoFormatada;
-}
-
-    // Executa a atualização no Prisma
     const usuarioAtualizado = await prisma.user.update({
       where: { id: idFormatado }, 
       data: dadosParaSalvar,
@@ -228,44 +247,46 @@ if (dataNascimentoFormatada && !isNaN(dataNascimentoFormatada.getTime())) {
       delete usuarioAtualizado.senha;
     }
 
-    return res.json({ message: 'Perfil atualizado com sucesso!', user: usuarioAtualizado });
+    return res.json({ message: 'Perfil updated!', user: usuarioAtualizado });
 
   } catch (error) {
-    // Esse log detalhado no console do Railway vai nos dizer exatamente qual coluna reclamou
     console.error("ERRO CRÍTICO NO BANCO (PRISMA):", error.message || error);
-    return res.status(500).json({ error: 'Erro interno ao atualizar os dados no banco.' });
+    return res.status(500).json({ error: 'Erro interno ao atualizar os dados.' });
   }
 };
+
 const obterPerfil = async (req, res) => {
   try {
-    const userId = req.userId || req.user?.userId || req.user?.id;
+    const userId = req.userId || req.user?.id;
+    const role = req.userRole || req.user?.role;
 
-    if (!userId) {
+    if (!userId || !role) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
 
-    const usuario = await prisma.user.findUnique({
-      where: { id: Number(userId) },
-    });
+    let usuario = null;
+
+    if (role === 'admin') {
+      usuario = await prisma.admin.findUnique({ where: { id: Number(userId) } });
+    } else {
+      usuario = await prisma.user.findUnique({ where: { id: Number(userId) } });
+    }
 
     if (!usuario) {
       return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
-    // Remove a senha por segurança antes de enviar para o front
     if (usuario.senha) delete usuario.senha;
 
-    return res.json(usuario);
+    return res.json({ ...usuario, role });
   } catch (error) {
     console.error("Erro ao buscar perfil:", error);
-    return res.status(500).json({ error: 'Erro interno ao buscar dados do perfil.' });
+    return res.status(500).json({ error: 'Erro interno ao buscar perfil.' });
   }
 };
 
 const listarAtletas = async (req, res) => {
-    console.log('USER DO TOKEN:', req.user);
   try {
-    // Apenas admin pode listar
     if (req.user?.role !== 'admin') {
       return res.status(403).json({ error: 'Acesso restrito ao administrador.' });
     }
@@ -281,7 +302,6 @@ const listarAtletas = async (req, res) => {
         cidade: true,
         estado: true,
         dataNascimento: true,
-        // senha NÃO é selecionada, então nunca vai pro frontend
       }
     });
 
@@ -292,4 +312,14 @@ const listarAtletas = async (req, res) => {
   }
 };
 
-module.exports = { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil, listarAtletas };
+module.exports = { 
+  register, 
+  login, 
+  registerAdmin, 
+  loginAdmin, 
+  loginGoogle, 
+  atualizarPerfil, 
+  obterPerfil, 
+  listarAtletas,
+  logout // 💡 Adicionada rota de logout para limpar cookies
+};

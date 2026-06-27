@@ -1,13 +1,11 @@
 const jwt = require('jsonwebtoken');
 
 function authMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization;
+  const token = req.cookies.token;
 
   console.log('AUTH HEADER:', authHeader);
 
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
+  if (!token) return res.status(401).json({ error: 'Token não fornecido' });
 
   const token = authHeader.startsWith('Bearer ')
     ? authHeader.slice(7)
