@@ -152,6 +152,7 @@ async function criar(req, res) {
 
 // 💡 FUNÇÃO ATUALIZADA: Com travas para não permitir agendamentos no passado
 // 💡 FUNÇÃO CORRIGIDA: Usa o horário de término do formulário e resolve o bug de escopo
+// 💡 FUNÇÃO ATUALIZADA: Alimenta a tabela de agendamentos E o fluxo de caixa (Payment)
 async function criarManual(req, res) {
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
 
@@ -161,47 +162,27 @@ async function criarManual(req, res) {
   try {
     const dataAgendamentoString = data.split('T')[0];
 
-    // ==========================================================
-    // TRAVA DE SEGURANÇA RETROATIVA
-    // ==========================================================
+    // Trava de fuso horário retroativo
     const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
     const ano = agoraBR.getUTCFullYear();
     const mes = String(agoraBR.getUTCMonth() + 1).padStart(2, '0');
     const dia = String(agoraBR.getUTCDate()).padStart(2, '0');
     const hojeString = `${ano}-${mes}-${dia}`;
-    
     const horaAtualStr = `${String(agoraBR.getUTCHours()).padStart(2, '0')}:${String(agoraBR.getUTCMinutes()).padStart(2, '0')}`;
 
     if (dataAgendamentoString < hojeString) {
       return res.status(400).json({ error: 'Não é possível agendar em um dia que já passou.' });
     }
-
     if (dataAgendamentoString === hojeString && horarioInicio <= horaAtualStr) {
       return res.status(400).json({ error: 'Não é possível agendar em um horário que já passou hoje.' });
     }
-    // ==========================================================
 
     const checkFuncionamento = await validarFuncionamento(dataAgendamentoString, horarioInicio);
     if (!checkFuncionamento.liberado) {
       return res.status(400).json({ error: checkFuncionamento.motivo });
     }
 
-    const bloqueiosAtivos = await prisma.bloqueioQuadra.findMany({
-      where: {
-        quadraId: Number(courtId),
-        data: dataAgendamentoString
-      }
-    });
-
-    const estaNoBloqueio = bloqueiosAtivos.some(bloqueio => {
-      return horarioInicio >= bloqueio.horaInicio && horarioInicio < bloqueio.horaFim;
-    });
-
-    if (estaNoBloqueio) {
-      return res.status(400).json({ error: 'Este horário está bloqueado para a administração.' });
-    }
-
-    // Executa a transação isolando as variáveis corretamente
+    // Executa a transação criando o agendamento e o lançamento financeiro juntos
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horarioInicio}`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
@@ -212,7 +193,6 @@ async function criarManual(req, res) {
       const [hInicio, mInicio] = horarioInicio.split(':');
       const [hFim, mFim] = horarioFim.split(':');
 
-      // Aplica a mesma lógica de fuso (+3 horas) que o seu método original 'criar' usa
       const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicio) + 3, Number(mInicio), 0));
       const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFim) + 3, Number(mFim), 0));
 
@@ -223,12 +203,8 @@ async function criarManual(req, res) {
           courtId: Number(courtId),
           data: dataFormatada,
           OR: [
-            { status: 'pago' },
             { status: 'confirmado' },
-            {
-              status: 'pendente',
-              createdAt: { gte: dezMinutosAtras }
-            }
+            { status: 'pendente' }
           ],
           AND: [
             {
@@ -246,7 +222,13 @@ async function criarManual(req, res) {
         throw new Error('SLOT_TAKEN');
       }
 
-      return tx.booking.create({
+      // 1. Puxa os dados da quadra para calcular o valor dinamicamente baseado nas horas
+      const quadra = await tx.court.findUnique({ where: { id: Number(courtId) } });
+      const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
+      const valorCalculado = (quadra?.precoPorHora || 0) * totalHoras;
+
+      // 2. Cria o registro do agendamento
+      const novoBooking = await tx.booking.create({
         data: {
           userId: null, 
           courtId: Number(courtId),
@@ -254,10 +236,24 @@ async function criarManual(req, res) {
           horaInicio: inicioFormatado,
           horaFim: fimFormatado,
           status: statusPagamento === 'pago' ? 'confirmado' : 'pendente',
-          nomeAvulso: nomeAtleta
+          nomeAvulso: nomeAtleta 
         },
         include: { court: true, user: true }
       });
+
+      // 3. 💡 INJETADO: Se foi pago no balcão, cria o lançamento aprovado na tabela de fluxo de caixa (Payment)
+      if (statusPagamento === 'pago') {
+        await tx.payment.create({
+          data: {
+            bookingId: novoBooking.id,
+            valor: valorCalculado,
+            metodo: 'dinheiro_balcao', // Identifica que entrou fisicamente
+            status: 'aprovado'         // 🖥️ Status que o seu fluxo de caixa lê!
+          }
+        });
+      }
+
+      return novoBooking;
     });
 
     return res.status(201).json(booking);
@@ -270,8 +266,7 @@ async function criarManual(req, res) {
   }
 }
 
-// 💡 NOVA FUNÇÃO: Atualiza os dados de uma reserva manual direto do calendário
-// 💡 FUNÇÃO ATUALIZADA: Corrige alteração de nome, horário e status financeiro
+// 💡 FUNÇÃO ATUALIZADA: Sincroniza as alterações de valores e status também na tabela de pagamentos
 async function atualizarManual(req, res) {
   const { id } = req.params;
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
@@ -287,40 +282,82 @@ async function atualizarManual(req, res) {
     const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicio) + 3, Number(mInicio), 0));
     const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFim) + 3, Number(mFim), 0));
 
-    // Mapeia o status financeiro do balcão para o status de reserva do seu banco
-    // Se o admin marcou "pago", o status vira 'confirmado' ou 'pago' (dependendo do seu enum)
     const novoStatus = statusPagamento === 'pago' ? 'confirmado' : 'pendente';
 
-    const reservaAtualizada = await prisma.booking.update({
-      where: { id: Number(id) },
-      data: {
-        courtId: Number(courtId),
-        data: dataFormatada,
-        horaInicio: inicioFormatado,
-        horaFim: fimFormatado,
-        status: novoStatus,
-        nomeAvulso: nomeAtleta
+    // Executa a atualização do agendamento e sincroniza o caixa em lote
+    const reservaAtualizada = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.update({
+        where: { id: Number(id) },
+        data: {
+          courtId: Number(courtId),
+          data: dataFormatada,
+          horaInicio: inicioFormatado,
+          horaFim: fimFormatado,
+          status: novoStatus,
+          nomeAvulso: nomeAtleta
+        },
+        include: { court: true }
+      });
+
+      const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
+      const valorCalculado = (booking.court?.precoPorHora || 0) * totalHoras;
+
+      if (statusPagamento === 'pago') {
+        // 💡 Atualiza ou cria o pagamento como aprovado no fluxo financeiro
+        await tx.payment.upsert({
+          where: { bookingId: booking.id },
+          update: { status: 'aprovado', valor: valorCalculado },
+          create: {
+            bookingId: booking.id,
+            valor: valorCalculado,
+            metodo: 'dinheiro_balcao',
+            status: 'aprovado'
+          }
+        });
+      } else {
+        // Se mudou de pago para pendente, remove ou muda o status do pagamento para não somar no caixa
+        await tx.payment.upsert({
+          where: { bookingId: booking.id },
+          update: { status: 'pendente' },
+          create: {
+            bookingId: booking.id,
+            valor: valorCalculado,
+            metodo: 'dinheiro_balcao',
+            status: 'pendente'
+          }
+        });
       }
+
+      return booking;
     });
 
     return res.json(reservaAtualizada);
   } catch (error) {
-    console.error("Erro ao atualizar reserva:", error);
+    console.error("Erro ao atualizar reserva manual:", error);
     return res.status(500).json({ error: "Erro ao atualizar reserva." });
   }
 }
 
-// 💡 NOVA FUNÇÃO: Remove permanentemente uma reserva manual do calendário
 async function deletarManual(req, res) {
   const { id } = req.params;
+
   try {
-    await prisma.booking.delete({
-      where: { id: Number(id) }
+    await prisma.$transaction(async (tx) => {
+      // 1. 💡 Remove primeiro o registro do fluxo de caixa (se existir)
+      await tx.payment.deleteMany({
+        where: { bookingId: Number(id) }
+      });
+
+      // 2. Depois deleta a reserva com segurança
+      await tx.booking.delete({
+        where: { id: Number(id) }
+      });
     });
-    return res.json({ message: "Reserva removida com sucesso!" });
+
+    return res.json({ message: 'Reserva e fluxo financeiro removidos com sucesso.' });
   } catch (error) {
-    console.error("Erro ao deletar reserva:", error);
-    return res.status(500).json({ error: "Erro ao remover reserva do banco." });
+    console.error("Erro ao deletar reserva manual:", error);
+    return res.status(500).json({ error: "Erro ao deletar reserva." });
   }
 }
 
