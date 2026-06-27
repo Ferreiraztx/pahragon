@@ -153,7 +153,7 @@ async function criar(req, res) {
 // 💡 FUNÇÃO ATUALIZADA: Com travas para não permitir agendamentos no passado
 // 💡 FUNÇÃO CORRIGIDA: Usa o horário de término do formulário e resolve o bug de escopo
 async function criarManual(req, res) {
-  const { nomeAtleta, data, horarioInicio, horarioFim, courtId } = req.body;
+  const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
 
   const rawAdminId = req.user?.id || req.userId;
   const adminId = isNaN(Number(rawAdminId)) ? rawAdminId : Number(rawAdminId);
@@ -253,7 +253,7 @@ async function criarManual(req, res) {
           data: dataFormatada,
           horaInicio: inicioFormatado,
           horaFim: fimFormatado,
-          status: 'confirmado',
+          status: statusPagamento === 'pago' ? 'confirmado' : 'pendente',
           nomeAvulso: nomeAtleta
         },
         include: { court: true, user: true }
