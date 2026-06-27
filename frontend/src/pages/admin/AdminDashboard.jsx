@@ -1479,7 +1479,7 @@ export default function AdminDashboard() {
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
                             <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg shrink-0">
-                              {formatarDataLateral(b.data)}
+                              {formatarDataLateral(b.data.replace(/-/g, '/'))}
                             </span>
                             <div>
                               <h4 className="font-extrabold text-slate-900 text-base">
