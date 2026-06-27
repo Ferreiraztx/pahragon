@@ -1,5 +1,17 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+require('dotenv').config();
+
+const authRoutes = require('./routes/auth');
+const courtRoutes = require('./routes/courts');
+const bookingRoutes = require('./routes/bookings');
+const paymentRoutes = require('./routes/payments');
+const tournamentRoutes = require('./routes/tournaments');
+
+const app = express();
+
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -13,16 +25,6 @@ app.use(
     },
   })
 );
-const cookieParser = require('cookie-parser');
-require('dotenv').config();
-
-const authRoutes = require('./routes/auth');
-const courtRoutes = require('./routes/courts');
-const bookingRoutes = require('./routes/bookings');
-const paymentRoutes = require('./routes/payments');
-const tournamentRoutes = require('./routes/tournaments');
-
-const app = express();
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
