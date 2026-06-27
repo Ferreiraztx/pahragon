@@ -55,12 +55,11 @@ export default function AgendaAdmin({
     }));
 
   // Mapeia os eventos aplicando os filtros e as cores por quadra
+  // Mapeia os eventos aplicando os filtros e as cores por quadra + destaque de pendente
   const eventsCalendar = reservas
     .filter((r) => {
-      // 1. Mantém apenas confirmados e pendentes
       const statusValido =
         r.status.startsWith("confirmado") || r.status.startsWith("pendente");
-      // 2. Aplica o filtro da quadra selecionada no topo
       const idDaQuadraReserva = r.court?.id || r.courtId;
       const quadraValida =
         quadraFiltrada === "todas" ||
@@ -74,27 +73,36 @@ export default function AgendaAdmin({
         statusReal === "confirmado" ? "pago" : "pendente";
       const idDaQuadraReserva = r.court?.id || r.courtId;
 
-      // 💡 Encontra o índice da quadra para associar a cor correspondente
+      // Encontra o índice da quadra para associar a cor correspondente
       const indiceQuadra = quadras.findIndex((q) => q.id === idDaQuadraReserva);
       const estileteCor = CORES_QUADRAS[indiceQuadra % 6];
 
-      // Se a reserva estiver pendente, damos um tom levemente mais opaco ou mantemos o padrão da quadra
-      // Para manter a identidade da quadra, usaremos a cor dela, mas se preferir destacar o pendente, pode customizar.
+      // 💡 LOGICA DAS CORES: Se for PAGO, usa o fundo sólido da quadra.
+      // Se for PENDENTE, cria um fundo listrado lindo combinando a cor da quadra com um aviso
+      const backgroundColor =
+        statusReal === "confirmado"
+          ? estileteCor.bg
+          : `repeating-linear-gradient(45deg, ${estileteCor.bg}, ${estileteCor.bg} 8px, #fef3c7 8px, #fef3c7 16px)`; // Mistura o fundo da quadra com amarelo pendente
+
       return {
         id: r.id,
         resourceId: idDaQuadraReserva,
         start: `${r.data.split("T")[0]}T${new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
         end: `${r.data.split("T")[0]}T${new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
 
-        // Exibe o nome do atleta + nome da quadra (se estiver vendo todas no mês)
+        // Se estiver pendente, adiciona um aviso visual de "⚠️" antes do nome do atleta
         title:
-          quadraFiltrada === "todas" && visaoAtual === "dayGridMonth"
-            ? `${nomeAvulso || r.user?.nome || "Agendamento"} (${r.court?.nome || "Quadra"})`
-            : nomeAvulso || r.user?.nome || "Agendamento",
+          statusReal === "confirmado"
+            ? quadraFiltrada === "todas" && visaoAtual === "dayGridMonth"
+              ? `${nomeAvulso || r.user?.nome || "Agendamento"} (${r.court?.nome || "Quadra"})`
+              : nomeAvulso || r.user?.nome || "Agendamento"
+            : `⚠️ [PENDENTE] ${nomeAvulso || r.user?.nome || "Agendamento"}`,
 
-        backgroundColor: estileteCor.bg,
+        backgroundColor: backgroundColor,
         textColor: estileteCor.text,
-        borderColor: estileteCor.border,
+        borderColor:
+          statusReal === "confirmado" ? estileteCor.border : "#f59e0b", // Borda laranja bem visível se pendente
+
         extendedProps: {
           r,
           statusReal,
