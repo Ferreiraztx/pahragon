@@ -177,6 +177,62 @@ export default function AdminDashboard() {
     "Sábado",
   ];
 
+  const [bloqueios, setBloqueios] = useState([]);
+
+  // Função para buscar os bloqueios do backend
+  const carregarBloqueios = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/bookings/bloqueios`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setBloqueios(data);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar bloqueios:", error);
+    }
+  };
+
+  // Função para deletar o bloqueio
+  const handleDeletarBloqueio = async (id, data, quadra) => {
+    if (
+      !confirm(
+        `Deseja realmente cancelar o bloqueio da ${quadra} no dia ${data}?`,
+      )
+    )
+      return;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/bookings/bloqueios/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+
+      if (response.ok) {
+        alert("Bloqueio cancelado com sucesso!");
+        carregarBloqueios(); // Recarrega a lista
+      } else {
+        alert("Erro ao cancelar bloqueio.");
+      }
+    } catch (error) {
+      console.error("Erro ao deletar bloqueio:", error);
+    }
+  };
+
+  // Força o carregamento dos bloqueios sempre que o admin entrar na aba de gestão
+  useEffect(() => {
+    if (aba === "gestao") {
+      carregarBloqueios();
+    }
+  }, [aba]);
+
   async function atualizarHorario(diaSemana, campo, valor) {
     const horarioAtual = horarios.find((h) => h.diaSemana === diaSemana);
     const atualizado = { ...horarioAtual, [campo]: valor };
@@ -409,9 +465,9 @@ export default function AdminDashboard() {
     { id: "quadras", label: "Quadras", count: quadras.length },
     { id: "torneios", label: "Torneios", count: torneios.length },
     { id: "atletas", label: "Atletas", count: atletas.length },
-    { id: "caixa", label: "Fluxo de Caixa", count: null },
     { id: "horarios", label: "Horário de Funcionamento", count: null },
     { id: "gestao", label: "Bloqueio de Quadras", count: null },
+    { id: "caixa", label: "Fluxo de Caixa", count: null },
   ];
 
   const formatarDataLateral = (dataString) => {
@@ -1262,107 +1318,208 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* GESTÃO DE QUADRAS (BLOQUEIOS) */}
             {aba === "gestao" && (
-  <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-    <div>
-      <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-        Gestão de Quadras
-      </h2>
-      <p className="text-slate-500 mt-2">
-        Bloqueie horários específicos para manutenção, aulas ou eventos privados.
-      </p>
-    </div>
+              <div className="space-y-8 animate-in fade-in duration-500">
+                <div>
+                  <h2 className="text-2xl font-extrabold text-slate-900">
+                    Gestão de Quadras
+                  </h2>
+                  <p className="text-sm text-slate-400 font-light mt-1">
+                    Bloqueie horários específicos para manutenção, aulas ou
+                    eventos privados.
+                  </p>
+                </div>
 
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-      <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2">
-          <div className="w-2 h-6 bg-teal-500 rounded-full"></div>
-          Novo Bloqueio de Horário
-        </h3>
-      </div>
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-base">
+                      <div className="w-1.5 h-5 bg-teal-500 rounded-full"></div>
+                      Novo Bloqueio de Horário
+                    </h3>
+                  </div>
 
-      <form onSubmit={handleCriarBloqueio} className="p-8 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Selecionar Quadra */}
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Quadra</label>
-            <select
-              required
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all text-slate-700"
-              value={bloqueioForm.quadraId}
-              onChange={(e) => setBloqueioForm({...bloqueioForm, quadraId: e.target.value})}
-            >
-              <option value="">Selecione a quadra...</option>
-              {quadras.map(q => (
-                <option key={q.id} value={q.id}>{q.nome}</option>
-              ))}
-            </select>
-          </div>
+                  <form
+                    onSubmit={handleCriarBloqueio}
+                    className="p-6 space-y-6"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 ml-0.5">
+                          Quadra
+                        </label>
+                        <select
+                          required
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all text-sm text-slate-700"
+                          value={bloqueioForm.quadraId}
+                          onChange={(e) =>
+                            setBloqueioForm({
+                              ...bloqueioForm,
+                              quadraId: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Selecione a quadra...</option>
+                          {quadras &&
+                            quadras.map((q) => (
+                              <option key={q.id} value={q.id}>
+                                {q.nome}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
 
-          {/* Selecionar Data */}
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Data do Bloqueio</label>
-            <input
-              type="date"
-              required
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-              value={bloqueioForm.data}
-              onChange={(e) => setBloqueioForm({...bloqueioForm, data: e.target.value})}
-            />
-          </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 ml-0.5">
+                          Data do Bloqueio
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                          value={bloqueioForm.data}
+                          onChange={(e) =>
+                            setBloqueioForm({
+                              ...bloqueioForm,
+                              data: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-          {/* Horário Início */}
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Horário de Início</label>
-            <input
-              type="time"
-              required
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-              value={bloqueioForm.horaInicio}
-              onChange={(e) => setBloqueioForm({...bloqueioForm, horaInicio: e.target.value})}
-            />
-          </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 ml-0.5">
+                          Horário de Início
+                        </label>
+                        <input
+                          type="time"
+                          required
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                          value={bloqueioForm.horaInicio}
+                          onChange={(e) =>
+                            setBloqueioForm({
+                              ...bloqueioForm,
+                              horaInicio: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-          {/* Horário Fim */}
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Horário de Término</label>
-            <input
-              type="time"
-              required
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-              value={bloqueioForm.horaFim}
-              onChange={(e) => setBloqueioForm({...bloqueioForm, horaFim: e.target.value})}
-            />
-          </div>
-        </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 ml-0.5">
+                          Horário de Término
+                        </label>
+                        <input
+                          type="time"
+                          required
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                          value={bloqueioForm.horaFim}
+                          onChange={(e) =>
+                            setBloqueioForm({
+                              ...bloqueioForm,
+                              horaFim: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
 
-        {/* Motivo */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-slate-700 ml-1">Motivo (Opcional)</label>
-          <input
-            type="text"
-            placeholder="Ex: Manutenção da areia, aula particular, evento..."
-            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-            value={bloqueioForm.motivo}
-            onChange={(e) => setBloqueioForm({...bloqueioForm, motivo: e.target.value})}
-          />
-        </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 ml-0.5">
+                        Motivo (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Manutenção da areia, aula particular, evento..."
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                        value={bloqueioForm.motivo}
+                        onChange={(e) =>
+                          setBloqueioForm({
+                            ...bloqueioForm,
+                            motivo: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
 
-        <div className="pt-4">
-          <button
-            type="submit"
-            disabled={loadingBloqueio}
-            className={`w-full py-4 rounded-2xl font-extrabold text-white transition-all shadow-lg shadow-teal-200 ${
-              loadingBloqueio ? 'bg-slate-400' : 'bg-teal-600 hover:bg-teal-700 hover:-translate-y-0.5'
-            }`}
-          >
-            {loadingBloqueio ? 'Processando...' : 'Confirmar Bloqueio de Horário'}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={loadingBloqueio}
+                        className={`w-full py-3 rounded-xl font-extrabold text-sm text-white transition-all shadow-md ${
+                          loadingBloqueio
+                            ? "bg-slate-400"
+                            : "bg-teal-600 hover:bg-teal-700 hover:-translate-y-0.5"
+                        }`}
+                      >
+                        {loadingBloqueio
+                          ? "Processando..."
+                          : "Confirmar Bloqueio de Horário"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* LISTA DE BLOQUEIOS ATIVOS */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">
+                    Bloqueios Ativos
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {bloqueios.length === 0 ? (
+                      <p className="text-slate-400 text-sm font-light pl-1 bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
+                        Nenhum horário está bloqueado no momento.
+                      </p>
+                    ) : (
+                      bloqueios.map((b) => (
+                        <div
+                          key={b.id}
+                          className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+                            <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg shrink-0">
+                              {formatarDataLateral(b.data)}
+                            </span>
+                            <div>
+                              <h4 className="font-extrabold text-slate-900 text-base">
+                                {b.quadra?.nome || `Quadra #${b.quadraId}`}
+                              </h4>
+                              <p className="text-sm text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2">
+                                <span className="font-mono text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded text-xs">
+                                  ⏰ {b.horaInicio} às {b.horaFim}
+                                </span>
+                                {b.motivo && (
+                                  <>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="italic text-slate-400 text-xs">
+                                      {b.motivo}
+                                    </span>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeletarBloqueio(
+                                b.id,
+                                formatarDataLateral(b.data),
+                                b.quadra?.nome,
+                              )
+                            }
+                            className="self-start sm:self-auto text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
+                          >
+                            Remover Bloqueio
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* FLUXO DE CAIXA */}
             {aba === "caixa" && caixa && (

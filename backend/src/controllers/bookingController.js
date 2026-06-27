@@ -360,6 +360,34 @@ async function criarBloqueio(req, res) {
   }
 }
 
+// Listar todos os bloqueios criados
+async function listarBloqueios(req, res) {
+  try {
+    const bloqueios = await prisma.bloqueioQuadra.findMany({
+      include: { quadra: true },
+      orderBy: { data: 'asc' }
+    });
+    return res.json(bloqueios);
+  } catch (err) {
+    console.error("Erro ao listar bloqueios:", err);
+    return res.status(500).json({ error: "Erro ao listar bloqueios" });
+  }
+}
+
+// Cancelar/Deletar um bloqueio específico
+async function deletarBloqueio(req, res) {
+  const { id } = req.params;
+  try {
+    await prisma.bloqueioQuadra.delete({
+      where: { id: Number(id) }
+    });
+    return res.json({ message: "Bloqueio removido com sucesso" });
+  } catch (err) {
+    console.error("Erro ao deletar bloqueio:", err);
+    return res.status(500).json({ error: "Erro ao remover bloqueio" });
+  }
+}
+
 async function buscarPorId(req, res) {
   try {
     const { id } = req.params;
@@ -388,4 +416,4 @@ async function buscarPorId(req, res) {
   }
 }
 
-module.exports = { criar, minhasReservas, cancelar, horariosDisponiveis, listarTodas, buscarPorId, criarBloqueio };
+module.exports = { criar, minhasReservas, cancelar, horariosDisponiveis, listarTodas, buscarPorId, criarBloqueio, listarBloqueios, deletarBloqueio };
