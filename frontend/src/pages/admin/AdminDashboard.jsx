@@ -1217,7 +1217,9 @@ export default function AdminDashboard() {
                         className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
                         placeholder="Ex: 41999999999 (Sem espaços ou traços)"
                         type="text"
+                        // 1. Altera o value para ler do objeto
                         value={novoTorneio.whatsapp}
+                        // 2. Altera o onChange para atualizar a propriedade certa do objeto
                         onChange={(e) =>
                           setNovoTorneio({
                             ...novoTorneio,
