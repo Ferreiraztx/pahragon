@@ -292,14 +292,59 @@ async function criarManual(req, res) {
 }
 
 // 💡 FUNÇÃO ATUALIZADA: Sincroniza as alterações de valores e status também na tabela de pagamentos
+// Atualizar reserva manual no Balcão (Admin - Blindagem na Edição contra Torneios)
 async function atualizarManual(req, res) {
   const { id } = req.params;
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
 
   try {
     const dataAgendamentoString = data.split('T')[0];
-    const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
     
+    // ==========================================================
+    // 🏆 TRAVA MATEMÁTICA NA EDIÇÃO: Impede salvar por cima de Torneio
+    // ==========================================================
+    const todosTorneios = await prisma.tournament.findMany();
+    
+    // Converte os novos horários da edição para minutos totais do dia
+    const [hIniM, mIniM] = horarioInicio.split(':').map(Number);
+    const [hFimM, mFimM] = horarioFim.split(':').map(Number);
+    const minutosInicioManual = hIniM * 60 + mIniM;
+    const minutosFimManual = hFimM * 60 + mFimM;
+
+    const temTorneio = todosTorneios.some(t => {
+      const quadrasArray = t.quadras || [];
+      const afetaTodas = quadrasArray.length === 0;
+      const pertenceAEstaQuadra = afetaTodas || quadrasArray.includes(String(courtId)) || quadrasArray.includes(String(Number(courtId)));
+      
+      if (!pertenceAEstaQuadra) return false;
+
+      // Extrai a data ISO pura do torneio para verificar o dia
+      const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
+      const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
+      
+      const diaBate = dataAgendamentoString >= dataTorneioStr && dataAgendamentoString <= dataFimTorneioStr;
+      if (!diaBate) return false;
+
+      // Extrai os horários originais salvos do torneio em minutos totais do dia
+      const incioTorneioStr = new Date(t.data).toISOString().substring(11, 16);
+      const fimTorneioStr = new Date(t.dataFim).toISOString().substring(11, 16);
+
+      const [hIniT, mIniT] = incioTorneioStr.split(':').map(Number);
+      const [hFimT, mFimT] = fimTorneioStr.split(':').map(Number);
+      
+      const minutosInicioTorneio = hIniT * 60 + mIniT;
+      const minutosFimTorneio = hFimT * 60 + mFimT;
+
+      // Colisão de intervalos de tempo
+      return (minutosInicioManual < minutosFimTorneio && minutosFimManual > minutosInicioTorneio);
+    });
+
+    if (temTorneio) {
+      return res.status(400).json({ error: 'Bloqueio! O novo horário escolhido coincide com um Torneio ativo nesta quadra.' });
+    }
+    // ==========================================================
+
+    const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
     const [hInicio, mInicio] = horarioInicio.split(':');
     const [hFim, mFim] = horarioFim.split(':');
 
@@ -309,7 +354,7 @@ async function atualizarManual(req, res) {
 
     const novoStatus = statusPagamento === 'pago' ? 'confirmado' : 'pendente';
 
-    // Executa a atualização do agendamento e sincroniza o caixa em lote
+    // Executa a atualização e sincroniza o fluxo financeiro em transação isolada
     const reservaAtualizada = await prisma.$transaction(async (tx) => {
       const booking = await tx.booking.update({
         where: { id: Number(id) },
@@ -328,7 +373,6 @@ async function atualizarManual(req, res) {
       const valorCalculado = (booking.court?.precoPorHora || 0) * totalHoras;
 
       if (statusPagamento === 'pago') {
-        // 💡 Atualiza ou cria o pagamento como aprovado no fluxo financeiro
         await tx.payment.upsert({
           where: { bookingId: booking.id },
           update: { status: 'aprovado', valor: valorCalculado },
@@ -340,7 +384,6 @@ async function atualizarManual(req, res) {
           }
         });
       } else {
-        // Se mudou de pago para pendente, remove ou muda o status do pagamento para não somar no caixa
         await tx.payment.upsert({
           where: { bookingId: booking.id },
           update: { status: 'pendente' },
