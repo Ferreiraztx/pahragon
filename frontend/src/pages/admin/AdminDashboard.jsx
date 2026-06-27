@@ -20,7 +20,6 @@ export default function AdminDashboard() {
   const [atletas, setAtletas] = useState([]);
   const [atletaSelecionado, setAtletaSelecionado] = useState(null);
   const [horarios, setHorarios] = useState([]);
-  const [quadrasDisponiveis, setQuadrasDisponiveis] = useState([]);
 
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -48,7 +47,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [modalConfirmacao, setModalConfirmacao] = useState({
-    open: false,
+    aberto: false, // 💡 Corrigido de 'open' para bater com o estado real usado abaixo
     titulo: "",
     mensagem: "",
     acaoConfirmar: null,
@@ -59,10 +58,8 @@ export default function AdminDashboard() {
 
   const formatarNascimentoCompleto = (dataStr) => {
     if (!dataStr) return "—";
-
     const dataPura = dataStr.split("T")[0];
     const [ano, mes, dia] = dataPura.split("-");
-
     const meses = [
       "jan",
       "fev",
@@ -77,9 +74,8 @@ export default function AdminDashboard() {
       "nov",
       "dez",
     ];
-    const nomeMes = meses[parseInt(mes, 10) - 1];
-
-    return `${parseInt(dia, 10)} ${nomeMes} ${ano}`;
+    const fontMes = meses[parseInt(mes, 10) - 1];
+    return `${parseInt(dia, 10)} ${fontMes} ${ano}`;
   };
 
   const [aviso, setAviso] = useState({
@@ -102,15 +98,18 @@ export default function AdminDashboard() {
   });
   const [loadingBloqueio, setLoadingBloqueio] = useState(false);
 
+  // 🔒 CRIAÇÃO DE BLOQUEIO ATUALIZADA
   const handleCriarBloqueio = async (e) => {
     e.preventDefault();
     setLoadingBloqueio(true);
 
     try {
+      // Usando a rota unificada e enviando com withCredentials automático da instância
       const response = await api.post("/bookings/bloqueios", bloqueioForm, {
         headers: {
           Authorization: `Bearer ${token || localStorage.getItem("token")}`,
         },
+        withCredentials: true,
       });
 
       if (response.status === 200 || response.status === 201) {
@@ -126,7 +125,7 @@ export default function AdminDashboard() {
           horaFim: "",
           motivo: "",
         });
-        carregarBloqueios();
+        carregarBloqueios(); // Atualiza a lista na hora!
       } else {
         setAviso({
           aberto: true,
@@ -137,11 +136,7 @@ export default function AdminDashboard() {
     } catch (error) {
       const errorMsg =
         error.response?.data?.error || "Erro na conexão com o servidor.";
-      setAviso({
-        aberto: true,
-        tipo: "erro",
-        mensagem: errorMsg,
-      });
+      setAviso({ aberto: true, tipo: "erro", mensagem: errorMsg });
     } finally {
       setLoadingBloqueio(false);
     }
@@ -155,20 +150,20 @@ export default function AdminDashboard() {
     });
   };
 
+  // 🔒 REMOÇÃO DE BLOQUEIO ATUALIZADA (MUDADO DE FETCH PARA AXIOS)
   const confirmarAcaoDeletar = async () => {
     const id = modalConfirmar.id;
     setModalConfirmar({ aberto: false, id: null, texto: "" });
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/bookings/bloqueios/${id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      const response = await api.delete(`/bookings/bloqueios/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token || localStorage.getItem("token")}`,
         },
-      );
+        withCredentials: true,
+      });
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 204) {
         setAviso({
           aberto: true,
           tipo: "sucesso",
@@ -202,11 +197,11 @@ export default function AdminDashboard() {
   async function carregarDados() {
     const headers = { Authorization: `Bearer ${token}` };
     const resultados = await Promise.allSettled([
-      api.get("/bookings/todas", { headers }),
+      api.get("/bookings/todas", { headers, withCredentials: true }),
       api.get("/courts"),
       api.get("/tournaments"),
-      api.get("/tournaments/caixa", { headers }),
-      api.get("/auth/usuarios", { headers }),
+      api.get("/tournaments/caixa", { headers, withCredentials: true }),
+      api.get("/auth/usuarios", { headers, withCredentials: true }),
       api.get("/horarios"),
     ]);
 
@@ -220,15 +215,6 @@ export default function AdminDashboard() {
     if (resAtletas.status === "fulfilled") setAtletas(resAtletas.value.data);
     if (resultados[5].status === "fulfilled")
       setHorarios(resultados[5].value.data);
-
-    resultados.forEach((r, i) => {
-      if (r.status === "rejected") {
-        console.error(
-          `Falha ao carregar dados [${i}]:`,
-          r.reason?.response?.data || r.reason?.message,
-        );
-      }
-    });
   }
 
   const diasSemana = [
@@ -240,21 +226,18 @@ export default function AdminDashboard() {
     "Sexta",
     "Sábado",
   ];
-
   const [bloqueios, setBloqueios] = useState([]);
 
+  // 🔒 BUSCA DE BLOQUEIOS ATUALIZADA (MUDADO DE FETCH PARA AXIOS)
   const carregarBloqueios = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/bookings/bloqueios`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      const response = await api.get("/bookings/bloqueios", {
+        headers: {
+          Authorization: `Bearer ${token || localStorage.getItem("token")}`,
         },
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setBloqueios(data);
-      }
+        withCredentials: true,
+      });
+      setBloqueios(response.data);
     } catch (error) {
       console.error("Erro ao carregar bloqueios:", error);
     }
@@ -269,7 +252,6 @@ export default function AdminDashboard() {
   async function atualizarHorario(diaSemana, campo, valor) {
     const horarioAtual = horarios.find((h) => h.diaSemana === diaSemana);
     const updated = { ...horarioAtual, [campo]: valor };
-
     setHorarios(horarios.map((h) => (h.diaSemana === diaSemana ? updated : h)));
 
     try {
@@ -281,7 +263,10 @@ export default function AdminDashboard() {
           orderAbertura: updated.horaAbertura,
           horaFechamento: updated.horaFechamento,
         },
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        },
       );
     } catch {
       setMensagem("❌ Erro ao salvar horário de funcionamento.");
@@ -295,7 +280,10 @@ export default function AdminDashboard() {
       await api.post(
         "/courts",
         { ...novaQuadra, precoPorHora: Number(novaQuadra.precoPorHora) },
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        },
       );
       setMensagem("✅ Quadra adicionada com sucesso.");
       setNovaQuadra({ nome: "", descricao: "", precoPorHora: "" });
@@ -307,7 +295,6 @@ export default function AdminDashboard() {
 
   async function criarTorneio(e) {
     e.preventDefault();
-
     if (novoTorneio.quadras.length === 0) {
       alert("❌ Por favor, selecione pelo menos uma quadra para o torneio.");
       return;
@@ -317,7 +304,6 @@ export default function AdminDashboard() {
       const whatsappLimpo = novoTorneio.whatsapp
         ? novoTorneio.whatsapp.replace(/\D/g, "")
         : "";
-
       const dadosParaEnviar = {
         nome: novoTorneio.nome,
         descricao: novoTorneio.descricao,
@@ -326,11 +312,12 @@ export default function AdminDashboard() {
         vagas: Number(novoTorneio.vagas),
         preco: Number(novoTorneio.preco),
         whatsapp: whatsappLimpo,
-        quadras: novoTorneio.quadras, // 👈 Enviando o array de IDs das quadras
+        quadras: novoTorneio.quadras,
       };
 
       await api.post("/tournaments", dadosParaEnviar, {
         headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
       });
 
       setMensagem("✅ Torneio publicado com sucesso.");
@@ -346,10 +333,6 @@ export default function AdminDashboard() {
       });
       carregarDados();
     } catch (error) {
-      console.error(
-        "Erro ao publicar torneio:",
-        error.response?.data || error.message,
-      );
       setMensagem("❌ Erro ao publicar torneio. Verifique os dados.");
     }
   }
@@ -358,26 +341,20 @@ export default function AdminDashboard() {
     const idTexto = String(courtId);
     setNovoTorneio((prev) => {
       const jaSelecionada = prev.quadras.includes(idTexto);
-      if (jaSelecionada) {
-        return {
-          ...prev,
-          quadras: prev.quadras.filter((id) => id !== idTexto),
-        };
-      } else {
-        return { ...prev, quadras: [...prev.quadras, idTexto] };
-      }
+      return jaSelecionada
+        ? { ...prev, quadras: prev.quadras.filter((id) => id !== idTexto) }
+        : { ...prev, quadras: [...prev.quadras, idTexto] };
     });
   };
 
   const selecionarTodasAsQuadrasTorneio = () => {
-    if (novoTorneio.quadras.length === quadras.length) {
-      setNovoTorneio((prev) => ({ ...prev, quadras: [] }));
-    } else {
-      setNovoTorneio((prev) => ({
-        ...prev,
-        quadras: quadras.map((q) => String(q.id)),
-      }));
-    }
+    setNovoTorneio((prev) => ({
+      ...prev,
+      quadras:
+        prev.quadras.length === quadras.length
+          ? []
+          : quadras.map((q) => String(q.id)),
+    }));
   };
 
   function solicitarDeletarQuadra(id, nome) {
@@ -388,6 +365,7 @@ export default function AdminDashboard() {
       acaoConfirmar: async () => {
         await api.delete(`/courts/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
         });
         carregarDados();
         fecharModal();
@@ -403,6 +381,7 @@ export default function AdminDashboard() {
       acaoConfirmar: async () => {
         await api.delete(`/tournaments/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
         });
         carregarDados();
         fecharModal();
@@ -425,7 +404,13 @@ export default function AdminDashboard() {
     setMenuAberto(false);
   }
 
-  function sair() {
+  // 🍪 LOGOUT COMPATÍVEL COM COOKIES
+  async function sair() {
+    try {
+      await api.post("/auth/logout"); // Avisa o back para detonar o cookie HttpOnly
+    } catch (err) {
+      console.error("Erro ao limpar cookie no servidor", err);
+    }
     localStorage.removeItem("adminToken");
     localStorage.removeItem("admin");
     navigate("/admin/login");
@@ -438,7 +423,7 @@ export default function AdminDashboard() {
 
     switch (tipo) {
       case "hoje":
-        setDataInicio(isoString(open));
+        setDataInicio(isoString(hoje));
         setDataFim(isoString(hoje));
         break;
       case "semana": {
@@ -455,13 +440,6 @@ export default function AdminDashboard() {
         setDataFim(isoString(hoje));
         break;
       }
-      case "ano": {
-        const anoPassado = new Date();
-        anoPassado.setFullYear(hoje.getFullYear() - 1);
-        setDataInicio(isoString(anoPassado));
-        setDataFim(isoString(hoje));
-        break;
-      }
       case "tudo":
       default:
         setDataInicio("");
@@ -472,24 +450,12 @@ export default function AdminDashboard() {
 
   const reservasFiltradasPorData = (reservas || []).filter((r) => {
     if (!r || !r.data) return false;
-
-    // Se o item for um bloqueio ou torneio que já injetamos a string formatada, pegamos direto
-    let dataReservaISO;
-    if (typeof r.data === "string") {
-      dataReservaISO = r.data.split("T")[0];
-    } else {
-      // Se for um objeto Date nativo das reservas comuns, tratamos sem deixar o fuso retroceder o dia
-      const d = new Date(r.data);
-      const ano = d.getUTCFullYear();
-      const mes = String(d.getUTCMonth() + 1).padStart(2, "0");
-      const dia = String(d.getUTCDate()).padStart(2, "0");
-      dataReservaISO = `${ano}-${mes}-${dia}`;
-    }
-
-    // Mantém a sua lógica de range do Admin se você usar inputs de filtro, mas sem distorcer o dia
+    let dataReservaISO =
+      typeof r.data === "string"
+        ? r.data.split("T")[0]
+        : new Date(r.data).toISOString().split("T")[0];
     if (dataInicio && dataReservaISO < dataInicio) return false;
     if (dataFim && dataReservaISO > dataFim) return false;
-
     return true;
   });
 
@@ -506,7 +472,6 @@ export default function AdminDashboard() {
     (soma, p) => soma + p.valor,
     0,
   );
-
   const totalConfirmadasNoPeriodo = reservasFiltradasPorData.filter(
     (r) => r.status === "confirmado",
   ).length;
@@ -516,21 +481,17 @@ export default function AdminDashboard() {
   const totalCanceladasNoPeriodo = reservasFiltradasPorData.filter(
     (r) => r.status === "cancelado",
   ).length;
-
-  const reservasExibidasNaLista = reservasFiltradasPorData.filter((r) => {
-    return filtroStatus === "todos" || r.status === filtroStatus;
-  });
+  const reservasExibidasNaLista = reservasFiltradasPorData.filter(
+    (r) => filtroStatus === "todos" || r.status === filtroStatus,
+  );
 
   const dadosGrafico = paymentsFiltradosPorPeriodo.length
     ? Object.values(
         paymentsFiltradosPorPeriodo.reduce((acc, p) => {
           const dataObj = new Date(p.booking.data);
           const dataFormatada = `${dataObj.getDate().toString().padStart(2, "0")}/${(dataObj.getMonth() + 1).toString().padStart(2, "0")}`;
-
-          if (!acc[dataFormatada]) {
+          if (!acc[dataFormatada])
             acc[dataFormatada] = { name: dataFormatada, faturamento: 0 };
-          }
-
           acc[dataFormatada].faturamento += p.valor;
           return acc;
         }, {}),
@@ -549,7 +510,6 @@ export default function AdminDashboard() {
           new Date(r.data) > new Date(maisRecente.data) ? r : maisRecente,
         )
       : null;
-
     return { totalReservas, ultimaReserva };
   }
 
@@ -662,7 +622,7 @@ export default function AdminDashboard() {
                     </span>
                     <span className="text-slate-800 font-semibold">
                       {atletaSelecionado.cidade
-                        ? `${atletaSelecionado.cidade}${atletaSelecionado.estado ? "/" + atletaSelecionado.estado : ""}`
+                        ? `${atletaSelecionado.cidade}/${atletaSelecionado.estado || ""}`
                         : "—"}
                     </span>
                   </div>
@@ -692,7 +652,6 @@ export default function AdminDashboard() {
                       {totalReservas}
                     </span>
                   </div>
-
                   {ultimaReserva ? (
                     <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1">
                       <span className="text-xs font-bold text-slate-400 block">
@@ -716,7 +675,6 @@ export default function AdminDashboard() {
                     </p>
                   )}
                 </div>
-
                 <button
                   onClick={() => setAtletaSelecionado(null)}
                   className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition"
@@ -738,7 +696,6 @@ export default function AdminDashboard() {
             arena
           </span>
         </div>
-
         <div className="hidden lg:flex items-center gap-8 text-sm sm:text-base">
           <span className="text-slate-500">
             Logado como{" "}
@@ -751,7 +708,6 @@ export default function AdminDashboard() {
             Sair
           </button>
         </div>
-
         <button
           onClick={() => setMenuAberto(!menuAberto)}
           className="lg:hidden flex flex-col items-center justify-center gap-1.5 w-10 h-10 rounded-xl hover:bg-slate-200/60 transition"
@@ -769,9 +725,9 @@ export default function AdminDashboard() {
         </button>
       </header>
 
-      {/* PAINEL DO MENU MOBILE */}
+      {/* MENU MOBILE */}
       {menuAberto && (
-        <div className="lg:hidden border-b border-slate-200/80 bg-white shadow-md animate-fadeIn">
+        <div className="lg:hidden border-b border-slate-200/80 bg-white shadow-md">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 space-y-5">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200/80">
               <span className="text-sm text-slate-500">
@@ -785,7 +741,6 @@ export default function AdminDashboard() {
                 Sair
               </button>
             </div>
-
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
                 Menu Principal
@@ -795,11 +750,7 @@ export default function AdminDashboard() {
                   <button
                     key={a.id}
                     onClick={() => selecionarAba(a.id)}
-                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${
-                      aba === a.id
-                        ? "bg-[#1e2221] text-white shadow-md"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                    }`}
+                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${aba === a.id ? "bg-[#1e2221] text-white shadow-md" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"}`}
                   >
                     <span>{a.label}</span>
                     {a.count !== null && (
@@ -831,7 +782,7 @@ export default function AdminDashboard() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 lg:gap-16 items-start">
-          {/* Barra Lateral de Controle */}
+          {/* Barra Lateral */}
           <div className="lg:col-span-1 space-y-10 lg:sticky lg:top-10 min-w-0 w-full overflow-hidden">
             <div className="hidden lg:block">
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
@@ -842,11 +793,7 @@ export default function AdminDashboard() {
                   <button
                     key={a.id}
                     onClick={() => selecionarAba(a.id)}
-                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${
-                      aba === a.id
-                        ? "bg-[#1e2221] text-white shadow-md"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                    }`}
+                    className={`text-left px-4 py-3 rounded-xl text-base font-bold transition flex items-center justify-between ${aba === a.id ? "bg-[#1e2221] text-white shadow-md" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"}`}
                   >
                     <span>{a.label}</span>
                     {a.count !== null && (
@@ -862,11 +809,11 @@ export default function AdminDashboard() {
             </div>
 
             {(aba === "reservas" || aba === "caixa") && (
-              <div className="space-y-6 pt-6 lg:pt-0 lg:border-t-0 border-t border-slate-200/80 min-w-0 w-full">
+              <div className="space-y-6 pt-6 lg:pt-0 border-t border-slate-200/80 lg:border-t-0 min-w-0 w-full">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   Filtrar Período
                 </p>
-                <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto -mx-4 px-4 lg:overflow-visible lg:mx-0 lg:px-0 pb-1 w-full">
+                <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto pb-1 w-full">
                   {[
                     { id: "tudo", label: "Todo o histórico" },
                     { id: "hoje", label: "Apenas hoje" },
@@ -876,22 +823,16 @@ export default function AdminDashboard() {
                     <button
                       key={item.id}
                       onClick={() => aplicarFiltroRapido(item.id)}
-                      className={`text-left text-sm px-3 py-2 rounded-lg font-medium transition whitespace-nowrap ${
-                        filtroDataAtivo === item.id
-                          ? "text-teal-700 font-bold bg-teal-50"
-                          : "text-slate-500 hover:text-slate-900"
-                      }`}
+                      className={`text-left text-sm px-3 py-2 rounded-lg font-medium transition whitespace-nowrap ${filtroDataAtivo === item.id ? "text-teal-700 font-bold bg-teal-50" : "text-slate-500 hover:text-slate-900"}`}
                     >
                       {item.label}
                     </button>
                   ))}
                 </div>
-
                 <div className="space-y-3 pt-2 min-w-0 w-full">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                     Período Customizado
                   </p>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-4 min-w-0 w-full">
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
@@ -904,10 +845,9 @@ export default function AdminDashboard() {
                           setDataInicio(e.target.value);
                           setFiltroDataAtivo("custom");
                         }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm appearance-none items-center justify-center text-left"
+                        className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base h-12 text-left focus:outline-none focus:border-slate-900 shadow-sm"
                       />
                     </div>
-
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
                         Até
@@ -919,7 +859,7 @@ export default function AdminDashboard() {
                           setDataFim(e.target.value);
                           setFiltroDataAtivo("custom");
                         }}
-                        className="block w-full min-w-0 max-w-full box-border bg-white border border-slate-300 rounded-xl px-4 text-base text-slate-800 h-12 focus:outline-none focus:border-slate-900 shadow-sm appearance-none items-center justify-center text-left"
+                        className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base h-12 text-left focus:outline-none focus:border-slate-900 shadow-sm"
                       />
                     </div>
                   </div>
@@ -967,7 +907,7 @@ export default function AdminDashboard() {
                   aoAtualizarDados={carregarDados}
                 />
 
-                <div className="flex gap-4 sm:gap-6 text-sm border-b border-slate-200/40 pb-3 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pt-6">
+                <div className="flex gap-4 sm:gap-6 text-sm border-b border-slate-200/40 pb-3 overflow-x-auto pt-6">
                   {[
                     { id: "todos", label: "Todos os status" },
                     { id: "confirmado", label: "Confirmadas" },
@@ -977,11 +917,7 @@ export default function AdminDashboard() {
                     <button
                       key={tab.id}
                       onClick={() => setFiltroStatus(tab.id)}
-                      className={`pb-1.5 transition text-sm font-medium whitespace-nowrap ${
-                        filtroStatus === tab.id
-                          ? "text-slate-900 border-b-2 border-slate-900 font-bold"
-                          : "text-slate-400 hover:text-slate-700"
-                      }`}
+                      className={`pb-1.5 transition text-sm font-medium whitespace-nowrap ${filtroStatus === tab.id ? "text-slate-900 border-b-2 border-slate-900 font-bold" : "text-slate-400 hover:text-slate-700"}`}
                     >
                       {tab.label}
                     </button>
@@ -1003,7 +939,6 @@ export default function AdminDashboard() {
                           <span className="text-sm font-mono font-bold text-slate-400 uppercase sm:w-20 tracking-wider">
                             {formatarDataLateral(r.data)}
                           </span>
-
                           <div>
                             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                               <span className="font-extrabold text-slate-900 text-base sm:text-lg">
@@ -1033,7 +968,6 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-
                         <div>
                           <span className={statusStyle[r.status]}>
                             {r.status}
@@ -1095,7 +1029,7 @@ export default function AdminDashboard() {
                   </h3>
                   <form onSubmit={criarQuadra} className="space-y-4">
                     <input
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base h-12 shadow-sm focus:outline-none focus:border-slate-900"
                       placeholder="Título/Identificação da Quadra"
                       value={novaQuadra.nome}
                       onChange={(e) =>
@@ -1104,7 +1038,7 @@ export default function AdminDashboard() {
                       required
                     />
                     <input
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base h-12 shadow-sm focus:outline-none focus:border-slate-900"
                       placeholder="Descrição ou observações estruturais"
                       value={novaQuadra.descricao}
                       onChange={(e) =>
@@ -1115,7 +1049,7 @@ export default function AdminDashboard() {
                       }
                     />
                     <input
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono h-12 shadow-sm"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base font-mono h-12 shadow-sm focus:outline-none focus:border-slate-900"
                       placeholder="Preço Cobrado por Hora (Ex: 80)"
                       type="number"
                       value={novaQuadra.precoPorHora}
@@ -1151,77 +1085,51 @@ export default function AdminDashboard() {
                         Sem competições agendadas.
                       </p>
                     ) : (
-                      torneios.map((t) => {
-                        const irParaWhatsappDoTorneio = () => {
-                          let numeroDestino = t.whatsapp
-                            ? String(t.whatsapp).replace(/\D/g, "")
-                            : "";
-
-                          if (!numeroDestino) {
-                            alert(
-                              "Este torneio não possui um número de contato cadastrado.",
-                            );
-                            return;
-                          }
-
-                          if (!numeroDestino.startsWith("55")) {
-                            numeroDestino = `55${numeroDestino}`;
-                          }
-
-                          const mensagem = `Olá! Vi o torneio "${t.nome}" no painel da arena e gostaria de saber se ainda restam vagas disponíveis para inscrição?`;
-                          const link = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(mensagem)}`;
-                          window.open(link, "_blank");
-                        };
-
-                        return (
-                          <div
-                            key={t.id}
-                            className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-slate-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all"
-                          >
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-                              <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">
-                                {formatarDataLateral(t.data)}
-                              </span>
-                              <div>
-                                <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
-                                  {t.nome}
-                                </h4>
-                                <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-y-1">
-                                  <span>👥 {t.vagas} duplas/vagas totais</span>
-                                  <span className="mx-2 text-slate-300">•</span>
-                                  <span>
-                                    Inscrição:{" "}
-                                    <span className="font-mono text-slate-700 font-bold">
-                                      R$ {Number(t.preco).toFixed(2)}
-                                    </span>
+                      torneios.map((t) => (
+                        <div
+                          key={t.id}
+                          className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-slate-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+                            <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">
+                              {formatarDataLateral(t.data)}
+                            </span>
+                            <div>
+                              <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
+                                {t.nome}
+                              </h4>
+                              <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-y-1">
+                                <span>👥 {t.vagas} duplas/vagas totais</span>
+                                <span className="mx-2 text-slate-300">•</span>
+                                <span>
+                                  Inscrição:{" "}
+                                  <span className="font-mono text-slate-700 font-bold">
+                                    R$ {Number(t.preco).toFixed(2)}
                                   </span>
-                                  {t.whatsapp && (
-                                    <>
-                                      <span className="mx-2 text-slate-300">
-                                        •
-                                      </span>
-                                      <span className="text-slate-600 font-medium">
-                                        📞 {t.whatsapp}
-                                      </span>
-                                    </>
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                              <button
-                                onClick={() =>
-                                  solicitarDeletarTorneio(t.id, t.nome)
-                                }
-                                className="text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
-                              >
-                                Cancelar
-                              </button>
+                                </span>
+                                {t.whatsapp && (
+                                  <>
+                                    <span className="mx-2 text-slate-300">
+                                      •
+                                    </span>
+                                    <span className="text-slate-600 font-medium">
+                                      📞 {t.whatsapp}
+                                    </span>
+                                  </>
+                                )}
+                              </p>
                             </div>
                           </div>
-                        );
-                      })
+                          <button
+                            onClick={() =>
+                              solicitarDeletarTorneio(t.id, t.nome)
+                            }
+                            className="text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors self-start sm:self-auto"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
@@ -1232,7 +1140,7 @@ export default function AdminDashboard() {
                   </h3>
                   <form onSubmit={criarTorneio} className="space-y-4">
                     <input
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base h-12 shadow-sm focus:outline-none focus:border-slate-900"
                       placeholder="Nome da Competição"
                       value={novoTorneio.nome}
                       onChange={(e) =>
@@ -1241,8 +1149,8 @@ export default function AdminDashboard() {
                       required
                     />
                     <input
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
-                      placeholder="Categorias envolvidas (Ex: Open Masculino / Mista B)"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base h-12 shadow-sm focus:outline-none focus:border-slate-900"
+                      placeholder="Categorias envolvidas (Ex: Open Masculino)"
                       value={novoTorneio.descricao}
                       onChange={(e) =>
                         setNovoTorneio({
@@ -1251,14 +1159,13 @@ export default function AdminDashboard() {
                         })
                       }
                     />
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1 w-full">
                         <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
                           Início do Torneio
                         </span>
                         <input
-                          className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm"
+                          className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base h-12 shadow-sm text-slate-800 focus:outline-none focus:border-slate-900"
                           type="datetime-local"
                           value={novoTorneio.data}
                           onChange={(e) =>
@@ -1270,13 +1177,12 @@ export default function AdminDashboard() {
                           required
                         />
                       </div>
-
                       <div className="flex flex-col gap-1 w-full">
                         <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
                           Término do Torneio
                         </span>
                         <input
-                          className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base focus:outline-none focus:border-slate-900 text-slate-800 h-12 shadow-sm"
+                          className="block w-full bg-white border border-slate-300 rounded-xl px-4 text-base h-12 shadow-sm text-slate-800 focus:outline-none focus:border-slate-900"
                           type="datetime-local"
                           value={novoTorneio.dataFim}
                           onChange={(e) =>
@@ -1289,10 +1195,9 @@ export default function AdminDashboard() {
                         />
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono h-12 shadow-sm"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base font-mono h-12 shadow-sm focus:outline-none focus:border-slate-900"
                         placeholder="Limite de Vagas"
                         type="number"
                         value={novoTorneio.vagas}
@@ -1305,8 +1210,8 @@ export default function AdminDashboard() {
                         required
                       />
                       <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 font-mono h-12 shadow-sm"
-                        placeholder="Valor Inscrição R$ (Ex: 120)"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base font-mono h-12 shadow-sm focus:outline-none focus:border-slate-900"
+                        placeholder="Valor Inscrição R$"
                         type="number"
                         value={novoTorneio.preco}
                         onChange={(e) =>
@@ -1318,14 +1223,13 @@ export default function AdminDashboard() {
                         required
                       />
                     </div>
-
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
                         WhatsApp de Contato *
                       </span>
                       <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
-                        placeholder="Ex: 41999999999 (DDD + Número)"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base h-12 shadow-sm focus:outline-none focus:border-slate-900"
+                        placeholder="Ex: 41999999999"
                         type="text"
                         required
                         value={novoTorneio.whatsapp}
@@ -1337,8 +1241,6 @@ export default function AdminDashboard() {
                         }
                       />
                     </div>
-
-                    {/* 💡 SEÇÃO ADICIONADA: Seleção visual de quais quadras travar */}
                     <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-4">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
@@ -1347,14 +1249,13 @@ export default function AdminDashboard() {
                         <button
                           type="button"
                           onClick={selecionarTodasAsQuadrasTorneio}
-                          className="text-xs font-bold text-teal-600 hover:text-teal-700 transition-colors"
+                          className="text-xs font-bold text-teal-600 hover:text-teal-700"
                         >
                           {novoTorneio.quadras.length === quadras.length
                             ? "Desmarcar Todas"
                             : "Selecionar Todas"}
                         </button>
                       </div>
-
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-1">
                         {quadras.map((q) => {
                           const estaSelecionada = novoTorneio.quadras.includes(
@@ -1365,11 +1266,7 @@ export default function AdminDashboard() {
                               key={q.id}
                               type="button"
                               onClick={() => lidarSelecaoQuadraTorneio(q.id)}
-                              className={`flex items-center justify-center p-3 rounded-xl border text-sm font-bold transition-all ${
-                                estaSelecionada
-                                  ? "bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm"
-                                  : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                              }`}
+                              className={`flex items-center justify-center p-3 rounded-xl border text-sm font-bold transition-all ${estaSelecionada ? "bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm" : "bg-white border-slate-200 text-slate-600"}`}
                             >
                               <span className="mr-2">
                                 {estaSelecionada ? "✅" : "⬜"}
@@ -1380,7 +1277,6 @@ export default function AdminDashboard() {
                         })}
                       </div>
                     </div>
-
                     <button
                       className="bg-[#1e2221] hover:bg-black text-white text-sm font-bold px-5 py-3.5 rounded-xl transition shadow-md w-full sm:w-auto"
                       type="submit"
@@ -1408,7 +1304,6 @@ export default function AdminDashboard() {
                       atletas.map((at) => {
                         const { totalReservas, ultimaReserva } =
                           estatisticasAtleta(at.id);
-
                         return (
                           <div
                             key={at.id}
@@ -1440,7 +1335,6 @@ export default function AdminDashboard() {
                                 )}
                               </p>
                             </div>
-
                             <div className="flex items-center gap-6 sm:gap-8">
                               <div className="text-center sm:text-right">
                                 <span className="text-xs font-bold text-slate-400 block">
@@ -1470,7 +1364,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* HORÁRIO DE FUNCIONAMENTO */}
+            {/* HORÁRIOS */}
             {aba === "horarios" && (
               <div className="space-y-8">
                 <div>
@@ -1481,7 +1375,6 @@ export default function AdminDashboard() {
                     Desative um dia para fechar as reservas nele completamente.
                   </p>
                 </div>
-
                 <div className="space-y-3">
                   {diasSemana.map((nomeDia, indice) => {
                     const h = horarios.find(
@@ -1491,11 +1384,7 @@ export default function AdminDashboard() {
                     return (
                       <div
                         key={indice}
-                        className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all ${
-                          h.ativo
-                            ? "bg-white border-slate-200"
-                            : "bg-slate-50 border-slate-200/60 opacity-70"
-                        }`}
+                        className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all ${h.ativo ? "bg-white border-slate-200" : "bg-slate-50 border-slate-200/60 opacity-70"}`}
                       >
                         <div className="flex items-center gap-4 min-w-[140px]">
                           <button
@@ -1513,7 +1402,6 @@ export default function AdminDashboard() {
                             {nomeDia}
                           </span>
                         </div>
-
                         <div className="flex items-center gap-3">
                           <input
                             type="time"
@@ -1526,7 +1414,7 @@ export default function AdminDashboard() {
                                 e.target.value,
                               )
                             }
-                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono disabled:opacity-40 disabled:bg-slate-100"
+                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono disabled:opacity-40"
                           />
                           <span className="text-slate-400 text-sm">às</span>
                           <input
@@ -1540,7 +1428,7 @@ export default function AdminDashboard() {
                                 e.target.value,
                               )
                             }
-                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono disabled:opacity-40 disabled:bg-slate-100"
+                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono disabled:opacity-40"
                           />
                         </div>
                       </div>
@@ -1552,7 +1440,7 @@ export default function AdminDashboard() {
 
             {/* GESTÃO DE QUADRAS (BLOQUEIOS) */}
             {aba === "gestao" && (
-              <div className="space-y-8 animate-in fade-in duration-500">
+              <div className="space-y-8">
                 <div>
                   <h2 className="text-2xl font-extrabold text-slate-900">
                     Gestão de Quadras
@@ -1582,7 +1470,7 @@ export default function AdminDashboard() {
                         </label>
                         <select
                           required
-                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all text-sm text-slate-700"
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-700"
                           value={bloqueioForm.quadraId}
                           onChange={(e) =>
                             setBloqueioForm({
@@ -1600,7 +1488,6 @@ export default function AdminDashboard() {
                             ))}
                         </select>
                       </div>
-
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 ml-0.5">
                           Data do Bloqueio
@@ -1608,7 +1495,7 @@ export default function AdminDashboard() {
                         <input
                           type="date"
                           required
-                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-700"
                           value={bloqueioForm.data}
                           onChange={(e) =>
                             setBloqueioForm({
@@ -1618,7 +1505,6 @@ export default function AdminDashboard() {
                           }
                         />
                       </div>
-
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 ml-0.5">
                           Horário de Início
@@ -1626,7 +1512,7 @@ export default function AdminDashboard() {
                         <input
                           type="time"
                           required
-                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-700"
                           value={bloqueioForm.horaInicio}
                           onChange={(e) =>
                             setBloqueioForm({
@@ -1636,7 +1522,6 @@ export default function AdminDashboard() {
                           }
                         />
                       </div>
-
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 ml-0.5">
                           Horário de Término
@@ -1644,7 +1529,7 @@ export default function AdminDashboard() {
                         <input
                           type="time"
                           required
-                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-700"
                           value={bloqueioForm.horaFim}
                           onChange={(e) =>
                             setBloqueioForm({
@@ -1655,15 +1540,14 @@ export default function AdminDashboard() {
                         />
                       </div>
                     </div>
-
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-500 ml-0.5">
                         Motivo (Opcional)
                       </label>
                       <input
                         type="text"
-                        placeholder="Ex: Manutenção da areia, aula particular, evento..."
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
+                        placeholder="Ex: Manutenção da areia..."
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-700"
                         value={bloqueioForm.motivo}
                         onChange={(e) =>
                           setBloqueioForm({
@@ -1673,16 +1557,11 @@ export default function AdminDashboard() {
                         }
                       />
                     </div>
-
                     <div className="pt-2">
                       <button
                         type="submit"
                         disabled={loadingBloqueio}
-                        className={`w-full py-3 rounded-xl font-extrabold text-sm text-white transition-all shadow-md ${
-                          loadingBloqueio
-                            ? "bg-slate-400"
-                            : "bg-teal-600 hover:bg-teal-700 hover:-translate-y-0.5"
-                        }`}
+                        className={`w-full py-3 rounded-xl font-extrabold text-sm text-white shadow-md ${loadingBloqueio ? "bg-slate-400" : "bg-teal-600 hover:bg-teal-700"}`}
                       >
                         {loadingBloqueio
                           ? "Processando..."
@@ -1692,12 +1571,11 @@ export default function AdminDashboard() {
                   </form>
                 </div>
 
-                {/* SEÇÃO 1: BLOQUEIOS MANUAIS */}
+                {/* BLOQUEIOS MANUAIS */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">
                     Bloqueios Manuais Ativos
                   </h3>
-
                   <div className="grid grid-cols-1 gap-3">
                     {bloqueios.length === 0 ? (
                       <p className="text-slate-400 text-sm font-light pl-1 bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
@@ -1712,7 +1590,6 @@ export default function AdminDashboard() {
                           b.quadra?.nome ||
                           quadras.find((q) => q.id === b.quadraId)?.nome ||
                           `Quadra #${b.quadraId}`;
-
                         return (
                           <div
                             key={b.id}
@@ -1750,7 +1627,7 @@ export default function AdminDashboard() {
                                   nomeDaQuadra,
                                 )
                               }
-                              className="self-start sm:self-auto text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
+                              className="self-start sm:self-auto text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50"
                             >
                               Remover Bloqueio
                             </button>
@@ -1761,12 +1638,11 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* 💡 SEÇÃO 2: BLOQUEIOS DINÂMICOS POR TORNEIO */}
+                {/* BLOQUEIOS POR TORNEIO */}
                 <div className="space-y-4 pt-4">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">
                     Bloqueios Gerados por Torneios
                   </h3>
-
                   <div className="grid grid-cols-1 gap-3">
                     {torneios.length === 0 ? (
                       <p className="text-slate-400 text-sm font-light pl-1 bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
@@ -1783,8 +1659,6 @@ export default function AdminDashboard() {
                         const horaFimTxt = new Date(t.dataFim)
                           .toISOString()
                           .substring(11, 16);
-
-                        // Transforma os IDs das quadras do torneio em nomes legíveis
                         const nomesDasQuadras =
                           t.quadras && t.quadras.length > 0
                             ? t.quadras
@@ -1860,7 +1734,7 @@ export default function AdminDashboard() {
                     </span>
                     <span className="text-3xl sm:text-5xl font-light text-slate-700 font-mono tracking-tighter">
                       {paymentsFiltradosPorPeriodo.length}{" "}
-                      <span className="text-sm text-slate-400 font-normal font-sans">
+                      <span className="text-sm text-slate-400 font-normal">
                         itens
                       </span>
                     </span>
@@ -1944,7 +1818,6 @@ export default function AdminDashboard() {
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">
                     Entradas Registradas
                   </h3>
-
                   <div className="divide-y divide-slate-200/60">
                     {paymentsFiltradosPorPeriodo.length === 0 ? (
                       <p className="text-slate-400 text-base py-6 font-light">
@@ -1992,20 +1865,12 @@ export default function AdminDashboard() {
 
       {/* TOAST DE AVISO */}
       {aviso.aberto && (
-        <div className="fixed top-5 right-5 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-5 right-5 z-50">
           <div
-            className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 backdrop-blur-md max-w-md bg-white ${
-              aviso.tipo === "sucesso"
-                ? "border-emerald-100"
-                : "border-rose-100"
-            }`}
+            className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 bg-white ${aviso.tipo === "sucesso" ? "border-emerald-100" : "border-rose-100"}`}
           >
             <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                aviso.tipo === "sucesso"
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-rose-50 text-rose-600"
-              }`}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${aviso.tipo === "sucesso" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}
             >
               {aviso.tipo === "sucesso" ? (
                 <span className="font-extrabold text-lg">✓</span>
@@ -2021,7 +1886,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={() => setAviso({ ...aviso, aberto: false })}
-              className="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors"
+              className="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded-lg"
             >
               Fechar
             </button>
@@ -2031,8 +1896,8 @@ export default function AdminDashboard() {
 
       {/* MODAL DE CONFIRMAÇÃO DE CANCELAMENTO */}
       {modalConfirmar.aberto && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden">
             <div className="p-6 text-center space-y-4">
               <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-xl font-black">
                 !
@@ -2052,14 +1917,14 @@ export default function AdminDashboard() {
                 onClick={() =>
                   setModalConfirmar({ aberto: false, id: null, texto: "" })
                 }
-                className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-extrabold hover:bg-slate-100 transition-colors shadow-sm"
+                className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-extrabold hover:bg-slate-100 shadow-sm"
               >
                 Voltar
               </button>
               <button
                 type="button"
                 onClick={confirmarAcaoDeletar}
-                className="w-full py-3 bg-rose-600 text-white rounded-xl text-sm font-extrabold hover:bg-rose-700 transition-colors shadow-md shadow-rose-100"
+                className="w-full py-3 bg-rose-600 text-white rounded-xl text-sm font-extrabold hover:bg-rose-700 shadow-md shadow-rose-100"
               >
                 Sim, Cancelar
               </button>
