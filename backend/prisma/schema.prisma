@@ -44,8 +44,9 @@ model Court {
 
 model Booking {
   id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     Int
+  user       User?     @relation(fields: [userId], references: [id])
+  userId     Int?
+  nomeAvulso String?
   court      Court    @relation(fields: [courtId], references: [id])
   courtId    Int
   data       DateTime

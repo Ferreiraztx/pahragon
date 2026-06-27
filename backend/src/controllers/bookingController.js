@@ -248,12 +248,13 @@ async function criarManual(req, res) {
 
       return tx.booking.create({
         data: {
-          userId: adminId, 
+          userId: null, 
           courtId: Number(courtId),
           data: dataFormatada,
           horaInicio: inicioFormatado,
           horaFim: fimFormatado,
-          status: 'confirmado'
+          status: 'confirmado',
+          nomeAvulso: nomeAtleta
         },
         include: { court: true, user: true }
       });
@@ -298,10 +299,7 @@ async function atualizarManual(req, res) {
         horaInicio: inicioFormatado,
         horaFim: fimFormatado,
         status: novoStatus,
-        // Caso seu banco use o esquema de relação com User, para atualizar o nome exibido
-        // na listagem de avulsos, garantimos que ele salve em texto ou atualize o User se aplicável.
-        // Se tiver o campo nomeAvulso descomente a linha abaixo:
-        // nomeAvulso: nomeAtleta
+        nomeAvulso: nomeAtleta
       }
     });
 
