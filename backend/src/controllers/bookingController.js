@@ -244,12 +244,6 @@ async function horariosDisponiveis(req, res) {
     const dia = String(agoraBrasilia.getUTCDate()).padStart(2, '0');
     const hojeString = `${ano}-${mes}-${dia}`;
 
-    let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
-
-    if (dataSelecionadaString === hojeString) {
-      const horaAtual = agoraBrasilia.getUTCHours();
-      const minutoAtual = agoraBrasilia.getUTCMinutes();
-
       const diaSemanaConsulta = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12)).getUTCDay();
 const horarioDoDia = await prisma.horarioFuncionamento.findUnique({
   where: { diaSemana: diaSemanaConsulta }
@@ -258,6 +252,12 @@ const horarioDoDia = await prisma.horarioFuncionamento.findUnique({
 if (!horarioDoDia || !horarioDoDia.ativo) {
   return res.json({ data, courtId, disponiveis: [], fechado: true });
 }
+
+let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
+
+    if (dataSelecionadaString === hojeString) {
+      const horaAtual = agoraBrasilia.getUTCHours();
+      const minutoAtual = agoraBrasilia.getUTCMinutes();
 
       disponiveis = disponiveis.filter(h => {
         const [hBotao, mBotao] = h.split(':').map(Number);
