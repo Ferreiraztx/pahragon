@@ -78,6 +78,18 @@ export default function AdminDashboard() {
     return `${parseInt(dia, 10)} ${nomeMes} ${ano}`;
   };
 
+  // Estados para alertas customizados
+  const [aviso, setAviso] = useState({
+    aberto: false,
+    tipo: "sucesso",
+    mensagem: "",
+  });
+  const [modalConfirmar, setModalConfirmar] = useState({
+    aberto: false,
+    id: null,
+    texto: "",
+  });
+
   // Estados para o formulário de bloqueio
   const [bloqueioForm, setBloqueioForm] = useState({
     quadraId: "",
@@ -89,6 +101,7 @@ export default function AdminDashboard() {
   const [loadingBloqueio, setLoadingBloqueio] = useState(false);
 
   // Função para enviar o bloqueio para o backend
+  // ATUALIZE A FUNÇÃO DE CRIAR BLOQUEIO
   const handleCriarBloqueio = async (e) => {
     e.preventDefault();
     setLoadingBloqueio(true);
@@ -100,14 +113,19 @@ export default function AdminDashboard() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`, // Certifique-se que o nome do token está correto
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
           body: JSON.stringify(bloqueioForm),
         },
       );
 
       if (response.ok) {
-        alert("Quadra bloqueada com sucesso!");
+        // 💡 Troca do alert nativo pelo aviso customizado
+        setAviso({
+          aberto: true,
+          tipo: "sucesso",
+          mensagem: "Quadra bloqueada com sucesso!",
+        });
         setBloqueioForm({
           quadraId: "",
           data: "",
@@ -115,15 +133,70 @@ export default function AdminDashboard() {
           horaFim: "",
           motivo: "",
         });
+        carregarBloqueios();
       } else {
         const errorData = await response.json();
-        alert(`Erro: ${errorData.error}`);
+        setAviso({
+          aberto: true,
+          tipo: "erro",
+          mensagem: `Erro: ${errorData.error}`,
+        });
       }
     } catch (error) {
-      console.error("Erro ao bloquear quadra:", error);
-      alert("Erro na conexão com o servidor.");
+      setAviso({
+        aberto: true,
+        tipo: "erro",
+        mensagem: "Erro na conexão com o servidor.",
+      });
     } finally {
       setLoadingBloqueio(false);
+    }
+  };
+
+  // ATUALIZE A FUNÇÃO DE DELETAR BLOQUEIO
+  const handleDeletarBloqueio = async (id, data, quadra) => {
+    // 💡 Abre o modal customizado de confirmação em vez do confirm() nativo
+    setModalConfirmar({
+      aberto: true,
+      id,
+      texto: `Deseja realmente cancelar o bloqueio da ${quadra} no dia ${data}?`,
+    });
+  };
+
+  // FUNÇÃO QUE EXECUTA A DELEÇÃO APÓS A CONFIRMAÇÃO NO MODAL
+  const confirmarAcaoDeletar = async () => {
+    const id = modalConfirmar.id;
+    setModalConfirmar({ aberto: false, id: null, texto: "" });
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/bookings/bloqueios/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+
+      if (response.ok) {
+        setAviso({
+          aberto: true,
+          tipo: "sucesso",
+          mensagem: "Bloqueio cancelado com sucesso!",
+        });
+        carregarBloqueios();
+      } else {
+        setAviso({
+          aberto: true,
+          tipo: "erro",
+          mensagem: "Erro ao cancelar o bloqueio.",
+        });
+      }
+    } catch (error) {
+      setAviso({
+        aberto: true,
+        tipo: "erro",
+        mensagem: "Erro na conexão com o servidor.",
+      });
     }
   };
 
@@ -1479,7 +1552,7 @@ export default function AdminDashboard() {
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
                             <span className="self-start text-xs sm:text-sm font-mono font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg shrink-0">
-                              {formatarDataLateral(b.data.replace(/-/g, '/'))}
+                              {formatarDataLateral(b.data.replace(/-/g, "/"))}
                             </span>
                             <div>
                               <h4 className="font-extrabold text-slate-900 text-base">
@@ -1673,6 +1746,92 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ========================================================== */}
+      {/* TOAST DE AVISO (SUCESSO / ERRO) */}
+      {/* ========================================================== */}
+      {aviso.aberto && (
+        <div className="fixed top-5 right-5 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div
+            className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 backdrop-blur-md max-w-md bg-white ${
+              aviso.tipo === "sucesso"
+                ? "border-emerald-100"
+                : "border-rose-100"
+            }`}
+          >
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                aviso.tipo === "sucesso"
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-rose-50 text-rose-600"
+              }`}
+            >
+              {aviso.tipo === "sucesso" ? (
+                <span className="font-extrabold text-lg">✓</span>
+              ) : (
+                <span className="font-extrabold text-lg">✕</span>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-extrabold text-slate-900">
+                {aviso.tipo === "sucesso" ? "Sucesso!" : "Ops, algo deu errado"}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">{aviso.mensagem}</p>
+            </div>
+            <button
+              onClick={() => setAviso({ ...aviso, aberto: false })}
+              className="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================== */}
+      {/* MODAL DE CONFIRMAÇÃO DE CANCELAMENTO */}
+      {/* ========================================================== */}
+      {modalConfirmar.aberto && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center space-y-4">
+              {/* Ícone de Alerta */}
+              <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-xl font-black">
+                !
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-extrabold text-slate-900">
+                  Confirmar Cancelamento
+                </h3>
+                <p className="text-sm text-slate-500 leading-relaxed px-2">
+                  {modalConfirmar.texto}
+                </p>
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="p-4 bg-slate-50/80 border-t border-slate-100 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setModalConfirmar({ aberto: false, id: null, texto: "" })
+                }
+                className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-extrabold hover:bg-slate-100 transition-colors shadow-sm"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarAcaoDeletar}
+                className="w-full py-3 bg-rose-600 text-white rounded-xl text-sm font-extrabold hover:bg-rose-700 transition-colors shadow-md shadow-rose-100"
+              >
+                Sim, Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
