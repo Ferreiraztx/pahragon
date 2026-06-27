@@ -6,14 +6,32 @@ import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import api from "../../services/api";
 
-export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados }) {
+// 💡 Definição de cores fixas para até 6 quadras diferentes (Fundo, Texto, Borda)
+const CORES_QUADRAS = {
+  0: { bg: "#ccfbf1", text: "#115e59", border: "#99f6e4" }, // Teal (Quadra 1)
+  1: { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd" }, // Azul (Quadra 2)
+  2: { bg: "#f3e8ff", text: "#6b21a8", border: "#e9d5ff" }, // Roxo (Quadra 3)
+  3: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" }, // Âmbar (Quadra 4)
+  4: { bg: "#dcfce7", text: "#166534", border: "#bbf7d0" }, // Verde (Quadra 5)
+  5: { bg: "#ffe4e6", text: "#9f1239", border: "#fecdd3" }, // Rosa (Quadra 6)
+};
+
+export default function AgendaAdmin({
+  reservas,
+  quadras,
+  token,
+  aoAtualizarDados,
+}) {
   const calendarRef = useRef(null);
   const [modalAberto, setModalAberto] = useState(false);
-  const [confirmarExclusao, setConfirmarExclusao] = useState(false); 
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const [loading, setLoading] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
   const [reservaIdAtual, setReservaIdAtual] = useState(null);
   const [erroMensagem, setErroMensagem] = useState("");
+
+  // 💡 NOVO ESTADO: Controla qual quadra exibir ("todas" ou o ID da quadra)
+  const [quadraFiltrada, setQuadraFiltrada] = useState("todas");
 
   const [dadosForm, setDadosForm] = useState({
     atleta: "",
@@ -25,27 +43,62 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
   });
   const [visaoAtual, setVisaoAtual] = useState("dayGridMonth");
 
-  const resourcesCalendar = quadras.map((q) => ({
-    id: q.id,
-    title: q.nome,
-  }));
+  // 💡 Recursos dinâmicos: Se filtrar uma quadra, a visão diária mostra só a coluna dela
+  const resourcesCalendar = quadras
+    .filter(
+      (q) =>
+        quadraFiltrada === "todas" || String(q.id) === String(quadraFiltrada),
+    )
+    .map((q) => ({
+      id: q.id,
+      title: q.nome,
+    }));
 
+  // Mapeia os eventos aplicando os filtros e as cores por quadra
   const eventsCalendar = reservas
-    .filter((r) => r.status === "confirmado" || r.status === "pendente")
-    .map((r) => {
-      const mapearStatusFinanceiro = r.status === "confirmado" ? "pago" : "pendente";
+    .filter((r) => {
+      // 1. Mantém apenas confirmados e pendentes
+      const statusValido =
+        r.status.startsWith("confirmado") || r.status.startsWith("pendente");
+      // 2. Aplica o filtro da quadra selecionada no topo
+      const idDaQuadraReserva = r.court?.id || r.courtId;
+      const quadraValida =
+        quadraFiltrada === "todas" ||
+        String(idDaQuadraReserva) === String(quadraFiltrada);
 
+      return statusValido && quadraValida;
+    })
+    .map((r) => {
+      const [statusReal, nomeAvulso] = r.status.split("|");
+      const mapearStatusFinanceiro =
+        statusReal === "confirmado" ? "pago" : "pendente";
+      const idDaQuadraReserva = r.court?.id || r.courtId;
+
+      // 💡 Encontra o índice da quadra para associar a cor correspondente
+      const indiceQuadra = quadras.findIndex((q) => q.id === idDaQuadraReserva);
+      const estileteCor = CORES_QUADRAS[indiceQuadra % 6];
+
+      // Se a reserva estiver pendente, damos um tom levemente mais opaco ou mantemos o padrão da quadra
+      // Para manter a identidade da quadra, usaremos a cor dela, mas se preferir destacar o pendente, pode customizar.
       return {
         id: r.id,
-        resourceId: r.court?.id || r.courtId,
+        resourceId: idDaQuadraReserva,
         start: `${r.data.split("T")[0]}T${new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
         end: `${r.data.split("T")[0]}T${new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
-        title: r.nomeAvulso || r.user?.nome || "Agendamento",
-        backgroundColor: r.status === "confirmado" ? "#ccfbf1" : "#fef3c7",
-        textColor: r.status === "confirmado" ? "#115e59" : "#92400e",
-        borderColor: r.status === "confirmado" ? "#99f6e4" : "#fde68a",
+
+        // Exibe o nome do atleta + nome da quadra (se estiver vendo todas no mês)
+        title:
+          quadraFiltrada === "todas" && visaoAtual === "dayGridMonth"
+            ? `${nomeAvulso || r.user?.nome || "Agendamento"} (${r.court?.nome || "Quadra"})`
+            : nomeAvulso || r.user?.nome || "Agendamento",
+
+        backgroundColor: estileteCor.bg,
+        textColor: estileteCor.text,
+        borderColor: estileteCor.border,
         extendedProps: {
           r,
+          statusReal,
+          nomeAvulso,
           statusFinanceiro: mapearStatusFinanceiro,
         },
       };
@@ -64,7 +117,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     const calendarApi = calendarRef.current.getApi();
     if (calendarApi.view.type === "resourceTimeGridDay") {
       if (info.start < new Date()) {
-        setErroMensagem("Não é possível realizar agendamentos em horários passados.");
+        setErroMensagem(
+          "Não é possível realizar agendamentos em horários passados.",
+        );
         setTimeout(() => setErroMensagem(""), 4000);
         return;
       }
@@ -92,22 +147,29 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
 
   const handleCliqueNaReservaExistente = (info) => {
     const r = info.event.extendedProps.r;
+    const { statusReal, nomeAvulso } = info.event.extendedProps;
 
     const dataFormatada = r.data.split("T")[0];
-    const hInicio = new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const hFim = new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const hInicio = new Date(r.horaInicio).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const hFim = new Date(r.horaFim).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     setModoEdicao(true);
     setReservaIdAtual(r.id);
     setErroMensagem("");
     setConfirmarExclusao(false);
     setDadosForm({
-      atleta: r.nomeAvulso || r.user?.nome || "",
+      atleta: nomeAvulso || r.user?.nome || "",
       data: dataFormatada,
       horario: hInicio,
       horarioFim: hFim,
       quadraId: r.court?.id || r.courtId,
-      statusPagamento: r.status === "confirmado" ? "pago" : "pendente",
+      statusPagamento: statusReal === "confirmado" ? "pago" : "pendente",
     });
     setModalAberto(true);
   };
@@ -121,7 +183,8 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
       data: new Date().toISOString().split("T")[0],
       horario: "08:00",
       horarioFim: "09:00",
-      quadraId: quadras[0]?.id || "",
+      quadraId:
+        quadraFiltrada === "todas" ? quadras[0]?.id || "" : quadraFiltrada,
       statusPagamento: "pago",
     });
     setModalAberto(true);
@@ -139,13 +202,17 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     setErroMensagem("");
 
     if (dadosForm.horarioFim <= dadosForm.horario) {
-      setErroMensagem("O horário de término precisa ser maior que o horário de início.");
+      setErroMensagem(
+        "O horário de término precisa ser maior que o horário de início.",
+      );
       setLoading(false);
       return;
     }
 
     try {
-      const url = modoEdicao ? `/bookings/manual/${reservaIdAtual}` : "/bookings/manual";
+      const url = modoEdicao
+        ? `/bookings/manual/${reservaIdAtual}`
+        : "/bookings/manual";
       const method = modoEdicao ? "PUT" : "POST";
 
       const response = await api({
@@ -167,7 +234,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         aoAtualizarDados();
       }
     } catch (error) {
-      setErroMensagem(error.response?.data?.error || "Erro ao processar agendamento.");
+      setErroMensagem(
+        error.response?.data?.error || "Erro ao processar agendamento.",
+      );
     } finally {
       setLoading(false);
     }
@@ -187,7 +256,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         aoAtualizarDados();
       }
     } catch (error) {
-      setErroMensagem(error.response?.data?.error || "Erro ao remover reserva.");
+      setErroMensagem(
+        error.response?.data?.error || "Erro ao remover reserva.",
+      );
     } finally {
       setLoading(false);
     }
@@ -197,30 +268,47 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
 
   return (
     <div className="bg-white p-6 border border-slate-200 rounded-2xl shadow-sm calendar-container space-y-4">
-      
       {erroMensagem && !modalAberto && (
         <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs font-bold animate-in fade-in duration-300">
           ⚠️ {erroMensagem}
         </div>
       )}
 
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-        <div>
-          {visaoAtual === "resourceTimeGridDay" ? (
+      {/* BARRA DE AÇÕES SUPERIOR MODIFICADA */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          {visaoAtual === "resourceTimeGridDay" && (
             <button
               onClick={volverParaMes}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition shrink-0"
             >
-              ← Voltar para Visão Mensal
+              ← Voltar
             </button>
-          ) : (
-            <span className="text-sm text-slate-400 font-medium">Visão Geral da Arena</span>
           )}
+
+          {/* 💡 SELETOR FILTRO DE QUADRAS */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
+              Filtrar:
+            </label>
+            <select
+              value={quadraFiltrada}
+              onChange={(e) => setQuadraFiltrada(e.target.value)}
+              className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-700 font-bold focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="todas">🏟️ Mostrar Todas as Quadras</option>
+              {quadras.map((q) => (
+                <option key={q.id} value={q.id}>
+                  📍 {q.nome}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <button
           onClick={handleAbrirReservaManualFixa}
-          className="px-5 py-2.5 bg-[#1e2221] hover:bg-black text-white text-sm font-bold rounded-xl transition shadow-md flex items-center gap-2"
+          className="px-5 py-2.5 bg-[#1e2221] hover:bg-black text-white text-sm font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2"
         >
           <span className="text-lg leading-none">+</span> Nova Reserva Manual
         </button>
@@ -248,25 +336,36 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
         }}
       />
 
-      {/* MODAL MISTO (CADASTRO / EDIÇÃO / EXCLUSÃO) */}
+      {/* MODAL MISTO */}
       {modalAberto && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-6 animate-in zoom-in-95 duration-200">
-            
             {confirmarExclusao ? (
               <div className="space-y-6 text-center py-4 animate-in fade-in duration-200">
-                <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-xl font-black">!</div>
+                <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-xl font-black">
+                  !
+                </div>
                 <div className="space-y-1.5">
-                  <h3 className="text-lg font-extrabold text-slate-900">Remover Reserva</h3>
-                  <p className="text-xs text-slate-400 px-4">Tem certeza que deseja cancelar e apagar definitivamente esse agendamento do mapa da arena?</p>
+                  <h3 className="text-lg font-extrabold text-slate-900">
+                    Remover Reserva
+                  </h3>
+                  <p className="text-xs text-slate-400 px-4">
+                    Tem certeza que deseja cancelar e apagar definitivamente
+                    esse agendamento do mapa da arena?
+                  </p>
                 </div>
                 {erroMensagem && (
-                  <div className="text-xs font-bold text-rose-600 bg-rose-50 p-2 rounded-lg mx-4">{erroMensagem}</div>
+                  <div className="text-xs font-bold text-rose-600 bg-rose-50 p-2 rounded-lg mx-4">
+                    {erroMensagem}
+                  </div>
                 )}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => { setConfirmarExclusao(false); setErroMensagem(""); }}
+                    onClick={() => {
+                      setConfirmarExclusao(false);
+                      setErroMensagem("");
+                    }}
                     className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-extrabold hover:bg-slate-100 transition-colors"
                   >
                     Voltar
@@ -287,7 +386,9 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                   <h3 className="text-lg font-extrabold text-slate-900">
                     {modoEdicao ? "Editar Agendamento" : "Nova Reserva Manual"}
                   </h3>
-                  <p className="text-xs text-slate-400">Gerenciamento direto pelo balcão da arena</p>
+                  <p className="text-xs text-slate-400">
+                    Gerenciamento direto pelo balcão da arena
+                  </p>
                 </div>
 
                 {erroMensagem && (
@@ -298,81 +399,123 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
 
                 <form onSubmit={handleSalvarReserva} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 ml-0.5">Nome do Atleta</label>
+                    <label className="text-xs font-bold text-slate-500 ml-0.5">
+                      Nome do Atleta
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="Digite o nome completo"
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                       value={dadosForm.atleta}
-                      onChange={(e) => setDadosForm({ ...dadosForm, atleta: e.target.value })}
+                      onChange={(e) =>
+                        setDadosForm({ ...dadosForm, atleta: e.target.value })
+                      }
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 ml-0.5">Quadra</label>
+                    <label className="text-xs font-bold text-slate-500 ml-0.5">
+                      Quadra
+                    </label>
                     <select
                       required
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                       value={dadosForm.quadraId}
-                      onChange={(e) => setDadosForm({ ...dadosForm, quadraId: e.target.value })}
+                      onChange={(e) =>
+                        setDadosForm({ ...dadosForm, quadraId: e.target.value })
+                      }
                     >
-                      <option value="" disabled>Selecione a quadra</option>
+                      <option value="" disabled>
+                        Selecione a quadra
+                      </option>
                       {quadras.map((q) => (
-                        <option key={q.id} value={q.id}>{q.nome}</option>
+                        <option key={q.id} value={q.id}>
+                          {q.nome}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 ml-0.5">Data</label>
+                      <label className="text-xs font-bold text-slate-500 ml-0.5">
+                        Data
+                      </label>
                       <input
                         type="date"
                         required
                         min={modoEdicao ? "" : hojeStringParaInput}
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                         value={dadosForm.data}
-                        onChange={(e) => setDadosForm({ ...dadosForm, data: e.target.value })}
+                        onChange={(e) =>
+                          setDadosForm({ ...dadosForm, data: e.target.value })
+                        }
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 ml-0.5">Início</label>
+                      <label className="text-xs font-bold text-slate-500 ml-0.5">
+                        Início
+                      </label>
                       <input
                         type="time"
                         required
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                         value={dadosForm.horario}
-                        onChange={(e) => setDadosForm({ ...dadosForm, horario: e.target.value })}
+                        onChange={(e) =>
+                          setDadosForm({
+                            ...dadosForm,
+                            horario: e.target.value,
+                          })
+                        }
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 ml-0.5">Término</label>
+                      <label className="text-xs font-bold text-slate-500 ml-0.5">
+                        Término
+                      </label>
                       <input
                         type="time"
                         required
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm text-slate-700"
                         value={dadosForm.horarioFim}
-                        onChange={(e) => setDadosForm({ ...dadosForm, horarioFim: e.target.value })}
+                        onChange={(e) =>
+                          setDadosForm({
+                            ...dadosForm,
+                            horarioFim: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 ml-0.5">Financeiro</label>
+                    <label className="text-xs font-bold text-slate-500 ml-0.5">
+                      Financeiro
+                    </label>
                     <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
                       <button
                         type="button"
-                        onClick={() => setDadosForm({ ...dadosForm, statusPagamento: "pago" })}
+                        onClick={() =>
+                          setDadosForm({
+                            ...dadosForm,
+                            statusPagamento: "pago",
+                          })
+                        }
                         className={`py-2 rounded-lg text-xs font-extrabold transition-all ${dadosForm.statusPagamento === "pago" ? "bg-emerald-600 text-white shadow" : "text-slate-500 hover:text-slate-800"}`}
                       >
                         ✓ JÁ FOI PAGO
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDadosForm({ ...dadosForm, statusPagamento: "pendente" })}
+                        onClick={() =>
+                          setDadosForm({
+                            ...dadosForm,
+                            statusPagamento: "pendente",
+                          })
+                        }
                         className={`py-2 rounded-lg text-xs font-extrabold transition-all ${dadosForm.statusPagamento === "pendente" ? "bg-amber-500 text-white shadow" : "text-slate-500 hover:text-slate-800"}`}
                       >
                         ⚠ PENDENTE
@@ -401,7 +544,10 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
                     {modoEdicao && (
                       <button
                         type="button"
-                        onClick={() => { setConfirmarExclusao(true); setErroMensagem(""); }}
+                        onClick={() => {
+                          setConfirmarExclusao(true);
+                          setErroMensagem("");
+                        }}
                         className="w-full py-2.5 mt-2 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold border border-rose-100 transition"
                       >
                         Remover Agendamento da Arena
