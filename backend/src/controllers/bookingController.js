@@ -153,21 +153,15 @@ async function criar(req, res) {
 // 💡 FUNÇÃO ATUALIZADA: Com travas para não permitir agendamentos no passado
 // 💡 FUNÇÃO CORRIGIDA: Usa o horário de término do formulário e resolve o bug de escopo
 // 💡 FUNÇÃO ATUALIZADA: Alimenta a tabela de agendamentos E o fluxo de caixa (Payment)
+// Criar reserva manual no Balcão (Admin - Blindagem Definitiva contra Torneios)
 async function criarManual(req, res) {
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
-
-  const rawAdminId = req.user?.id || req.userId;
-  const adminId = isNaN(Number(rawAdminId)) ? rawAdminId : Number(rawAdminId);
 
   try {
     const dataAgendamentoString = data.split('T')[0];
 
-    // Trava de fuso horário retroativo
     const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
-    const ano = agoraBR.getUTCFullYear();
-    const mes = String(agoraBR.getUTCMonth() + 1).padStart(2, '0');
-    const dia = String(agoraBR.getUTCDate()).padStart(2, '0');
-    const hojeString = `${ano}-${mes}-${dia}`;
+    const hojeString = `${agoraBR.getUTCFullYear()}-${String(agoraBR.getUTCMonth() + 1).padStart(2, '0')}-${String(agoraBR.getUTCDate()).padStart(2, '0')}`;
     const horaAtualStr = `${String(agoraBR.getUTCHours()).padStart(2, '0')}:${String(agoraBR.getUTCMinutes()).padStart(2, '0')}`;
 
     if (dataAgendamentoString < hojeString) {
@@ -182,7 +176,50 @@ async function criarManual(req, res) {
       return res.status(400).json({ error: checkFuncionamento.motivo });
     }
 
-    // Executa a transação criando o agendamento e o lançamento financeiro juntos
+    // ==========================================================
+    // 🏆 TRAVA MATEMÁTICA: Impede agendamento se houver Torneio
+    // ==========================================================
+    const todosTorneios = await prisma.tournament.findMany();
+    
+    // Converte o horário que o Admin quer agendar para minutos totais
+    const [hIniM, mIniM] = horarioInicio.split(':').map(Number);
+    const [hFimM, mFimM] = horarioFim.split(':').map(Number);
+    const minutosInicioManual = hIniM * 60 + mIniM;
+    const minutosFimManual = hFimM * 60 + mFimM;
+
+    const temTorneio = todosTorneios.some(t => {
+      const quadrasArray = t.quadras || [];
+      const afetaTodas = quadrasArray.length === 0;
+      const pertenceAEstaQuadra = afetaTodas || quadrasArray.includes(String(courtId)) || quadrasArray.includes(String(Number(courtId)));
+      
+      if (!pertenceAEstaQuadra) return false;
+
+      // Extrai a data ISO pura do torneio para comparar o dia
+      const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
+      const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
+      
+      const diaBate = dataAgendamentoString >= dataTorneioStr && dataAgendamentoString <= dataFimTorneioStr;
+      if (!diaBate) return false;
+
+      // Extrai os horários do torneio e converte para minutos totais do dia
+      const incioTorneioStr = new Date(t.data).toISOString().substring(11, 16);
+      const fimTorneioStr = new Date(t.dataFim).toISOString().substring(11, 16);
+
+      const [hIniT, mIniT] = incioTorneioStr.split(':').map(Number);
+      const [hFimT, mFimT] = fimTorneioStr.split(':').map(Number);
+      
+      const minutosInicioTorneio = hIniT * 60 + mIniT;
+      const minutosFimTorneio = hFimT * 60 + mFimT;
+
+      // Validação de colisão de intervalos matemáticos
+      return (minutosInicioManual < minutosFimTorneio && minutosFimManual > minutosInicioTorneio);
+    });
+
+    if (temTorneio) {
+      return res.status(400).json({ error: 'Bloqueio! Este horário está reservado para um Torneio nesta quadra.' });
+    }
+    // ==========================================================
+
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horarioInicio}`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
@@ -196,16 +233,11 @@ async function criarManual(req, res) {
       const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicio) + 3, Number(mInicio), 0));
       const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFim) + 3, Number(mFim), 0));
 
-      const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
-
       const conflito = await tx.booking.findFirst({
         where: {
           courtId: Number(courtId),
           data: dataFormatada,
-          OR: [
-            { status: 'confirmado' },
-            { status: 'pendente' }
-          ],
+          OR: [{ status: 'confirmado' }, { status: 'pendente' }],
           AND: [
             {
               OR: [
@@ -218,16 +250,12 @@ async function criarManual(req, res) {
         }
       });
 
-      if (conflito) {
-        throw new Error('SLOT_TAKEN');
-      }
+      if (conflito) throw new Error('SLOT_TAKEN');
 
-      // 1. Puxa os dados da quadra para calcular o valor dinamicamente baseado nas horas
       const quadra = await tx.court.findUnique({ where: { id: Number(courtId) } });
       const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
       const valorCalculado = (quadra?.precoPorHora || 0) * totalHoras;
 
-      // 2. Cria o registro do agendamento
       const novoBooking = await tx.booking.create({
         data: {
           userId: null, 
@@ -241,14 +269,13 @@ async function criarManual(req, res) {
         include: { court: true, user: true }
       });
 
-      // 3. 💡 INJETADO: Se foi pago no balcão, cria o lançamento aprovado na tabela de fluxo de caixa (Payment)
       if (statusPagamento === 'pago') {
         await tx.payment.create({
           data: {
             bookingId: novoBooking.id,
             valor: valorCalculado,
-            metodo: 'dinheiro_balcao', // Identifica que entrou fisicamente
-            status: 'aprovado'         // 🖥️ Status que o seu fluxo de caixa lê!
+            metodo: 'dinheiro_balcao',
+            status: 'aprovado'
           }
         });
       }
@@ -258,10 +285,8 @@ async function criarManual(req, res) {
 
     return res.status(201).json(booking);
   } catch (err) {
-    if (err.message === 'SLOT_TAKEN') {
-      return res.status(409).json({ error: 'Este horário já está reservado.' });
-    }
-    console.error('ERRO AO CRIAR RESERVA MANUAL:', err);
+    if (err.message === 'SLOT_TAKEN') return res.status(409).json({ error: 'Este horário já está reservado.' });
+    console.error(err);
     return res.status(500).json({ error: 'Erro ao criar reserva no balcão.' });
   }
 }
