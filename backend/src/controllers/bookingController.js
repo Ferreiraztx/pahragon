@@ -270,6 +270,7 @@ async function criarManual(req, res) {
 }
 
 // 💡 NOVA FUNÇÃO: Atualiza os dados de uma reserva manual direto do calendário
+// 💡 FUNÇÃO ATUALIZADA: Corrige alteração de nome, horário e status financeiro
 async function atualizarManual(req, res) {
   const { id } = req.params;
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
@@ -285,7 +286,10 @@ async function atualizarManual(req, res) {
     const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicio) + 3, Number(mInicio), 0));
     const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFim) + 3, Number(mFim), 0));
 
-    // Atualiza o registro usando o Prisma
+    // Mapeia o status financeiro do balcão para o status de reserva do seu banco
+    // Se o admin marcou "pago", o status vira 'confirmado' ou 'pago' (dependendo do seu enum)
+    const novoStatus = statusPagamento === 'pago' ? 'confirmado' : 'pendente';
+
     const reservaAtualizada = await prisma.booking.update({
       where: { id: Number(id) },
       data: {
@@ -293,7 +297,11 @@ async function atualizarManual(req, res) {
         data: dataFormatada,
         horaInicio: inicioFormatado,
         horaFim: fimFormatado,
-        // statusPagamento: statusPagamento // se você tiver esse campo mapeado no banco
+        status: novoStatus,
+        // Caso seu banco use o esquema de relação com User, para atualizar o nome exibido
+        // na listagem de avulsos, garantimos que ele salve em texto ou atualize o User se aplicável.
+        // Se tiver o campo nomeAvulso descomente a linha abaixo:
+        // nomeAvulso: nomeAtleta
       }
     });
 
