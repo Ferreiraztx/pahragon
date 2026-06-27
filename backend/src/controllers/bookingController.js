@@ -438,7 +438,7 @@ async function horariosDisponiveis(req, res) {
       data: { status: 'cancelado' }
     });
 
-    const dataSelecionadaString = data.split('T')[0]; // Ex: "2026-06-30"
+    const dataSelecionadaString = data.split('T')[0];
     const [anoD, mesD, diaD] = dataSelecionadaString.split('-');
     const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12, 0, 0));
 
@@ -484,17 +484,22 @@ async function horariosDisponiveis(req, res) {
     }
 
     // ==========================================================
-    // 💡 CORREÇÃO CRÍTICA DE FUSO HORÁRIO PARA TORNEIOS
+    // 💡 ATUALIZADO: Filtro Inteligente de Torneios (Com trava global)
     // ==========================================================
     const todosTorneios = await prisma.tournament.findMany();
 
     const torneiosDoDiaDessaQuadra = todosTorneios.filter(t => {
       const quadrasArray = t.quadras || [];
-      const pertenceAEstaQuadra = quadrasArray.includes(String(courtId)) || quadrasArray.includes(String(horariocut));
+      
+      // Se o array de quadras estiver vazio ou não existir, o Admin definiu que afeta "Todas as quadras"
+      const afetaTodasAsQuadras = quadrasArray.length === 0;
+      
+      const pertenceAEstaQuadra = afetaTodasAsQuadras || 
+                                  quadrasArray.includes(String(courtId)) || 
+                                  quadrasArray.includes(String(horariocut));
       
       if (!pertenceAEstaQuadra) return false;
 
-      // Forçamos a conversão das datas do banco subtraindo o fuso para obter a data real escolhida no Brasil
       const dataInicioLocal = new Date(new Date(t.data).getTime() - (3 * 60 * 60 * 1000));
       const dataFimLocal = new Date(new Date(t.dataFim).getTime() - (3 * 60 * 60 * 1000));
 
@@ -510,7 +515,6 @@ async function horariosDisponiveis(req, res) {
         const horaMinutoTexto = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
         const estaTrancadoPorTorneio = torneiosDoDiaDessaQuadra.some(t => {
-          // Extraímos as horas locais exatas correspondentes ao que foi digitado no formulário
           const dataInicioLocal = new Date(new Date(t.data).getTime() - (3 * 60 * 60 * 1000));
           const dataFimLocal = new Date(new Date(t.dataFim).getTime() - (3 * 60 * 60 * 1000));
 
