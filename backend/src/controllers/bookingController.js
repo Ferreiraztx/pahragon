@@ -412,6 +412,7 @@ async function cancelar(req, res) {
 }
 
 // Listar horários disponíveis de uma quadra em uma data (Injetada lógica de bloqueios)
+// Listar horários disponíveis de uma quadra em uma data (Corrigido fuso horário dos Torneios)
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
 
@@ -466,12 +467,14 @@ async function horariosDisponiveis(req, res) {
       where: { diaSemana: diaSemanaConsulta }
     });
 
+    // Ajustado de gridDoDia para horarioDoDia para corrigir o bug de inicialização
     if (!horarioDoDia || !horarioDoDia.ativo) {
       return res.json({ data, courtId, disponiveis: [], fechado: true });
     }
 
     let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
 
+    // 1. Filtro de Bloqueios manuais de manutenção
     const bloqueios = await prisma.bloqueioQuadra.findMany({
       where: {
         quadraId: Number(courtId),
@@ -487,6 +490,44 @@ async function horariosDisponiveis(req, res) {
         return !estaBloqueado;
       });
     }
+
+    // ==========================================================
+    // 💡 INJETADO E CORRIGIDO: Alinhamento de Fuso Horário do Torneio
+    // ==========================================================
+    // Criamos o início e fim do dia considerando a data selecionada na mesma timezone do banco
+    const dataInicioDia = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 0, 0, 0));
+    const dataFimDia = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 23, 59, 59));
+
+    const torneiosDoDia = await prisma.tournament.findMany({
+      where: {
+        quadras: { has: String(courtId) },
+        AND: [
+          { data: { lte: dataFimDia } },
+          { dataFim: { gte: dataInicioDia } }
+        ]
+      }
+    });
+
+    if (torneiosDoDia.length > 0) {
+      disponiveis = disponiveis.filter(hora => {
+        const [h, m] = hora.split(':').map(Number);
+        
+        // Convertemos o slot de horário atual do loop para String "HH:MM" puro para comparar direto 
+        // com o horário salvo do torneio convertido para texto local (Horário de Brasília)
+        const horaMinutoTexto = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+        const estaNoTorneio = torneiosDoDia.some(t => {
+          // Obtém as strings de hora local (HH:MM) baseadas nos objetos Date salvos no banco
+          const incioTexto = new Date(t.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+          const fimTexto = new Date(t.dataFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+          
+          return horaMinutoTexto >= incioTexto && horaMinutoTexto < fimTexto;
+        });
+
+        return !estaNoTorneio;
+      });
+    }
+    // ==========================================================
 
     if (dataSelecionadaString === hojeString) {
       const horaAtual = agoraBrasilia.getUTCHours();
