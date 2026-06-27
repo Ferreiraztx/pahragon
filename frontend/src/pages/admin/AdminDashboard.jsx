@@ -945,7 +945,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <AgendaAdmin
-                  reservas={reservasFiltradasPorData}
+                  reservas={[...reservasFiltradasPorData, ...torneios]}
                   quadras={quadras}
                   token={token}
                   aoAtualizarDados={carregarDados}
