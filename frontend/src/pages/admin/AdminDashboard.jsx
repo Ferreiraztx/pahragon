@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import AgendaAdmin from "./AgendaAdmin";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -59,8 +60,18 @@ export default function AdminDashboard() {
     const [ano, mes, dia] = dataPura.split("-");
 
     const meses = [
-      "jan", "fev", "mar", "abr", "mai", "jun",
-      "jul", "ago", "set", "out", "nov", "dez",
+      "jan",
+      "fev",
+      "mar",
+      "abr",
+      "mai",
+      "jun",
+      "jul",
+      "ago",
+      "set",
+      "out",
+      "nov",
+      "dez",
     ];
     const nomeMes = meses[parseInt(mes, 10) - 1];
 
@@ -123,7 +134,8 @@ export default function AdminDashboard() {
         });
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.error || "Erro na conexão com o servidor.";
+      const errorMsg =
+        error.response?.data?.error || "Erro na conexão com o servidor.";
       setAviso({
         aberto: true,
         tipo: "erro",
@@ -198,14 +210,16 @@ export default function AdminDashboard() {
       api.get("/horarios"),
     ]);
 
-    const [resReservas, resQuadras, resTorneios, resCaixa, resAtletas] = resultados;
+    const [resReservas, resQuadras, resTorneios, resCaixa, resAtletas] =
+      resultados;
 
     if (resReservas.status === "fulfilled") setReservas(resReservas.value.data);
     if (resQuadras.status === "fulfilled") setQuadras(resQuadras.value.data);
     if (resTorneios.status === "fulfilled") setTorneios(resTorneios.value.data);
     if (resCaixa.status === "fulfilled") setCaixa(resCaixa.value.data);
     if (resAtletas.status === "fulfilled") setAtletas(resAtletas.value.data);
-    if (resultados[5].status === "fulfilled") setHorarios(resultados[5].value.data);
+    if (resultados[5].status === "fulfilled")
+      setHorarios(resultados[5].value.data);
 
     resultados.forEach((r, i) => {
       if (r.status === "rejected") {
@@ -218,7 +232,13 @@ export default function AdminDashboard() {
   }
 
   const diasSemana = [
-    "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
+    "Domingo",
+    "Segunda",
+    "Terça",
+    "Quarta",
+    "Quinta",
+    "Sexta",
+    "Sábado",
   ];
 
   const [bloqueios, setBloqueios] = useState([]);
@@ -252,9 +272,7 @@ export default function AdminDashboard() {
     const horarioAtual = horarios.find((h) => h.diaSemana === diaSemana);
     const updated = { ...horarioAtual, [campo]: valor };
 
-    setHorarios(
-      horarios.map((h) => (h.diaSemana === diaSemana ? updated : h)),
-    );
+    setHorarios(horarios.map((h) => (h.diaSemana === diaSemana ? updated : h)));
 
     try {
       await api.put(
@@ -847,6 +865,7 @@ export default function AdminDashboard() {
             {/* RESERVAS */}
             {aba === "reservas" && (
               <div className="space-y-10">
+                {/* Seção de Métricas (Confirmadas, Pendentes, Canceladas) */}
                 <div className="grid grid-cols-3 gap-4 sm:gap-8 py-4 border-b border-slate-200/80">
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">
@@ -874,7 +893,16 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 sm:gap-6 text-sm border-b border-slate-200/40 pb-3 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                {/* 1. GRADE VISUAL DE HORÁRIOS (Nova funcionalidade) */}
+                <AgendaAdmin
+                  reservas={reservasFiltradasPorData}
+                  quadras={quadras}
+                  token={token}
+                  aoAtualizarDados={carregarDados}
+                />
+
+                {/* 2. FILTROS DA SUA LISTA ANTIGA (Mantidos aqui) */}
+                <div className="flex gap-4 sm:gap-6 text-sm border-b border-slate-200/40 pb-3 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pt-6">
                   {[
                     { id: "todos", label: "Todos os status" },
                     { id: "confirmado", label: "Confirmadas" },
@@ -884,13 +912,18 @@ export default function AdminDashboard() {
                     <button
                       key={tab.id}
                       onClick={() => setFiltroStatus(tab.id)}
-                      className={`pb-1.5 transition text-sm font-medium whitespace-nowrap ${filtroStatus === tab.id ? "text-slate-900 border-b-2 border-slate-900 font-bold" : "text-slate-400 hover:text-slate-700"}`}
+                      className={`pb-1.5 transition text-sm font-medium whitespace-nowrap ${
+                        filtroStatus === tab.id
+                          ? "text-slate-900 border-b-2 border-slate-900 font-bold"
+                          : "text-slate-400 hover:text-slate-700"
+                      }`}
                     >
                       {tab.label}
                     </button>
                   ))}
                 </div>
 
+                {/* 3. LISTA DE RESERVAS EXIBIDAS (Mantida idêntica ao seu código original) */}
                 <div className="grid grid-cols-1 gap-4">
                   {reservasExibidasNaLista.length === 0 ? (
                     <div className="text-slate-400 text-base py-16 text-center font-light">
@@ -915,12 +948,18 @@ export default function AdminDashboard() {
                               <span className="text-sm font-mono font-medium text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded">
                                 {new Date(r.horaInicio).toLocaleTimeString(
                                   "pt-BR",
-                                  { hour: "2-digit", minute: "2-digit" },
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
                                 )}
                                 h –{" "}
                                 {new Date(r.horaFim).toLocaleTimeString(
                                   "pt-BR",
-                                  { hour: "2-digit", minute: "2-digit" },
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
                                 )}
                                 h
                               </span>
@@ -1260,7 +1299,8 @@ export default function AdminDashboard() {
                     Horário de Funcionamento
                   </h2>
                   <p className="text-slate-400 text-sm font-light">
-                    Desative um dia para fechar as reservas nele automaticamente.
+                    Desative um dia para fechar as reservas nele
+                    automaticamente.
                   </p>
                 </div>
 
@@ -1340,7 +1380,8 @@ export default function AdminDashboard() {
                     Gestão de Quadras
                   </h2>
                   <p className="text-sm text-slate-400 font-light mt-1">
-                    Bloqueie horários específicos para manutenção, aulas ou eventos privados.
+                    Bloqueie horários específicos para manutenção, aulas ou
+                    eventos privados.
                   </p>
                 </div>
 
@@ -1352,7 +1393,10 @@ export default function AdminDashboard() {
                     </h3>
                   </div>
 
-                  <form onSubmit={handleCriarBloqueio} className="p-6 space-y-6">
+                  <form
+                    onSubmit={handleCriarBloqueio}
+                    className="p-6 space-y-6"
+                  >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 ml-0.5">
@@ -1462,7 +1506,9 @@ export default function AdminDashboard() {
                             : "bg-teal-600 hover:bg-teal-700 hover:-translate-y-0.5"
                         }`}
                       >
-                        {loadingBloqueio ? "Processando..." : "Confirmar Bloqueio de Horário"}
+                        {loadingBloqueio
+                          ? "Processando..."
+                          : "Confirmar Bloqueio de Horário"}
                       </button>
                     </div>
                   </form>
@@ -1520,7 +1566,13 @@ export default function AdminDashboard() {
                             </div>
                             <button
                               type="button"
-                              onClick={() => handleDeletarBloqueio(b.id, dataFormatadaSegura, nomeDaQuadra)}
+                              onClick={() =>
+                                handleDeletarBloqueio(
+                                  b.id,
+                                  dataFormatadaSegura,
+                                  nomeDaQuadra,
+                                )
+                              }
                               className="self-start sm:self-auto text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
                             >
                               Remover Bloqueio
