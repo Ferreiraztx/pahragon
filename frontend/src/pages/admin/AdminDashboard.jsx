@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const [aba, setAba] = useState("reservas");
   const [atletas, setAtletas] = useState([]);
   const [atletaSelecionado, setAtletaSelecionado] = useState(null);
+  const [horarios, setHorarios] = useState([]);
 
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -93,6 +94,7 @@ export default function AdminDashboard() {
       api.get("/tournaments"),
       api.get("/tournaments/caixa", { headers }),
       api.get("/auth/usuarios", { headers }),
+      api.get("/horarios"),
     ]);
 
     const [resReservas, resQuadras, resTorneios, resCaixa, resAtletas] =
@@ -103,6 +105,8 @@ export default function AdminDashboard() {
     if (resTorneios.status === "fulfilled") setTorneios(resTorneios.value.data);
     if (resCaixa.status === "fulfilled") setCaixa(resCaixa.value.data);
     if (resAtletas.status === "fulfilled") setAtletas(resAtletas.value.data);
+    if (resultados[5].status === "fulfilled")
+      setHorarios(resultados[5].value.data);
 
     resultados.forEach((r, i) => {
       if (r.status === "rejected") {
@@ -112,6 +116,41 @@ export default function AdminDashboard() {
         );
       }
     });
+  }
+
+  const diasSemana = [
+    "Domingo",
+    "Segunda",
+    "Terça",
+    "Quarta",
+    "Quinta",
+    "Sexta",
+    "Sábado",
+  ];
+
+  async function atualizarHorario(diaSemana, campo, valor) {
+    const horarioAtual = horarios.find((h) => h.diaSemana === diaSemana);
+    const atualizado = { ...horarioAtual, [campo]: valor };
+
+    setHorarios(
+      horarios.map((h) => (h.diaSemana === diaSemana ? atualizado : h)),
+    );
+
+    try {
+      await api.put(
+        "/horarios",
+        {
+          diaSemana,
+          ativo: atualizado.ativo,
+          horaAbertura: atualizado.horaAbertura,
+          horaFechamento: atualizado.horaFechamento,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    } catch {
+      setMensagem("❌ Erro ao salvar horário de funcionamento.");
+      carregarDados(); // reverte caso falhe
+    }
   }
 
   async function criarQuadra(e) {
@@ -322,6 +361,7 @@ export default function AdminDashboard() {
     { id: "torneios", label: "Torneios", count: torneios.length },
     { id: "atletas", label: "Atletas", count: atletas.length },
     { id: "caixa", label: "Fluxo de Caixa", count: null },
+    { id: "horarios", label: "Horário de Funcionamento", count: null },
   ];
 
   const formatarDataLateral = (dataString) => {
@@ -424,7 +464,9 @@ export default function AdminDashboard() {
                     </span>
                     <span className="text-slate-800 font-semibold">
                       {atletaSelecionado.dataNascimento
-                        ? formatarNascimentoCompleto(atletaSelecionado.dataNascimento)
+                        ? formatarNascimentoCompleto(
+                            atletaSelecionado.dataNascimento,
+                          )
                         : "—"}
                     </span>
                   </div>
@@ -1089,6 +1131,87 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+
+            {/* HORÁRIO DE FUNCIONAMENTO */}
+            {aba === "horarios" && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-2xl font-extrabold text-slate-900 mb-2">
+                    Horário de Funcionamento
+                  </h2>
+                  <p className="text-slate-400 text-sm font-light">
+                    Desative um dia para fechar as reservas nele
+                    automaticamente.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {diasSemana.map((nomeDia, indice) => {
+                    const h = horarios.find(
+                      (item) => item.diaSemana === indice,
+                    );
+                    if (!h) return null;
+                    return (
+                      <div
+                        key={indice}
+                        className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all ${
+                          h.ativo
+                            ? "bg-white border-slate-200"
+                            : "bg-slate-50 border-slate-200/60 opacity-70"
+                        }`}
+                      >
+                        <div className="flex items-center gap-4 min-w-[140px]">
+                          <button
+                            onClick={() =>
+                              atualizarHorario(indice, "ativo", !h.ativo)
+                            }
+                            className={`w-12 h-7 rounded-full relative transition-colors shrink-0 ${h.ativo ? "bg-teal-500" : "bg-slate-300"}`}
+                          >
+                            <span
+                              className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${h.ativo ? "translate-x-5" : ""}`}
+                            />
+                          </button>
+                          <span className="font-extrabold text-slate-900">
+                            {nomeDia}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="time"
+                            value={h.horaAbertura}
+                            disabled={!h.ativo}
+                            onChange={(e) =>
+                              atualizarHorario(
+                                indice,
+                                "horaAbertura",
+                                e.target.value,
+                              )
+                            }
+                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono disabled:opacity-40 disabled:bg-slate-100"
+                          />
+                          <span className="text-slate-400 text-sm">às</span>
+                          <input
+                            type="time"
+                            value={h.horaFechamento}
+                            disabled={!h.ativo}
+                            onChange={(e) =>
+                              atualizarHorario(
+                                indice,
+                                "horaFechamento",
+                                e.target.value,
+                              )
+                            }
+                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono disabled:opacity-40 disabled:bg-slate-100"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* FLUXO DE CAIXA */}
             {aba === "caixa" && caixa && (
               <div className="space-y-12">

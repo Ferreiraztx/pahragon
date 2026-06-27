@@ -34,6 +34,7 @@ app.use('/courts', courtRoutes);
 app.use('/bookings', bookingRoutes);
 app.use('/payments', paymentRoutes);
 app.use('/tournaments', tournamentRoutes);
+app.use('/horarios', require('./routes/horarios'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Pahragon Beach Tennis API 🎾' });

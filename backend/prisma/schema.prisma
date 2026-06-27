@@ -76,3 +76,12 @@ model Tournament {
   status      String   @default("aberto")
   createdAt   DateTime @default(now())
 }
+
+model HorarioFuncionamento {
+  id             Int      @id @default(autoincrement())
+  diaSemana      Int      @unique // 0 = Domingo ... 6 = Sábado
+  ativo          Boolean  @default(true)
+  horaAbertura   String   @default("08:00") // "HH:mm"
+  horaFechamento String   @default("23:00") // "HH:mm"
+  updatedAt      DateTime @updatedAt
+}

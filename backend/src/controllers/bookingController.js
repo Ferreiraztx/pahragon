@@ -1,6 +1,25 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
+  const [ano, mes, dia] = dataAgendamentoString.split('-').map(Number);
+  const diaSemana = new Date(Date.UTC(ano, mes - 1, dia, 12)).getUTCDay();
+
+  const horario = await prisma.horarioFuncionamento.findUnique({
+    where: { diaSemana }
+  });
+
+  if (!horario || !horario.ativo) {
+    return { liberado: false, motivo: 'A arena está fechada neste dia da semana.' };
+  }
+
+  if (horaAgendamentoStr < horario.horaAbertura || horaAgendamentoStr >= horario.horaFechamento) {
+    return { liberado: false, motivo: `Fora do horário de funcionamento (${horario.horaAbertura} às ${horario.horaFechamento}).` };
+  }
+
+  return { liberado: true };
+}
+
 // Criar reserva (Versão Corrigida com Validação Local e Lógica de Conflito Blindada)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim } = req.body;
@@ -32,6 +51,11 @@ async function criar(req, res) {
       return res.status(400).json({ error: 'Não é possível agendar em um horário que já passou hoje.' });
     }
     // ==========================================================
+
+    const checkFuncionamento = await validarFuncionamento(dataAgendamentoString, horaAgendamentoStr);
+    if (!checkFuncionamento.liberado) {
+      return res.status(400).json({ error: checkFuncionamento.motivo });
+    }
 
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horaInicio}`;
@@ -220,11 +244,20 @@ async function horariosDisponiveis(req, res) {
     const dia = String(agoraBrasilia.getUTCDate()).padStart(2, '0');
     const hojeString = `${ano}-${mes}-${dia}`;
 
-    let disponiveis = [...horariosBase];
+    let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
 
     if (dataSelecionadaString === hojeString) {
       const horaAtual = agoraBrasilia.getUTCHours();
       const minutoAtual = agoraBrasilia.getUTCMinutes();
+
+      const diaSemanaConsulta = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12)).getUTCDay();
+const horarioDoDia = await prisma.horarioFuncionamento.findUnique({
+  where: { diaSemana: diaSemanaConsulta }
+});
+
+if (!horarioDoDia || !horarioDoDia.ativo) {
+  return res.json({ data, courtId, disponiveis: [], fechado: true });
+}
 
       disponiveis = disponiveis.filter(h => {
         const [hBotao, mBotao] = h.split(':').map(Number);
