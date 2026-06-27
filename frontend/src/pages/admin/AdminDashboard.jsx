@@ -165,7 +165,7 @@ export default function AdminDashboard() {
         carregarBloqueios();
       } else {
         setAviso({
-          aberto: true,
+          alert: true,
           tipo: "erro",
           mensagem: "Erro ao cancelar o bloqueio.",
         });
@@ -475,11 +475,12 @@ export default function AdminDashboard() {
       "text-slate-500 bg-slate-200/60 px-3 py-1 rounded-lg text-xs font-medium",
   };
 
+  // 💡 CORRIGIDO AQUI: Removido 'athletes' inexistente para evitar tela branca!
   const abas = [
     { id: "reservas", label: "Reservas", count: reservas.length },
     { id: "quadras", label: "Quadras", count: quadras.length },
     { id: "torneios", label: "Torneios", count: torneios.length },
-    { id: "atletas", label: "Atletas", count: athletes?.length || atletas.length },
+    { id: "atletas", label: "Atletas", count: atletas.length },
     { id: "horarios", label: "Horário de Funcionamento", count: null },
     { id: "gestao", label: "Bloqueio de Quadras", count: null },
     { id: "caixa", label: "Fluxo de Caixa", count: null },
