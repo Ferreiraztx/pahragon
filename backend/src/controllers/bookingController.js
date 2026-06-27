@@ -150,27 +150,41 @@ async function criar(req, res) {
   }
 }
 
-// 💡 NOVA FUNÇÃO: Cria agendamentos manuais vindos do Painel do Admin
+// 💡 FUNÇÃO ATUALIZADA: Com travas para não permitir agendamentos no passado
 async function criarManual(req, res) {
   const { nomeAtleta, data, horarioInicio, courtId } = req.body;
 
-  // Recupera o ID do administrador logado para associar à tabela de transações obrigatória
   const rawAdminId = req.user?.id || req.userId;
   const adminId = isNaN(Number(rawAdminId)) ? rawAdminId : Number(rawAdminId);
 
   try {
-    const dataAgendamentoString = data.split('T')[0];
-    const [horas, minutos] = horarioInicio.split(':');
+    // ==========================================================
+    // TRAVA DE SEGURANÇA RETROATIVA: Bloqueia passados (Igual seu método criar)
+    // ==========================================================
+    const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
+    const ano = agoraBR.getUTCFullYear();
+    const mes = String(agoraBR.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(agoraBR.getUTCDate()).padStart(2, '0');
+    const hojeString = `${ano}-${mes}-${dia}`;
     
-    // Define a duração padrão de 1 hora para o encerramento do bloco
-    const horaTermino = `${String(Number(horas) + 1).padStart(2, '0')}:${minutos}`;
+    const horaAtualStr = `${String(agoraBR.getUTCHours()).padStart(2, '0')}:${String(agoraBR.getUTCMinutes()).padStart(2, '0')}`;
+
+    const dataAgendamentoString = data.split('T')[0];
+
+    if (dataAgendamentoString < hojeString) {
+      return res.status(400).json({ error: 'Não é possível agendar em um dia que já passou.' });
+    }
+
+    if (dataAgendamentoString === hojeString && horarioInicio <= horaAtualStr) {
+      return res.status(400).json({ error: 'Não é possível agendar em um horário que já passou hoje.' });
+    }
+    // ==========================================================
 
     const checkFuncionamento = await validarFuncionamento(dataAgendamentoString, horarioInicio);
     if (!checkFuncionamento.liberado) {
       return res.status(400).json({ error: checkFuncionamento.motivo });
     }
 
-    // Valida se não existe nenhum bloqueio geral de manutenção ativo na quadra
     const bloqueiosAtivos = await prisma.bloqueioQuadra.findMany({
       where: {
         quadraId: Number(courtId),
@@ -186,7 +200,6 @@ async function criarManual(req, res) {
       return res.status(400).json({ error: 'Este horário está bloqueado para a administração.' });
     }
 
-    // Executa a transação utilizando travas e converte os fusos idêntico à sua função original
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horarioInicio}`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
@@ -227,8 +240,6 @@ async function criarManual(req, res) {
         throw new Error('SLOT_TAKEN');
       }
 
-      // Se seu banco aceitar o nome do atleta avulso em string, você pode mapear
-      // o campo 'nomeAtleta' aqui nas propriedades.
       return tx.booking.create({
         data: {
           userId: adminId, 
