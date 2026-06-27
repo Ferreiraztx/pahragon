@@ -566,15 +566,104 @@ async function horariosDisponiveis(req, res) {
 }
 
 // Admin: listar todas as reservas
+// Admin: listar todas as reservas, bloqueios e torneios unificados para o calendário
 async function listarTodas(req, res) {
   try {
+    // 1. Busca as reservas tradicionais dos atletas
     const bookings = await prisma.booking.findMany({
       include: { court: true, user: true },
       orderBy: { data: 'asc' }
     });
-    return res.json(bookings);
+
+    // 2. Busca os bloqueios de manutenção normais
+    const bloqueios = await prisma.bloqueioQuadra.findMany({
+      include: { quadra: true }
+    });
+
+    // 3. Busca todos os torneios agendados
+    const torneios = await prisma.tournament.findMany();
+
+    // 4. Formata as reservas comuns para a lista final
+    const agendaCompleta = bookings.map(b => {
+      // Extrai a hora legível dos objetos Date
+      const horaInic = new Date(b.horaInicio).toISOString().substring(11, 16);
+      const horaFim = new Date(b.horaFim).toISOString().substring(11, 16);
+      const dataApenasStr = new Date(b.data).toISOString().split('T')[0];
+
+      return {
+        id: b.id,
+        data: dataApenasStr,
+        horaInicio: horaInic,
+        horaFim: horaFim,
+        courtId: b.courtId,
+        status: b.status,
+        nomeAtleta: b.nomeAvulso || b.user?.name || 'Atleta',
+        tipo: 'reserva', // Identificador
+        court: b.court,
+        user: b.user
+      };
+    });
+
+    // 5. Injeta os Bloqueios de Manutenção na lista
+    bloqueios.forEach(b => {
+      agendaCompleta.push({
+        id: `bloqueio-${b.id}`,
+        data: b.data, // Mantém a string "AAAA-MM-DD"
+        horaInicio: b.horaInicio,
+        horaFim: b.horaFim,
+        courtId: b.quadraId,
+        status: 'confirmado',
+        nomeAtleta: `🚧 Bloqueio: ${b.motivo || 'Manutenção'}`,
+        tipo: 'bloqueio',
+        court: b.quadra
+      });
+    });
+
+    // 6. Injeta os Torneios mapeando por quadra afetada
+    torneios.forEach(t => {
+      const dataInicioStr = new Date(t.data).toISOString().split('T')[0];
+      const horaInic = new Date(t.data).toISOString().substring(11, 16);
+      const horaFim = new Date(t.dataFim).toISOString().substring(11, 16);
+      
+      const quadrasArray = t.quadras || [];
+
+      if (quadrasArray.length === 0) {
+        // Fallback: Se não selecionou quadra específica, bloqueia as quadras de ID 1, 2, 3 e 4
+        const todasQuadrasIds = [1, 2, 3, 4]; 
+        todasQuadrasIds.forEach(qId => {
+          agendaCompleta.push({
+            id: `torneio-${t.id}-all-${qId}`,
+            data: dataInicioStr,
+            horaInicio: horaInic,
+            horaFim: horaFim,
+            courtId: qId,
+            status: 'confirmado',
+            nomeAtleta: `🏆 Torneio: ${t.nome}`,
+            tipo: 'torneio'
+          });
+        });
+      } else {
+        // Se escolheu quadras específicas, cria um card no calendário para cada uma delas
+        quadrasArray.forEach(qId => {
+          agendaCompleta.push({
+            id: `torneio-${t.id}-${qId}`,
+            data: dataInicioStr,
+            horaInicio: horaInic,
+            horaFim: horaFim,
+            courtId: Number(qId),
+            status: 'confirmado',
+            nomeAtleta: `🏆 Torneio: ${t.nome}`,
+            tipo: 'torneio'
+          });
+        });
+      }
+    });
+
+    // Retorna a lista unificada para o calendário ler de uma vez só!
+    return res.json(agendaCompleta);
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao listar reservas' });
+    console.error('Erro ao montar lista completa do calendário:', err);
+    return res.status(500).json({ error: 'Erro ao listar reservas da agenda.' });
   }
 }
 
