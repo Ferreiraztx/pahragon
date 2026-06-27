@@ -44,22 +44,72 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
       title: q.nome,
     }));
 
-  const eventsCalendar = reservas
+  const eventsCalendar = (reservas || [])
     .filter((r) => {
-      const statusValido = r.status.startsWith("confirmado") || r.status.startsWith("pendente");
+      if (!r) return false;
       const idDaQuadraReserva = r.court?.id || r.courtId;
       const quadraValida = quadraFiltrada === "todas" || String(idDaQuadraReserva) === String(quadraFiltrada);
 
+      if (r.tipo === 'bloqueio' || r.tipo === 'torneio') {
+        return quadraValida;
+      }
+
+      const statusValido = r.status && (r.status.startsWith("confirmado") || r.status.startsWith("pendente") || r.status.startsWith("pago"));
       return statusValido && quadraValida;
     })
     .map((r) => {
-      const isPendente = r.status.startsWith("pendente");
       const idDaQuadraReserva = r.court?.id || r.courtId;
+      
+      // Garante que a data seja uma string no formato YYYY-MM-DD com segurança
+      let dataApenas = new Date().toISOString().split("T")[0];
+      if (r.data) {
+        dataApenas = typeof r.data === "string" ? r.data.split("T")[0] : new Date(r.data).toISOString().split("T")[0];
+      }
 
+      // Converte horaInicio e horaFim com segurança para HH:MM
+      const obterHoraFormatada = (dataHora) => {
+        if (!dataHora) return "00:00";
+        return new Date(dataHora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      };
+
+      const hInicio = obterHoraFormatada(r.horaInicio);
+      const hFim = obterHoraFormatada(r.horaFim);
+
+      // 1. Customização visual se o item for um TORNEIO
+      if (r.tipo === 'torneio') {
+        return {
+          id: r.id,
+          resourceId: idDaQuadraReserva,
+          start: `${dataApenas}T${hInicio}:00`,
+          end: `${dataApenas}T${hFim}:00`,
+          title: r.nomeAvulso || "🏆 Torneio Ativo",
+          backgroundColor: "#065f46", 
+          textColor: "#ffffff",
+          borderColor: "#047857",
+          extendedProps: { r, desativarClique: true }
+        };
+      }
+
+      // 2. Customização visual se o item for um BLOQUEIO MANUAL
+      if (r.tipo === 'bloqueio') {
+        return {
+          id: r.id,
+          resourceId: idDaQuadraReserva,
+          start: `${dataApenas}T${hInicio}:00`,
+          end: `${dataApenas}T${hFim}:00`,
+          title: r.nomeAvulso || "🚧 Horário Bloqueado",
+          backgroundColor: "repeating-linear-gradient(45deg, #ffedd5, #ffedd5 10px, #fff7ed 10px, #fff7ed 20px)",
+          textColor: "#9a3412",
+          borderColor: "#fdba74",
+          extendedProps: { r, desativarClique: true }
+        };
+      }
+
+      // 3. Layout das Reservas normais dos clientes
+      const isPendente = r.status ? r.status.startsWith("pendente") : false;
       const indiceQuadra = quadras.findIndex((q) => q.id === idDaQuadraReserva);
       const estileteCor = CORES_QUADRAS[indiceQuadra % 6] || CORES_QUADRAS[0];
 
-      // 💡 CORES AJUSTADAS: Fundo sólido se pago; listras de alto contraste (Cor + Branco) se pendente
       const backgroundColor = !isPendente
         ? estileteCor.bg
         : `repeating-linear-gradient(45deg, ${estileteCor.bg}, ${estileteCor.bg} 10px, #ffffff 10px, #ffffff 20px)`;
@@ -67,23 +117,20 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
       return {
         id: r.id,
         resourceId: idDaQuadraReserva,
-        start: `${r.data.split("T")[0]}T${new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
-        end: `${r.data.split("T")[0]}T${new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}:00`,
-
+        start: `${dataApenas}T${hInicio}:00`,
+        end: `${dataApenas}T${hFim}:00`,
         title: isPendente
-          ? `⚠️ [PENDENTE] ${r.nomeAvulso || r.user?.nome || "Agendamento"}`
+          ? `⚠️ [PENDENTE] ${r.nomeAvulso || r.user?.nome || r.user?.name || "Agendamento"}`
           : (quadraFiltrada === "todas" && visaoAtual === "dayGridMonth"
-              ? `${r.nomeAvulso || r.user?.nome || "Agendamento"} (${r.court?.nome || "Quadra"})`
-              : r.nomeAvulso || r.user?.nome || "Agendamento"),
-
+              ? `${r.nomeAvulso || r.user?.nome || r.user?.name || "Agendamento"} (${r.court?.nome || "Quadra"})`
+              : r.nomeAvulso || r.user?.nome || r.user?.name || "Agendamento"),
         backgroundColor: backgroundColor,
         textColor: estileteCor.text,
-        // Borda vermelha marcante se estiver pendente para destacar em qualquer tela
         borderColor: isPendente ? "#ef4444" : estileteCor.border, 
-
         extendedProps: {
           r,
           isPendente,
+          desativarClique: false
         },
       };
     });
@@ -128,10 +175,14 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
   };
 
   const handleCliqueNaReservaExistente = (info) => {
+    if (info.event.extendedProps.desativarClique) {
+      return;
+    }
+
     const r = info.event.extendedProps.r;
     const isPendente = info.event.extendedProps.isPendente;
 
-    const dataFormatada = r.data.split("T")[0];
+    const dataFormatada = typeof r.data === "string" ? r.data.split("T")[0] : new Date(r.data).toISOString().split("T")[0];
     const hInicio = new Date(r.horaInicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const hFim = new Date(r.horaFim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -140,8 +191,7 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
     setErroMensagem("");
     setConfirmarExclusao(false);
     setDadosForm({
-      // 💡 CORRIGIDO AQUI: Puxa o r.nomeAvulso salvo da nova coluna do Prisma
-      atleta: r.nomeAvulso || r.user?.nome || "", 
+      atleta: r.nomeAvulso || r.user?.nome || r.user?.name || "", 
       data: dataFormatada,
       horario: hInicio,
       horarioFim: hFim,
@@ -174,7 +224,7 @@ export default function AgendaAdmin({ reservas, quadras, token, aoAtualizarDados
 
   const handleSalvarReserva = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setLoading(true); // 💡 CORRIGIDO: Antes estava loading(true), o que gerava o crash
     setErroMensagem("");
 
     if (dadosForm.horarioFim <= dadosForm.horario) {

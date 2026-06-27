@@ -414,11 +414,10 @@ async function cancelar(req, res) {
 // Listar horários disponíveis de uma quadra em uma data (Injetada lógica de bloqueios)
 // Listar horários disponíveis de uma quadra em uma data (Corrigido fuso horário dos Torneios)
 // Listar horários disponíveis de uma quadra em uma data (Versão Ultra Blindada)
-// Listar horários disponíveis de uma quadra em uma data (Fuso Horário Corrigido por Deslocamento)
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
 
-  const horariocut = Number(courtId);
+  const horariocut = Number(courtId); // Garante a versão numérica se necessário
 
   const horariosBase = [
     '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -438,7 +437,7 @@ async function horariosDisponiveis(req, res) {
       data: { status: 'cancelado' }
     });
 
-    const dataSelecionadaString = data.split('T')[0];
+    const dataSelecionadaString = data.split('T')[0]; // "2026-06-30"
     const [anoD, mesD, diaD] = dataSelecionadaString.split('-');
     const dataBusca = new Date(Date.UTC(Number(anoD), Number(mesD) - 1, Number(diaD), 12, 0, 0));
 
@@ -484,27 +483,22 @@ async function horariosDisponiveis(req, res) {
     }
 
     // ==========================================================
-    // 💡 ATUALIZADO: Filtro Inteligente de Torneios (Com trava global)
+    // 💡 SOLUÇÃO GLOBAL PARA TORNEIOS (Tratamento de string agnóstico)
     // ==========================================================
+    // Puxa todos os torneios ativos do sistema para fazer a filtragem local via JS (mais seguro contra divergência de tipos do banco)
     const todosTorneios = await prisma.tournament.findMany();
 
+    // Filtra os torneios que pertencem a este dia e que afetam esta quadra
     const torneiosDoDiaDessaQuadra = todosTorneios.filter(t => {
       const quadrasArray = t.quadras || [];
-      
-      // Se o array de quadras estiver vazio ou não existir, o Admin definiu que afeta "Todas as quadras"
-      const afetaTodasAsQuadras = quadrasArray.length === 0;
-      
-      const pertenceAEstaQuadra = afetaTodasAsQuadras || 
-                                  quadrasArray.includes(String(courtId)) || 
-                                  quadrasArray.includes(String(horariocut));
+      // Aceita se o ID estiver salvo como texto "1" ou número 1
+      const pertenceAEstaQuadra = quadrasArray.includes(String(courtId)) || quadrasArray.includes(String(horariocut));
       
       if (!pertenceAEstaQuadra) return false;
 
-      const dataInicioLocal = new Date(new Date(t.data).getTime() - (3 * 60 * 60 * 1000));
-      const dataFimLocal = new Date(new Date(t.dataFim).getTime() - (3 * 60 * 60 * 1000));
-
-      const dataTorneioStr = dataInicioLocal.toISOString().split('T')[0];
-      const dataFimTorneioStr = dataFimLocal.toISOString().split('T')[0];
+      // Verifica se a data do torneio bate com o dia selecionado (comparando ano-mes-dia puro)
+      const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
+      const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
       
       return dataSelecionadaString >= dataTorneioStr && dataSelecionadaString <= dataFimTorneioStr;
     });
@@ -515,9 +509,8 @@ async function horariosDisponiveis(req, res) {
         const horaMinutoTexto = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
         const estaTrancadoPorTorneio = torneiosDoDiaDessaQuadra.some(t => {
-          // Extrai "HH:MM" direto da string ISO salva, ignorando conversões automáticas de fuso do Node
-          const incioTexto = new Date(t.data).toISOString().substring(11, 16);
-          const fimTexto = new Date(t.dataFim).toISOString().substring(11, 16);
+          const incioTexto = new Date(t.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+          const fimTexto = new Date(t.dataFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
           
           return horaMinutoTexto >= incioTexto && horaMinutoTexto < fimTexto;
         });
@@ -566,104 +559,15 @@ async function horariosDisponiveis(req, res) {
 }
 
 // Admin: listar todas as reservas
-// Admin: listar todas as reservas, bloqueios e torneios unificados para o calendário
 async function listarTodas(req, res) {
   try {
-    // 1. Busca as reservas tradicionais dos atletas
     const bookings = await prisma.booking.findMany({
       include: { court: true, user: true },
       orderBy: { data: 'asc' }
     });
-
-    // 2. Busca os bloqueios de manutenção normais
-    const bloqueios = await prisma.bloqueioQuadra.findMany({
-      include: { quadra: true }
-    });
-
-    // 3. Busca todos os torneios agendados
-    const torneios = await prisma.tournament.findMany();
-
-    // 4. Formata as reservas comuns para a lista final
-    const agendaCompleta = bookings.map(b => {
-      // Extrai a hora legível dos objetos Date
-      const horaInic = new Date(b.horaInicio).toISOString().substring(11, 16);
-      const horaFim = new Date(b.horaFim).toISOString().substring(11, 16);
-      const dataApenasStr = new Date(b.data).toISOString().split('T')[0];
-
-      return {
-        id: b.id,
-        data: dataApenasStr,
-        horaInicio: horaInic,
-        horaFim: horaFim,
-        courtId: b.courtId,
-        status: b.status,
-        nomeAtleta: b.nomeAvulso || b.user?.name || 'Atleta',
-        tipo: 'reserva', // Identificador
-        court: b.court,
-        user: b.user
-      };
-    });
-
-    // 5. Injeta os Bloqueios de Manutenção na lista
-    bloqueios.forEach(b => {
-      agendaCompleta.push({
-        id: `bloqueio-${b.id}`,
-        data: b.data, // Mantém a string "AAAA-MM-DD"
-        horaInicio: b.horaInicio,
-        horaFim: b.horaFim,
-        courtId: b.quadraId,
-        status: 'confirmado',
-        nomeAtleta: `🚧 Bloqueio: ${b.motivo || 'Manutenção'}`,
-        tipo: 'bloqueio',
-        court: b.quadra
-      });
-    });
-
-    // 6. Injeta os Torneios mapeando por quadra afetada
-    torneios.forEach(t => {
-      const dataInicioStr = new Date(t.data).toISOString().split('T')[0];
-      const horaInic = new Date(t.data).toISOString().substring(11, 16);
-      const horaFim = new Date(t.dataFim).toISOString().substring(11, 16);
-      
-      const quadrasArray = t.quadras || [];
-
-      if (quadrasArray.length === 0) {
-        // Fallback: Se não selecionou quadra específica, bloqueia as quadras de ID 1, 2, 3 e 4
-        const todasQuadrasIds = [1, 2, 3, 4]; 
-        todasQuadrasIds.forEach(qId => {
-          agendaCompleta.push({
-            id: `torneio-${t.id}-all-${qId}`,
-            data: dataInicioStr,
-            horaInicio: horaInic,
-            horaFim: horaFim,
-            courtId: qId,
-            status: 'confirmado',
-            nomeAtleta: `🏆 Torneio: ${t.nome}`,
-            tipo: 'torneio'
-          });
-        });
-      } else {
-        // Se escolheu quadras específicas, cria um card no calendário para cada uma delas
-        quadrasArray.forEach(qId => {
-          agendaCompleta.push({
-            id: `torneio-${t.id}-${qId}`,
-            data: dataInicioStr,
-            horaInicio: horaInic,
-            horaFim: horaFim,
-            courtId: Number(qId),
-            status: 'confirmado',
-            nomeAtleta: `🏆 Torneio: ${t.nome}`,
-            tipo: 'torneio'
-          });
-        });
-      }
-    });
-
-    // Retorna a lista unificada para o calendário ler de uma vez só!
-    return res.json(agendaCompleta);
+    return res.json(bookings);
   } catch (err) {
-    console.error('Erro ao montar lista completa do calendário:', err);
-    return res.status(500).json({ error: 'Erro ao listar reservas da agenda.' });
+    return res.status(500).json({ error: 'Erro ao listar reservas' });
   }
 }
 
