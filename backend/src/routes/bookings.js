@@ -11,7 +11,9 @@ const {
   criarBloqueio, 
   listarBloqueios, 
   deletarBloqueio,
-  criarManual 
+  criarManual,
+  atualizarManual,
+  deletarManual,
 } = require('../controllers/bookingController');
 const auth = require('../middlewares/auth');
 
@@ -24,7 +26,8 @@ router.get('/detalhes/:id', auth, buscarPorId);
 router.post('/bloqueios', auth, criarBloqueio);
 router.get('/bloqueios', auth, listarBloqueios);
 router.delete('/bloqueios/:id', auth, deletarBloqueio);
-
 router.post('/manual', auth, criarManual);
+router.put('/manual/:id', auth, atualizarManual);
+router.delete('/manual/:id', auth, deletarManual);
 
 module.exports = router;

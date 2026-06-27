@@ -151,15 +151,18 @@ async function criar(req, res) {
 }
 
 // 💡 FUNÇÃO ATUALIZADA: Com travas para não permitir agendamentos no passado
+// 💡 FUNÇÃO CORRIGIDA: Usa o horário de término do formulário e resolve o bug de escopo
 async function criarManual(req, res) {
-  const { nomeAtleta, data, horarioInicio, courtId } = req.body;
+  const { nomeAtleta, data, horarioInicio, horarioFim, courtId } = req.body;
 
   const rawAdminId = req.user?.id || req.userId;
   const adminId = isNaN(Number(rawAdminId)) ? rawAdminId : Number(rawAdminId);
 
   try {
+    const dataAgendamentoString = data.split('T')[0];
+
     // ==========================================================
-    // TRAVA DE SEGURANÇA RETROATIVA: Bloqueia passados (Igual seu método criar)
+    // TRAVA DE SEGURANÇA RETROATIVA
     // ==========================================================
     const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
     const ano = agoraBR.getUTCFullYear();
@@ -168,8 +171,6 @@ async function criarManual(req, res) {
     const hojeString = `${ano}-${mes}-${dia}`;
     
     const horaAtualStr = `${String(agoraBR.getUTCHours()).padStart(2, '0')}:${String(agoraBR.getUTCMinutes()).padStart(2, '0')}`;
-
-    const dataAgendamentoString = data.split('T')[0];
 
     if (dataAgendamentoString < hojeString) {
       return res.status(400).json({ error: 'Não é possível agendar em um dia que já passou.' });
@@ -200,6 +201,7 @@ async function criarManual(req, res) {
       return res.status(400).json({ error: 'Este horário está bloqueado para a administração.' });
     }
 
+    // Executa a transação isolando as variáveis corretamente
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horarioInicio}`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)`;
@@ -207,8 +209,12 @@ async function criarManual(req, res) {
       const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
       const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 12, 0, 0));
 
-      const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(horas) + 3, Number(minutos), 0));
-      const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(horas) + 4, Number(minutos), 0));
+      const [hInicio, mInicio] = horarioInicio.split(':');
+      const [hFim, mFim] = horarioFim.split(':');
+
+      // Aplica a mesma lógica de fuso (+3 horas) que o seu método original 'criar' usa
+      const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicio) + 3, Number(mInicio), 0));
+      const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFim) + 3, Number(mFim), 0));
 
       const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000);
 
@@ -260,6 +266,55 @@ async function criarManual(req, res) {
     }
     console.error('ERRO AO CRIAR RESERVA MANUAL:', err);
     return res.status(500).json({ error: 'Erro ao criar reserva no balcão.' });
+  }
+}
+
+// 💡 NOVA FUNÇÃO: Atualiza os dados de uma reserva manual direto do calendário
+async function atualizarManual(req, res) {
+  const { id } = req.params;
+  const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
+
+  try {
+    const dataAgendamentoString = data.split('T')[0];
+    const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
+    
+    const [hInicio, mInicio] = horarioInicio.split(':');
+    const [hFim, mFim] = horarioFim.split(':');
+
+    const dataFormatada = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), 12, 0, 0));
+    const inicioFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hInicio) + 3, Number(mInicio), 0));
+    const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFim) + 3, Number(mFim), 0));
+
+    // Atualiza o registro usando o Prisma
+    const reservaAtualizada = await prisma.booking.update({
+      where: { id: Number(id) },
+      data: {
+        courtId: Number(courtId),
+        data: dataFormatada,
+        horaInicio: inicioFormatado,
+        horaFim: fimFormatado,
+        // statusPagamento: statusPagamento // se você tiver esse campo mapeado no banco
+      }
+    });
+
+    return res.json(reservaAtualizada);
+  } catch (error) {
+    console.error("Erro ao atualizar reserva:", error);
+    return res.status(500).json({ error: "Erro ao atualizar reserva." });
+  }
+}
+
+// 💡 NOVA FUNÇÃO: Remove permanentemente uma reserva manual do calendário
+async function deletarManual(req, res) {
+  const { id } = req.params;
+  try {
+    await prisma.booking.delete({
+      where: { id: Number(id) }
+    });
+    return res.json({ message: "Reserva removida com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao deletar reserva:", error);
+    return res.status(500).json({ error: "Erro ao remover reserva do banco." });
   }
 }
 
@@ -534,5 +589,7 @@ module.exports = {
   buscarPorId, 
   criarBloqueio, 
   listarBloqueios, 
-  deletarBloqueio 
+  deletarBloqueio,
+  atualizarManual,
+  deletarManual,
 };
