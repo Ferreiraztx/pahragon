@@ -304,24 +304,44 @@ export default function AdminDashboard() {
   }
 
   // 💡 FUNÇÃO ATUALIZADA: Agora despacha corretamente o whatsapp para a API
+  // 💡 FUNÇÃO ATUALIZADA: Envia explicitamente o whatsapp para a API
   async function criarTorneio(e) {
     e.preventDefault();
     try {
-      await api.post("/tournaments", novoTorneio, {
+      // Remove espaços, parênteses e traços caso o usuário digite formatado
+      const whatsappLimpo = novoTorneio.whatsapp
+        ? novoTorneio.whatsapp.replace(/\D/g, "")
+        : "";
+
+      const dadosParaEnviar = {
+        nome: novoTorneio.nome,
+        descricao: novoTorneio.descricao,
+        data: novoTorneio.data,
+        vagas: Number(novoTorneio.vagas),
+        preco: Number(novoTorneio.preco),
+        whatsapp: whatsappLimpo, // 👈 Enviando o campo sanitizado
+      };
+
+      await api.post("/tournaments", dadosParaEnviar, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMensagem("✅ Torneio publicado.");
+
+      setMensagem("✅ Torneio publicado com sucesso.");
       setNovoTorneio({
         nome: "",
         descricao: "",
         data: "",
         vagas: "",
         preco: "",
-        whatsapp: "", // Reseta o campo
+        whatsapp: "",
       });
       carregarDados();
-    } catch {
-      setMensagem("❌ Erro ao publicar torneio.");
+    } catch (error) {
+      console.error(
+        "Erro ao publicar torneio:",
+        error.response?.data || error.message,
+      );
+      setMensagem("❌ Erro ao publicar torneio. Verifique os dados.");
     }
   }
 
@@ -1189,11 +1209,9 @@ export default function AdminDashboard() {
                         required
                       />
                     </div>
-
-                    {/* 💡 ADICIONADO VISUALMENTE: Novo input para o WhatsApp de contato */}
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
-                        WhatsApp de Contato (Opcional)
+                        WhatsApp de Contato
                       </span>
                       <input
                         className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
@@ -1207,10 +1225,6 @@ export default function AdminDashboard() {
                           })
                         }
                       />
-                      <p className="text-[10px] text-slate-400 pl-0.5 mt-0.5">
-                        Se não preenchido, o aplicativo usará o contato padrão
-                        da arena.
-                      </p>
                     </div>
 
                     <button
