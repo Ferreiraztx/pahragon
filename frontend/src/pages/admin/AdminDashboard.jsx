@@ -1766,17 +1766,13 @@ export default function AdminDashboard() {
                       torneios.map((t) => {
                         const dataInicioTxt = new Date(
                           t.data,
-                        ).toLocaleDateString("pt-BR");
-                        const horaInicTxt = new Date(t.data).toLocaleTimeString(
-                          "pt-BR",
-                          { hour: "2-digit", minute: "2-digit" },
-                        );
-                        const horaFimTxt = new Date(
-                          t.dataFim,
-                        ).toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        });
+                        ).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+                        const horaInicTxt = new Date(t.data)
+                          .toISOString()
+                          .substring(11, 16);
+                        const horaFimTxt = new Date(t.dataFim)
+                          .toISOString()
+                          .substring(11, 16);
 
                         // Transforma os IDs das quadras do torneio em nomes legíveis
                         const nomesDasQuadras =

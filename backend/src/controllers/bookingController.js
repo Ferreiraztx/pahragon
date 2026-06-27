@@ -515,11 +515,9 @@ async function horariosDisponiveis(req, res) {
         const horaMinutoTexto = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
         const estaTrancadoPorTorneio = torneiosDoDiaDessaQuadra.some(t => {
-          const dataInicioLocal = new Date(new Date(t.data).getTime() - (3 * 60 * 60 * 1000));
-          const dataFimLocal = new Date(new Date(t.dataFim).getTime() - (3 * 60 * 60 * 1000));
-
-          const incioTexto = `${String(dataInicioLocal.getUTCHours()).padStart(2, '0')}:${String(dataInicioLocal.getUTCMinutes()).padStart(2, '0')}`;
-          const fimTexto = `${String(dataFimLocal.getUTCHours()).padStart(2, '0')}:${String(dataFimLocal.getUTCMinutes()).padStart(2, '0')}`;
+          // Extrai "HH:MM" direto da string ISO salva, ignorando conversões automáticas de fuso do Node
+          const incioTexto = new Date(t.data).toISOString().substring(11, 16);
+          const fimTexto = new Date(t.dataFim).toISOString().substring(11, 16);
           
           return horaMinutoTexto >= incioTexto && horaMinutoTexto < fimTexto;
         });
