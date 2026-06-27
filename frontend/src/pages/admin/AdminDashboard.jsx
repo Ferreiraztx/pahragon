@@ -32,12 +32,15 @@ export default function AdminDashboard() {
     descricao: "",
     precoPorHora: "",
   });
+
+  // 💡 ATUALIZADO: Adicionado a propriedade 'whatsapp' no estado inicial do formulário
   const [novoTorneio, setNovoTorneio] = useState({
     nome: "",
     descricao: "",
     data: "",
     vagas: "",
     preco: "",
+    whatsapp: "",
   });
   const [mensagem, setMensagem] = useState("");
   const navigate = useNavigate();
@@ -52,7 +55,6 @@ export default function AdminDashboard() {
   const admin = JSON.parse(localStorage.getItem("admin") || "{}");
   const token = localStorage.getItem("adminToken");
 
-  // Função para o nascimento com o mês abreviado + ano (sem erro de fuso)
   const formatarNascimentoCompleto = (dataStr) => {
     if (!dataStr) return "—";
 
@@ -78,7 +80,6 @@ export default function AdminDashboard() {
     return `${parseInt(dia, 10)} ${nomeMes} ${ano}`;
   };
 
-  // Estados para alertas customizados
   const [aviso, setAviso] = useState({
     aberto: false,
     tipo: "sucesso",
@@ -90,7 +91,6 @@ export default function AdminDashboard() {
     texto: "",
   });
 
-  // Estados para o formulário de bloqueio
   const [bloqueioForm, setBloqueioForm] = useState({
     quadraId: "",
     data: "",
@@ -100,7 +100,6 @@ export default function AdminDashboard() {
   });
   const [loadingBloqueio, setLoadingBloqueio] = useState(false);
 
-  // Função para enviar o bloqueio para o backend
   const handleCriarBloqueio = async (e) => {
     e.preventDefault();
     setLoadingBloqueio(true);
@@ -146,7 +145,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Abre o modal customizado sem acionar pop-ups nativos do navegador
   const handleDeletarBloqueio = (id, data, quadra) => {
     setModalConfirmar({
       aberto: true,
@@ -243,7 +241,6 @@ export default function AdminDashboard() {
 
   const [bloqueios, setBloqueios] = useState([]);
 
-  // Função para buscar os bloqueios do backend
   const carregarBloqueios = async () => {
     try {
       const response = await fetch(
@@ -261,7 +258,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Força o carregamento dos bloqueios sempre que o admin entrar na aba de gestão
   useEffect(() => {
     if (aba === "gestao") {
       carregarBloqueios();
@@ -280,7 +276,7 @@ export default function AdminDashboard() {
         {
           diaSemana,
           ativo: updated.ativo,
-          horaAbertura: updated.horaAbertura,
+          orderAbertura: updated.horaAbertura,
           horaFechamento: updated.horaFechamento,
         },
         { headers: { Authorization: `Bearer ${token}` } },
@@ -307,6 +303,7 @@ export default function AdminDashboard() {
     }
   }
 
+  // 💡 FUNÇÃO ATUALIZADA: Agora despacha corretamente o whatsapp para a API
   async function criarTorneio(e) {
     e.preventDefault();
     try {
@@ -320,6 +317,7 @@ export default function AdminDashboard() {
         data: "",
         vagas: "",
         preco: "",
+        whatsapp: "", // Reseta o campo
       });
       carregarDados();
     } catch {
@@ -493,7 +491,6 @@ export default function AdminDashboard() {
       "text-slate-500 bg-slate-200/60 px-3 py-1 rounded-lg text-xs font-medium",
   };
 
-  // 💡 CORRIGIDO AQUI: Removido 'athletes' inexistente para evitar tela branca!
   const abas = [
     { id: "reservas", label: "Reservas", count: reservas.length },
     { id: "quadras", label: "Quadras", count: quadras.length },
@@ -865,7 +862,6 @@ export default function AdminDashboard() {
             {/* RESERVAS */}
             {aba === "reservas" && (
               <div className="space-y-10">
-                {/* Seção de Métricas (Confirmadas, Pendentes, Canceladas) */}
                 <div className="grid grid-cols-3 gap-4 sm:gap-8 py-4 border-b border-slate-200/80">
                   <div>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">
@@ -893,7 +889,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* 1. GRADE VISUAL DE HORÁRIOS (Nova funcionalidade) */}
                 <AgendaAdmin
                   reservas={reservasFiltradasPorData}
                   quadras={quadras}
@@ -901,7 +896,6 @@ export default function AdminDashboard() {
                   aoAtualizarDados={carregarDados}
                 />
 
-                {/* 2. FILTROS DA SUA LISTA ANTIGA (Mantidos aqui) */}
                 <div className="flex gap-4 sm:gap-6 text-sm border-b border-slate-200/40 pb-3 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pt-6">
                   {[
                     { id: "todos", label: "Todos os status" },
@@ -923,7 +917,6 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
-                {/* 3. LISTA DE RESERVAS EXIBIDAS (Mantida idêntica ao seu código original) */}
                 <div className="grid grid-cols-1 gap-4">
                   {reservasExibidasNaLista.length === 0 ? (
                     <div className="text-slate-400 text-base py-16 text-center font-light">
@@ -948,25 +941,19 @@ export default function AdminDashboard() {
                               <span className="text-sm font-mono font-medium text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded">
                                 {new Date(r.horaInicio).toLocaleTimeString(
                                   "pt-BR",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
+                                  { hour: "2-digit", minute: "2-digit" },
                                 )}
                                 h –{" "}
                                 {new Date(r.horaFim).toLocaleTimeString(
                                   "pt-BR",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
+                                  { hour: "2-digit", minute: "2-digit" },
                                 )}
                                 h
                               </span>
                             </div>
                             <div className="text-sm text-slate-500 mt-1.5 flex items-center flex-wrap gap-x-2">
                               <span className="font-semibold text-slate-700">
-                                {r.user?.nome || "Usuário"}
+                                {r.nomeAvulso || r.user?.nome || "Usuário"}
                               </span>
                               <span className="opacity-40">•</span>
                               <span className="font-mono text-slate-400 text-xs sm:text-sm">
@@ -1202,6 +1189,30 @@ export default function AdminDashboard() {
                         required
                       />
                     </div>
+
+                    {/* 💡 ADICIONADO VISUALMENTE: Novo input para o WhatsApp de contato */}
+                    <div className="flex flex-col gap-1 w-full">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
+                        WhatsApp de Contato (Opcional)
+                      </span>
+                      <input
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-slate-900 h-12 shadow-sm"
+                        placeholder="Ex: 41999999999 (Sem espaços ou traços)"
+                        type="text"
+                        value={novoTorneio.whatsapp}
+                        onChange={(e) =>
+                          setNovoTorneio({
+                            ...novoTorneio,
+                            whatsapp: e.target.value,
+                          })
+                        }
+                      />
+                      <p className="text-[10px] text-slate-400 pl-0.5 mt-0.5">
+                        Se não preenchido, o aplicativo usará o contato padrão
+                        da arena.
+                      </p>
+                    </div>
+
                     <button
                       className="bg-[#1e2221] hover:bg-black text-white text-sm font-bold px-5 py-3.5 rounded-xl transition shadow-md w-full sm:w-auto"
                       type="submit"
@@ -1514,7 +1525,6 @@ export default function AdminDashboard() {
                   </form>
                 </div>
 
-                {/* LISTA DE BLOQUEIOS ATIVOS */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 pl-1">
                     Bloqueios Ativos
@@ -1530,7 +1540,6 @@ export default function AdminDashboard() {
                         const dataFormatadaSegura = formatarDataLateral(
                           b.data.replace(/-/g, "/"),
                         );
-
                         const nomeDaQuadra =
                           b.quadra?.nome ||
                           quadras.find((q) => q.id === b.quadraId)?.nome ||
@@ -1717,7 +1726,10 @@ export default function AdminDashboard() {
                                 {p.booking.court?.nome || "Quadra"}
                               </p>
                               <p className="text-sm text-slate-500 mt-0.5">
-                                👤 {p.booking.user?.nome || "Usuário"}{" "}
+                                👤{" "}
+                                {p.booking.nomeAvulso ||
+                                  p.booking.user?.nome ||
+                                  "Usuário"}{" "}
                                 <span className="mx-2 text-slate-300">•</span>{" "}
                                 <span className="font-mono uppercase text-xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">
                                   {p.metodo}
@@ -1739,9 +1751,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ========================================================== */}
-      {/* TOAST DE AVISO (SUCESSO / ERRO) */}
-      {/* ========================================================== */}
+      {/* TOAST DE AVISO */}
       {aviso.aberto && (
         <div className="fixed top-5 right-5 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
@@ -1780,18 +1790,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ========================================================== */}
       {/* MODAL DE CONFIRMAÇÃO DE CANCELAMENTO */}
-      {/* ========================================================== */}
       {modalConfirmar.aberto && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center space-y-4">
-              {/* Ícone de Alerta */}
               <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-xl font-black">
                 !
               </div>
-
               <div className="space-y-1.5">
                 <h3 className="text-lg font-extrabold text-slate-900">
                   Confirmar Cancelamento
@@ -1801,8 +1807,6 @@ export default function AdminDashboard() {
                 </p>
               </div>
             </div>
-
-            {/* Botões de Ação */}
             <div className="p-4 bg-slate-50/80 border-t border-slate-100 grid grid-cols-2 gap-3">
               <button
                 type="button"

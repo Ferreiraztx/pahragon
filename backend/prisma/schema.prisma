@@ -78,6 +78,7 @@ model Tournament {
   preco       Float
   status      String   @default("aberto")
   createdAt   DateTime @default(now())
+  whatsapp    String?
 }
 
 model HorarioFuncionamento {

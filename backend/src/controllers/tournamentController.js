@@ -11,13 +11,23 @@ async function listar(req, res) {
 }
 
 async function criar(req, res) {
-  const { nome, descricao, data, vagas, preco } = req.body
+  // 💡 ADICIONADO: whatsapp recebido do front-end
+  const { nome, descricao, data, vagas, preco, whatsapp } = req.body 
   try {
     const tournament = await prisma.tournament.create({
-      data: { nome, descricao, data: new Date(data), vagas: Number(vagas), preco: Number(preco) }
+      data: { 
+        nome, 
+        descricao, 
+        data: new Date(data), 
+        vagas: Number(vagas), 
+        preco: Number(preco),
+        // 💡 ADICIONADO: Salva o número ou deixa null se estiver vazio
+        whatsapp: whatsapp || null 
+      }
     })
     return res.status(201).json(tournament)
   } catch (err) {
+    console.error("Erro ao criar torneio:", err.message)
     return res.status(500).json({ error: 'Erro ao criar torneio' })
   }
 }
