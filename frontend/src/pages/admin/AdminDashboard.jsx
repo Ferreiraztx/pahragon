@@ -55,23 +55,12 @@ export default function AdminDashboard() {
   const formatarNascimentoCompleto = (dataStr) => {
     if (!dataStr) return "—";
 
-    // Pega apenas a data pura caso venha com horas (ex: "2007-08-30T00:00:00")
     const dataPura = dataStr.split("T")[0];
     const [ano, mes, dia] = dataPura.split("-");
 
     const meses = [
-      "jan",
-      "fev",
-      "mar",
-      "abr",
-      "mai",
-      "jun",
-      "jul",
-      "ago",
-      "set",
-      "out",
-      "nov",
-      "dez",
+      "jan", "fev", "mar", "abr", "mai", "jun",
+      "jul", "ago", "set", "out", "nov", "dez",
     ];
     const nomeMes = meses[parseInt(mes, 10) - 1];
 
@@ -101,26 +90,18 @@ export default function AdminDashboard() {
   const [loadingBloqueio, setLoadingBloqueio] = useState(false);
 
   // Função para enviar o bloqueio para o backend
-  // ATUALIZE A FUNÇÃO DE CRIAR BLOQUEIO
   const handleCriarBloqueio = async (e) => {
     e.preventDefault();
     setLoadingBloqueio(true);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/bookings/bloqueios`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(bloqueioForm),
+      const response = await api.post("/bookings/bloqueios", bloqueioForm, {
+        headers: {
+          Authorization: `Bearer ${token || localStorage.getItem("token")}`,
         },
-      );
+      });
 
-      if (response.ok) {
-        // 💡 Troca do alert nativo pelo aviso customizado
+      if (response.status === 200 || response.status === 201) {
         setAviso({
           aberto: true,
           tipo: "sucesso",
@@ -135,27 +116,26 @@ export default function AdminDashboard() {
         });
         carregarBloqueios();
       } else {
-        const errorData = await response.json();
         setAviso({
           aberto: true,
           tipo: "erro",
-          mensagem: `Erro: ${errorData.error}`,
+          mensagem: "Erro ao processar o bloqueio na arena.",
         });
       }
     } catch (error) {
+      const errorMsg = error.response?.data?.error || "Erro na conexão com o servidor.";
       setAviso({
         aberto: true,
         tipo: "erro",
-        mensagem: "Erro na conexão com o servidor.",
+        mensagem: errorMsg,
       });
     } finally {
       setLoadingBloqueio(false);
     }
   };
 
-  // ATUALIZE A FUNÇÃO DE DELETAR BLOQUEIO
-  const handleDeletarBloqueio = async (id, data, quadra) => {
-    // 💡 Abre o modal customizado de confirmação em vez do confirm() nativo
+  // Abre o modal customizado sem acionar pop-ups nativos do navegador
+  const handleDeletarBloqueio = (id, data, quadra) => {
     setModalConfirmar({
       aberto: true,
       id,
@@ -163,7 +143,6 @@ export default function AdminDashboard() {
     });
   };
 
-  // FUNÇÃO QUE EXECUTA A DELEÇÃO APÓS A CONFIRMAÇÃO NO MODAL
   const confirmarAcaoDeletar = async () => {
     const id = modalConfirmar.id;
     setModalConfirmar({ aberto: false, id: null, texto: "" });
@@ -219,16 +198,14 @@ export default function AdminDashboard() {
       api.get("/horarios"),
     ]);
 
-    const [resReservas, resQuadras, resTorneios, resCaixa, resAtletas] =
-      resultados;
+    const [resReservas, resQuadras, resTorneios, resCaixa, resAtletas] = resultados;
 
     if (resReservas.status === "fulfilled") setReservas(resReservas.value.data);
     if (resQuadras.status === "fulfilled") setQuadras(resQuadras.value.data);
     if (resTorneios.status === "fulfilled") setTorneios(resTorneios.value.data);
     if (resCaixa.status === "fulfilled") setCaixa(resCaixa.value.data);
     if (resAtletas.status === "fulfilled") setAtletas(resAtletas.value.data);
-    if (resultados[5].status === "fulfilled")
-      setHorarios(resultados[5].value.data);
+    if (resultados[5].status === "fulfilled") setHorarios(resultados[5].value.data);
 
     resultados.forEach((r, i) => {
       if (r.status === "rejected") {
@@ -241,13 +218,7 @@ export default function AdminDashboard() {
   }
 
   const diasSemana = [
-    "Domingo",
-    "Segunda",
-    "Terça",
-    "Quarta",
-    "Quinta",
-    "Sexta",
-    "Sábado",
+    "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
   ];
 
   const [bloqueios, setBloqueios] = useState([]);
@@ -270,35 +241,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Função para deletar o bloqueio
-  const handleDeletarBloqueio = async (id, data, quadra) => {
-    if (
-      !confirm(
-        `Deseja realmente cancelar o bloqueio da ${quadra} no dia ${data}?`,
-      )
-    )
-      return;
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/bookings/bloqueios/${id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
-      );
-
-      if (response.ok) {
-        alert("Bloqueio cancelado com sucesso!");
-        carregarBloqueios(); // Recarrega a lista
-      } else {
-        alert("Erro ao cancelar bloqueio.");
-      }
-    } catch (error) {
-      console.error("Erro ao deletar bloqueio:", error);
-    }
-  };
-
   // Força o carregamento dos bloqueios sempre que o admin entrar na aba de gestão
   useEffect(() => {
     if (aba === "gestao") {
@@ -308,10 +250,10 @@ export default function AdminDashboard() {
 
   async function atualizarHorario(diaSemana, campo, valor) {
     const horarioAtual = horarios.find((h) => h.diaSemana === diaSemana);
-    const atualizado = { ...horarioAtual, [campo]: valor };
+    const updated = { ...horarioAtual, [campo]: valor };
 
     setHorarios(
-      horarios.map((h) => (h.diaSemana === diaSemana ? atualizado : h)),
+      horarios.map((h) => (h.diaSemana === diaSemana ? updated : h)),
     );
 
     try {
@@ -319,15 +261,15 @@ export default function AdminDashboard() {
         "/horarios",
         {
           diaSemana,
-          ativo: atualizado.ativo,
-          horaAbertura: atualizado.horaAbertura,
-          horaFechamento: atualizado.horaFechamento,
+          ativo: updated.ativo,
+          horaAbertura: updated.horaAbertura,
+          horaFechamento: updated.horaFechamento,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
     } catch {
       setMensagem("❌ Erro ao salvar horário de funcionamento.");
-      carregarDados(); // reverte caso falhe
+      carregarDados();
     }
   }
 
@@ -401,7 +343,7 @@ export default function AdminDashboard() {
     setModalConfirmacao({
       aberto: false,
       titulo: "",
-      messaging: "",
+      mensagem: "",
       acaoConfirmar: null,
     });
   }
@@ -537,7 +479,7 @@ export default function AdminDashboard() {
     { id: "reservas", label: "Reservas", count: reservas.length },
     { id: "quadras", label: "Quadras", count: quadras.length },
     { id: "torneios", label: "Torneios", count: torneios.length },
-    { id: "atletas", label: "Atletas", count: atletas.length },
+    { id: "atletas", label: "Atletas", count: athletes?.length || atletas.length },
     { id: "horarios", label: "Horário de Funcionamento", count: null },
     { id: "gestao", label: "Bloqueio de Quadras", count: null },
     { id: "caixa", label: "Fluxo de Caixa", count: null },
@@ -863,7 +805,6 @@ export default function AdminDashboard() {
                     Período Customizado
                   </p>
 
-                  {/* AJUSTADO: Inputs "De" e "Até" estruturados em wrappers flex idênticos ao de Novo Torneio */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-4 min-w-0 w-full">
                     <div className="flex flex-col gap-1 w-full">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-wider pl-0.5">
@@ -968,7 +909,7 @@ export default function AdminDashboard() {
                           <div>
                             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                               <span className="font-extrabold text-slate-900 text-base sm:text-lg">
-                                {r.court.nome}
+                                {r.court?.nome || "Quadra"}
                               </span>
                               <span className="text-sm font-mono font-medium text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded">
                                 {new Date(r.horaInicio).toLocaleTimeString(
@@ -985,11 +926,11 @@ export default function AdminDashboard() {
                             </div>
                             <div className="text-sm text-slate-500 mt-1.5 flex items-center flex-wrap gap-x-2">
                               <span className="font-semibold text-slate-700">
-                                {r.user.nome}
+                                {r.user?.nome || "Usuário"}
                               </span>
                               <span className="opacity-40">•</span>
                               <span className="font-mono text-slate-400 text-xs sm:text-sm">
-                                {r.user.email}
+                                {r.user?.email || "—"}
                               </span>
                             </div>
                           </div>
@@ -1232,6 +1173,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* ATLETAS */}
             {aba === "atletas" && (
               <div className="space-y-12">
                 <div>
@@ -1244,9 +1186,7 @@ export default function AdminDashboard() {
                         Nenhum atleta cadastrado ainda.
                       </p>
                     ) : (
-                      // Mudamos para chaves {} aqui para permitir lógica interna antes do return
                       atletas.map((at) => {
-                        // Buscando as estatísticas do atleta antes de renderizar o JSX
                         const { totalReservas, ultimaReserva } =
                           estatisticasAtleta(at.id);
 
@@ -1319,8 +1259,7 @@ export default function AdminDashboard() {
                     Horário de Funcionamento
                   </h2>
                   <p className="text-slate-400 text-sm font-light">
-                    Desative um dia para fechar as reservas nele
-                    automaticamente.
+                    Desative um dia para fechar as reservas nele automaticamente.
                   </p>
                 </div>
 
@@ -1341,6 +1280,7 @@ export default function AdminDashboard() {
                       >
                         <div className="flex items-center gap-4 min-w-[140px]">
                           <button
+                            type="button"
                             onClick={() =>
                               atualizarHorario(indice, "ativo", !h.ativo)
                             }
@@ -1392,7 +1332,6 @@ export default function AdminDashboard() {
             )}
 
             {/* GESTÃO DE QUADRAS (BLOQUEIOS) */}
-            {/* GESTÃO DE QUADRAS (BLOQUEIOS) */}
             {aba === "gestao" && (
               <div className="space-y-8 animate-in fade-in duration-500">
                 <div>
@@ -1400,8 +1339,7 @@ export default function AdminDashboard() {
                     Gestão de Quadras
                   </h2>
                   <p className="text-sm text-slate-400 font-light mt-1">
-                    Bloqueie horários específicos para manutenção, aulas ou
-                    eventos privados.
+                    Bloqueie horários específicos para manutenção, aulas ou eventos privados.
                   </p>
                 </div>
 
@@ -1413,10 +1351,7 @@ export default function AdminDashboard() {
                     </h3>
                   </div>
 
-                  <form
-                    onSubmit={handleCriarBloqueio}
-                    className="p-6 space-y-6"
-                  >
+                  <form onSubmit={handleCriarBloqueio} className="p-6 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 ml-0.5">
@@ -1526,9 +1461,7 @@ export default function AdminDashboard() {
                             : "bg-teal-600 hover:bg-teal-700 hover:-translate-y-0.5"
                         }`}
                       >
-                        {loadingBloqueio
-                          ? "Processando..."
-                          : "Confirmar Bloqueio de Horário"}
+                        {loadingBloqueio ? "Processando..." : "Confirmar Bloqueio de Horário"}
                       </button>
                     </div>
                   </form>
@@ -1547,12 +1480,10 @@ export default function AdminDashboard() {
                       </p>
                     ) : (
                       bloqueios.map((b) => {
-                        // Força a formatação segura da data com barras locais antes de renderizar
                         const dataFormatadaSegura = formatarDataLateral(
                           b.data.replace(/-/g, "/"),
                         );
 
-                        // Busca o nome real da quadra baseado no ID para evitar o 'undefined'
                         const nomeDaQuadra =
                           b.quadra?.nome ||
                           quadras.find((q) => q.id === b.quadraId)?.nome ||
@@ -1588,14 +1519,7 @@ export default function AdminDashboard() {
                             </div>
                             <button
                               type="button"
-                              // Passa os valores já formatados e sem erro de fuso para o modal de confirmação
-                              onClick={() =>
-                                setModalConfirmar({
-                                  aberto: true,
-                                  id: b.id,
-                                  texto: `Deseja realmente cancelar o bloqueio da ${nomeDaQuadra} no dia ${dataFormatadaSegura}?`,
-                                })
-                              }
+                              onClick={() => handleDeletarBloqueio(b.id, dataFormatadaSegura, nomeDaQuadra)}
                               className="self-start sm:self-auto text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
                             >
                               Remover Bloqueio
@@ -1737,10 +1661,10 @@ export default function AdminDashboard() {
                             </span>
                             <div>
                               <p className="font-extrabold text-slate-900 text-base">
-                                {p.booking.court.nome}
+                                {p.booking.court?.nome || "Quadra"}
                               </p>
                               <p className="text-sm text-slate-500 mt-0.5">
-                                👤 {p.booking.user.nome}{" "}
+                                👤 {p.booking.user?.nome || "Usuário"}{" "}
                                 <span className="mx-2 text-slate-300">•</span>{" "}
                                 <span className="font-mono uppercase text-xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">
                                   {p.metodo}
