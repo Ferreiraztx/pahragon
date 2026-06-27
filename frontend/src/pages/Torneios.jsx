@@ -9,8 +9,6 @@ export default function Torneios() {
     api.get('/tournaments').then(res => setTorneios(res.data))
   }, [])
 
-  const whatsappUrl = "https://wa.me/5541999999999"
-
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base pt-20">
       <Navbar />
@@ -41,73 +39,105 @@ export default function Torneios() {
           
           /* Grid de Torneios Ativos */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {torneios.map(t => (
-              <div key={t.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:border-slate-300 flex flex-col justify-between transition-all group">
+            {torneios.map(t => {
+              // 💡 FUNÇÃO DINÂMICA: Gera o link correto para o WhatsApp do torneio específico
+              const gerarLinkInscricao = () => {
+                let numeroDestino = t.whatsapp ? String(t.whatsapp).replace(/\D/g, "") : "";
                 
-                <div>
-                  {/* Título do Torneio */}
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <h3 className="text-[#1e2221] font-black text-xl tracking-tight leading-snug">
-                      {t.nome}
-                    </h3>
-                    <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                      t.status === 'aberto' ? 'bg-teal-100 text-teal-900' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {t.status === 'aberto' ? 'Inscrições Abertas' : 'Encerrado'}
-                    </span>
-                  </div>
+                if (!numeroDestino) {
+                  return "#";
+                }
 
-                  {/* Descrição opcional */}
-                  {t.descricao && (
-                    <p className="text-slate-500 text-sm font-normal mb-6 leading-relaxed">
-                      {t.descricao}
-                    </p>
-                  )}
+                // Garante que tenha o prefixo do país (55 - Brasil)
+                if (!numeroDestino.startsWith("55")) {
+                  numeroDestino = `55${numeroDestino}`;
+                }
+
+                // Mensagem customizada usando o nome do torneio criado
+                const mensagem = `Olá! Vi o torneio "${t.nome}" no site e gostaria de realizar a inscrição da minha dupla, ainda restam vagas?`;
+                
+                return `https://wa.me/${numeroDestino}?text=${encodeURIComponent(mensagem)}`;
+              };
+
+              const linkWhatsApp = gerarLinkInscricao();
+
+              return (
+                <div key={t.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:border-slate-300 flex flex-col justify-between transition-all group">
                   
-                  {/* Informações técnicas organizadas como Metadados do Admin */}
-                  <div className="grid grid-cols-3 gap-4 border-t border-b border-slate-100 py-4 mb-6">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Data</span>
-                      <span className="text-sm font-mono font-bold text-slate-800">
-                        {new Date(t.data).toLocaleDateString('pt-BR')}
+                  <div>
+                    {/* Título do Torneio */}
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <h3 className="text-[#1e2221] font-black text-xl tracking-tight leading-snug">
+                        {t.nome}
+                      </h3>
+                      <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded shrink-0 ${
+                        t.status === 'aberto' ? 'bg-teal-100 text-teal-900' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {t.status === 'aberto' ? 'Inscrições Abertas' : 'Encerrado'}
                       </span>
                     </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Duplas</span>
-                      <span className="text-sm font-mono font-bold text-slate-800">
-                        {t.vagas} restando
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Inscrição</span>
-                      <span className="text-sm font-mono font-bold text-teal-600">
-                        R$ {t.preco.toFixed(2)}
-                      </span>
+
+                    {/* Descrição opcional */}
+                    {t.descricao && (
+                      <p className="text-slate-500 text-sm font-normal mb-6 leading-relaxed">
+                        {t.descricao}
+                      </p>
+                    )}
+                    
+                    {/* Informações técnicas organizadas como Metadados do Admin */}
+                    <div className="grid grid-cols-3 gap-4 border-t border-b border-slate-100 py-4 mb-6">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Data</span>
+                        <span className="text-sm font-mono font-bold text-slate-800">
+                          {new Date(t.data).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Duplas</span>
+                        <span className="text-sm font-mono font-bold text-slate-800">
+                          {t.vagas} restando
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Inscrição</span>
+                        <span className="text-sm font-mono font-bold text-teal-600">
+                          R$ {Number(t.preco).toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Botão de Ação Condicional */}
+                  {t.status === 'aberto' ? (
+                    linkWhatsApp === "#" ? (
+                      <button 
+                        onClick={() => alert("Este torneio não possui um número de contato configurado.")}
+                        className="block w-full text-center bg-slate-400 text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl"
+                      >
+                        Contato Indisponível
+                      </button>
+                    ) : (
+                      <a 
+                        href={linkWhatsApp} 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full text-center bg-[#1e2221] hover:bg-black text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl transition shadow-sm group-hover:shadow-md"
+                      >
+                        Inscrever via WhatsApp
+                      </a>
+                    )
+                  ) : (
+                    <button 
+                      disabled 
+                      className="block w-full text-center bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl cursor-not-allowed"
+                    >
+                      Vagas Esgotadas
+                    </button>
+                  )}
+
                 </div>
-
-                {/* Botão de Ação Condicional */}
-                {t.status === 'aberto' ? (
-                  <a 
-                    href={whatsappUrl} 
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full text-center bg-[#1e2221] hover:bg-black text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl transition shadow-sm group-hover:shadow-md"
-                  >
-                    Inscrever via WhatsApp
-                  </a>
-                ) : (
-                  <button 
-                    disabled 
-                    className="block w-full text-center bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl cursor-not-allowed"
-                  >
-                    Vagas Esgotadas
-                  </button>
-                )}
-
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

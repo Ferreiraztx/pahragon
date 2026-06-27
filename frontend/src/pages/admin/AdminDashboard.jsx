@@ -1098,14 +1098,10 @@ export default function AdminDashboard() {
                     ) : (
                       torneios.map((t) => {
                         const irParaWhatsappDoTorneio = () => {
-                          let numeroDestino = t.whatsapp
-                            ? String(t.whatsapp).replace(/\D/g, "")
-                            : "";
-
+                          let numeroDestino = t.whatsapp ? String(t.whatsapp).replace(/\D/g, "") : "";
+                          
                           if (!numeroDestino) {
-                            alert(
-                              "Este torneio não possui um número de contato cadastrado.",
-                            );
+                            alert("Este torneio não possui um número de contato cadastrado.");
                             return;
                           }
 
@@ -1134,26 +1130,17 @@ export default function AdminDashboard() {
                                 <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-y-1">
                                   <span>👥 {t.vagas} duplas/vagas totais</span>
                                   <span className="mx-2 text-slate-300">•</span>
-                                  <span>
-                                    Inscrição:{" "}
-                                    <span className="font-mono text-slate-700 font-bold">
-                                      R$ {Number(t.preco).toFixed(2)}
-                                    </span>
-                                  </span>
+                                  <span>Inscrição: <span className="font-mono text-slate-700 font-bold">R$ {Number(t.preco).toFixed(2)}</span></span>
                                   {t.whatsapp && (
                                     <>
-                                      <span className="mx-2 text-slate-300">
-                                        •
-                                      </span>
-                                      <span className="text-slate-600 font-medium">
-                                        📞 {t.whatsapp}
-                                      </span>
+                                      <span className="mx-2 text-slate-300">•</span>
+                                      <span className="text-slate-600 font-medium">📞 {t.whatsapp}</span>
                                     </>
                                   )}
                                 </p>
                               </div>
                             </div>
-
+                            
                             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                               <button
                                 onClick={irParaWhatsappDoTorneio}
@@ -1162,9 +1149,7 @@ export default function AdminDashboard() {
                                 Inscrição
                               </button>
                               <button
-                                onClick={() =>
-                                  solicitarDeletarTorneio(t.id, t.nome)
-                                }
+                                onClick={() => solicitarDeletarTorneio(t.id, t.nome)}
                                 className="text-xs font-bold text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 transition-colors"
                               >
                                 Cancelar
@@ -1365,7 +1350,8 @@ export default function AdminDashboard() {
                     Horário de Funcionamento
                   </h2>
                   <p className="text-slate-400 text-sm font-light">
-                    Desative um dia para fechar as reservas nele completamente.
+                    Desative um dia para fechar as reservas nele
+                    completamente.
                   </p>
                 </div>
 
