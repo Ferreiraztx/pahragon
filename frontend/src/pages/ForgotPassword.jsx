@@ -13,13 +13,25 @@ export default function ForgotPassword() {
     setSucesso("");
 
     try {
-      // Envia o e-mail para a sua rota do Back-end
-      await api.post("/auth/forgot-password", { email });
+      // 🛠️ Contornando o Axios usando o fetch nativo para evitar o erro do interceptor
+      const response = await fetch("https://pahragon-production.up.railway.app/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Erro ao processar a solicitação.");
+      }
+
       setSucesso("Se o e-mail existir em nossa base, um link de recuperação será enviado em instantes.");
       setEmail("");
     } catch (_err) {
-      const msg = _err.response?.data?.message || _err.response?.data?.error;
-      setErro(msg || "Erro ao processar a solicitação. Tente novamente.");
+      setErro(_err.message || "Erro ao processar a solicitação. Tente novamente.");
     }
   }
 

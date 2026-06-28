@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 // Configuração do Transportador de E-mail (Nodemailer)
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.resend.com",
-  port: process.env.EMAIL_PORT || 465,
+  port: process.env.EMAIL_PORT || 587,
   auth: {
     user: process.env.RESEND_USER, // 🔄 Mudou aqui
     pass: process.env.RESEND_PASS, // 🔄 Mudou aqui
