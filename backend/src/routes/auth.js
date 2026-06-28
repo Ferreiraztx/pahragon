@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 // 💡 Adicionado o 'logout' aqui na desestruturação:
-const { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil, listarAtletas, logout } = require('../controllers/authController');
+const { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil, listarAtletas, logout, forgotPassword, resetPassword } = require('../controllers/authController');
 const requireAuth = require('../middlewares/auth');
 const { listar } = require('../controllers/courtController');
 
