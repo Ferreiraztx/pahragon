@@ -74,6 +74,7 @@ export default function Navbar() {
         <div className="md:hidden bg-[#faf9f6] border-t border-slate-200/80 px-6 py-4 space-y-4 shadow-inner">
           <Link to="/torneios" onClick={() => setMenu(false)} className="block text-slate-600 hover:text-slate-900 font-semibold text-sm transition">Torneios</Link>
           <Link to="/contato" onClick={() => setMenu(false)} className="block text-slate-600 hover:text-slate-900 font-semibold text-sm transition">Contato</Link>
+          <Link to="/estrutura" onClick={() => setMenu(false)} className="block text-slate-600 hover:text-slate-900 font-semibold text-sm transition">Estrutura</Link>
           {user ? (
             <>
               <Link to="/minhas-reservas" onClick={() => setMenu(false)} className="block text-slate-600 hover:text-slate-900 font-semibold text-sm transition">Minhas Reservas</Link>
