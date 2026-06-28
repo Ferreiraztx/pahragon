@@ -11,6 +11,7 @@ export default function Register() {
     telefone: "",
   });
   const [erro, setErro] = useState("");
+  const [showToast, setShowToast] = useState(false); // 🧼 Estado para controlar o Toast
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -23,16 +24,23 @@ export default function Register() {
     setErro("");
     try {
       await api.post("/auth/register", form);
-      // Em vez de logar direto com dados vazios, avisa e manda fazer login
-      alert("Conta criada com sucesso! Por favor, faça o seu login.");
-      navigate("/login");
+      
+      // 🌟 Exibe o Toast no topo direito
+      setShowToast(true);
+      
+      // 🕒 Dá 3 segundos para ler antes de redirecionar para o login
+      setTimeout(() => {
+        setShowToast(false);
+        navigate("/login");
+      }, 3000);
+      
     } catch (_err) {
       setErro("Erro ao cadastrar. Verifique seus dados e tente novamente.");
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#faf9f6] flex items-center justify-center px-4 relative">
       <div className="w-full max-w-md">
         {/* Identidade Visual Refinada */}
         <div className="text-center mb-10">
@@ -103,7 +111,7 @@ export default function Register() {
             ))}
 
             <button
-              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-3.5 rounded-xl transition shadow-sm mt-2"
+              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-3.5 rounded-xl transition shadow-sm mt-2 cursor-pointer"
               type="submit"
             >
               Finalizar Cadastro
@@ -121,6 +129,30 @@ export default function Register() {
           </p>
         </div>
       </div>
+
+      {/* 🧼 TOAST DE AVISO NO CANTO SUPERIOR DIREITO */}
+      {showToast && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300 font-sans">
+          <div className="p-4 rounded-3xl shadow-2xl border border-slate-100/80 backdrop-blur-xl flex items-start gap-4 max-w-sm bg-white/95">
+            {/* Ícone de Sucesso */}
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm border border-emerald-100/60 mt-0.5">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            
+            {/* Mensagem */}
+            <div className="flex-1 pr-1">
+              <p className="text-sm font-black text-slate-950 tracking-tight">
+                Conta Criada com Sucesso!
+              </p>
+              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                Por favor, faça seu login na próxima tela para acessar o painel.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
