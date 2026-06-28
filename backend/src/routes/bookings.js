@@ -15,6 +15,7 @@ const {
   criarManual,
   atualizarManual,
   deletarManual,
+  limparHistoricoCancelado // 👈 1. Adicionado aqui!
 } = require('../controllers/bookingController');
 const auth = require('../middlewares/auth');
 
@@ -30,6 +31,6 @@ router.delete('/bloqueios/:id', auth, deletarBloqueio);
 router.post('/manual', auth, criarManual);
 router.put('/manual/:id', auth, atualizarManual);
 router.delete('/manual/:id', auth, deletarManual);
-router.delete('/bookings/limpar-canceladas', requireAuth, bookingController.limparHistoricoCancelado);
+router.delete('/limpar-canceladas', requireAuth, limparHistoricoCancelado);
 
 module.exports = router;
