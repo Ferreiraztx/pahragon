@@ -449,6 +449,42 @@ async function minhasReservas(req, res) {
   }
 }
 
+async function limparHistoricoCancelado(req, res) {
+  try {
+    // 🛡️ Segurança: Só deixa prosseguir se for Admin logado
+    if (req.user?.role !== 'admin' && req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
+    }
+
+    // 1. Busca os IDs das reservas canceladas
+    const canceladas = await prisma.booking.findMany({
+      where: { status: 'cancelado' },
+      select: { id: true }
+    });
+
+    const ids = canceladas.map(r => r.id);
+
+    if (ids.length === 0) {
+      return res.json({ message: 'Nenhuma reserva cancelada para limpar!' });
+    }
+
+    // 2. Deleta os pagamentos em cascata
+    await prisma.payment.deleteMany({
+      where: { bookingId: { in: ids } }
+    });
+
+    // 3. Deleta as reservas
+    await prisma.booking.deleteMany({
+      where: { id: { in: ids } }
+    });
+
+    return res.json({ message: `Sucesso! ${ids.length} reservas canceladas foram limpas.` });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro interno ao limpar o histórico.' });
+  }
+}
+
 // Cancelar reserva
 async function cancelar(req, res) {
   const { id } = req.params;

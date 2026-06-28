@@ -337,6 +337,40 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleLimparCanceladas = async () => {
+    if (
+      !window.confirm(
+        "Deseja realmente apagar DEFINITIVAMENTE todas as reservas canceladas do histórico?",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await api.delete("/bookings/limpar-canceladas", {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+
+      setAviso({
+        aberto: true,
+        tipo: "sucesso",
+        mensagem: response.data.message || "Histórico limpo com sucesso!",
+      });
+
+      // Recarrega os dados do dashboard para zerar o contador na tela na hora!
+      carregarDados();
+    } catch (error) {
+      const msgErro =
+        error.response?.data?.error || "Erro ao tentar limpar o histórico.";
+      setAviso({
+        aberto: true,
+        tipo: "erro",
+        mensagem: msgErro,
+      });
+    }
+  };
+
   const lidarSelecaoQuadraTorneio = (courtId) => {
     const idTexto = String(courtId);
     setNovoTorneio((prev) => {
@@ -897,6 +931,15 @@ export default function AdminDashboard() {
                     <span className="text-3xl sm:text-5xl font-light text-slate-400 font-mono tracking-tighter">
                       {totalCanceladasNoPeriodo}
                     </span>
+                    {totalCanceladasNoPeriodo > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleLimparCanceladas}
+                        className="text-[11px] font-bold text-rose-500 hover:text-rose-700 underline text-left mt-2 transition-colors"
+                      >
+                        Limpar histórico
+                      </button>
+                    )}
                   </div>
                 </div>
 

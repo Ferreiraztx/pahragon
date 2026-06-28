@@ -29,5 +29,6 @@ router.delete('/bloqueios/:id', auth, deletarBloqueio);
 router.post('/manual', auth, criarManual);
 router.put('/manual/:id', auth, atualizarManual);
 router.delete('/manual/:id', auth, deletarManual);
+router.delete('/bookings/limpar-canceladas', requireAuth, limparHistoricoCancelado);
 
 module.exports = router;
