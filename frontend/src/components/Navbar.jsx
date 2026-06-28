@@ -25,6 +25,9 @@ export default function Navbar() {
           <Link to="/contato" className="text-slate-500 hover:text-slate-900 font-semibold transition">
             Contato
           </Link>
+          <Link to="/estrutura" className="text-slate-500 hover:text-slate-900 font-semibold transition">
+            Estrutura
+          </Link>
           
           {user ? (
             <>
@@ -51,7 +54,7 @@ export default function Navbar() {
           ) : (
             <>
               <Link 
-                to="/register" 
+                to="/login" 
                 className="bg-[#1e2221] hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm"
               >
                 Criar conta / Entrar

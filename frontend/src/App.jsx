@@ -13,7 +13,8 @@ import PagamentoFalha from './pages/PagamentoFalha'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import PagamentoAguardando from './pages/PagamentoAguardando';
-import Perfil from './pages/Perfil' // 👈 Importe a página nova aqui
+import Perfil from './pages/Perfil'
+import Estrutura from './pages/Estrutura';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/torneios" element={<Torneios />} />
+      <Route path="/estrutura" element={<Estrutura />} />
       <Route path="/contato" element={<Contato />} />
       <Route path="/agendar" element={<PrivateRoute><Booking /></PrivateRoute>} />
       <Route path="/minhas-reservas" element={<PrivateRoute><MinhasReservas /></PrivateRoute>} />
