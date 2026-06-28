@@ -1,255 +1,338 @@
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
+const availability = [
+  {
+    time: "18:00h - 19:00h",
+    status: "Reservado",
+    available: false,
+  },
+  {
+    time: "19:00h - 20:00h",
+    status: "Disponível",
+    available: true,
+  },
+  {
+    time: "20:00h - 21:00h",
+    status: "Disponível",
+    available: true,
+  },
+  {
+    time: "21:00h - 22:00h",
+    status: "Últimas vagas",
+    available: true,
+  },
+];
+
+const signaturePoints = [
+  {
+    label: "Estrutura",
+    desc: "Quadras cobertas, ambiente organizado e leitura visual limpa em toda a jornada.",
+  },
+  {
+    label: "Reserva",
+    desc: "Escolha o horário, confirme por PIX e tenha o bloqueio da quadra em poucos instantes.",
+  },
+  {
+    label: "Comunidade",
+    desc: "Torneios, partidas e rotina esportiva para quem quer jogar com frequência e estilo.",
+  },
+];
+
+const steps = [
+  {
+    num: "01",
+    title: "Escolha sua quadra",
+    desc: "Visualize a grade com clareza e encontre o horário ideal em poucos segundos.",
+  },
+  {
+    num: "02",
+    title: "Confirme sua reserva",
+    desc: "Faça login e vincule o agendamento ao seu perfil de forma rápida e segura.",
+  },
+  {
+    num: "03",
+    title: "Pague por PIX",
+    desc: "A confirmação acontece na hora e o horário fica bloqueado no seu nome automaticamente.",
+  },
+];
+
 export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base">
+    <div className="min-h-screen bg-[#f6f4ee] text-[#1f2523] antialiased tracking-tight font-sans">
+      <div className="absolute inset-x-0 top-0 -z-10 h-[24rem] bg-[radial-gradient(circle_at_top,_rgba(20,184,166,0.08),_transparent_42%)]" />
+
       <Navbar />
 
-      {/* HERO SECTION — VÍDEO FULL SCREEN */}
-      <section className="relative w-full h-screen overflow-hidden">
-        {/* VÍDEO DE FUNDO OCUPANDO A TELA TODA */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          disablePictureInPicture
-          disableRemotePlayback
-          controls={false}
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
-          style={{ objectPosition: "center center" }}
-        >
-          <source src="/videos/pahragon.mp4" type="video/mp4" />
-        </video>
-
-        {/* OVERLAY escurecendo um pouco pra legibilidade do texto branco */}
-        <div className="absolute inset-0 bg-black/40 z-0"></div>
-
-        {/* CONTEÚDO POR CIMA DO VÍDEO */}
-        <div className="relative z-10 h-full flex flex-col justify-center max-w-6xl mx-auto px-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 rounded-full backdrop-blur-sm w-fit">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
-            <span className="text-xs font-extrabold uppercase tracking-widest text-teal-300">
-              Grade de hoje aberta
-            </span>
-          </div>
-
-          <h1 className="text-5xl sm:text-7xl font-light text-white tracking-tighter leading-[0.95] mt-6">
-            Sorriso no rosto,
-            <br />
-            <span className="font-black text-white">areia nos pés.</span>
-          </h1>
-
-          <p className="text-slate-200 text-base sm:text-lg max-w-xl leading-relaxed font-normal mt-6">
-            A pahragon arena combina o minimalismo de um espaço planejado com a
-            energia do beach tennis. Agende sua quadra em segundos e viva essa
-            experiência no Santa Quitéria.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-4 pt-8">
-            <button
-              onClick={() => navigate("/agendar")}
-              className="bg-white hover:bg-slate-100 text-[#1e2221] text-sm font-bold px-7 py-4 rounded-xl transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              Agendar Horário
-            </button>
-            <button
-              onClick={() => navigate("/torneios")}
-              className="text-sm font-bold text-white px-6 py-4 rounded-xl border border-white/30 bg-white/10 hover:bg-white/20 backdrop-blur-sm transition"
-            >
-              Inscrições em Torneios
-            </button>
-          </div>
-        </div>
-
-        {/* Indicador de scroll */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 text-white/70 text-xs font-bold uppercase tracking-widest animate-bounce">
-          ↓ Role para ver mais
-        </div>
-      </section>
-
-      {/* ESTATÍSTICAS ESTILO DASHBOARD */}
-      <section className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-left py-6 px-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Estrutura
-            </span>
-            <span className="text-3xl font-light text-[#1e2221] font-mono tracking-tighter">
-              04{" "}
-              <span className="text-base font-sans font-medium text-slate-400">
-                Quadras Cobertas
-              </span>
-            </span>
-          </div>
-          <div className="border-t sm:border-t-0 sm:border-l border-slate-200/80 pt-4 sm:pt-0 sm:pl-8">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Comunidade
-            </span>
-            <span className="text-3xl font-light text-teal-600 font-mono tracking-tighter">
-              +500{" "}
-              <span className="text-base font-sans font-medium text-slate-400">
-                Atletas
-              </span>
-            </span>
-          </div>
-          <div className="border-t sm:border-t-0 sm:border-l border-slate-200/80 pt-4 sm:pt-0 sm:pl-8">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Localização
-            </span>
-            <span className="text-3xl font-light text-slate-900 font-mono tracking-tighter">
-              Próximo{" "}
-              <span className="text-base font-sans font-medium text-slate-400">
-                ao Batel
-              </span>
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* CARD DE AGENDAMENTO — seção própria, sobrepondo a base do vídeo */}
-      <section className="max-w-6xl mx-auto px-6 py-12">
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden max-w-md mx-auto">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50/50 rounded-full blur-3xl -z-10"></div>
-
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h3 className="font-extrabold text-slate-900 text-lg">
-                Quadra Central
-              </h3>
-              <p className="text-xs text-slate-400 font-medium">
-                Disponibilidade para Hoje
-              </p>
-            </div>
-            <span className="text-xs font-mono font-bold bg-teal-100/80 text-teal-900 px-2.5 py-1 rounded-lg uppercase">
-              R$ 90/h
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 opacity-60">
-              <span className="text-xs font-mono font-bold text-slate-400">
-                18:00h - 19:00h
-              </span>
-              <span className="text-xs font-bold text-slate-400">
-                Reservado
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-teal-200 shadow-sm">
-              <span className="text-xs font-mono font-bold text-teal-700">
-                19:00h - 20:00h
-              </span>
-              <span className="text-xs font-extrabold text-teal-600 uppercase tracking-wider bg-teal-50 px-2 py-0.5 rounded">
-                Disponível
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-teal-200 shadow-sm">
-              <span className="text-xs font-mono font-bold text-teal-700">
-                20:00h - 21:00h
-              </span>
-              <span className="text-xs font-extrabold text-teal-600 uppercase tracking-wider bg-teal-50 px-2 py-0.5 rounded">
-                Disponível
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => navigate("/agendar")}
-            className="w-full text-center text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-900 transition-colors pt-2"
+      <main>
+        <section className="relative isolate min-h-[92svh] overflow-hidden">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            disablePictureInPicture
+            disableRemotePlayback
+            controls={false}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: "center center" }}
           >
-            Clique para ver a grade completa →
-          </button>
-        </div>
-      </section>
+            <source src="/videos/pahragon.mp4" type="video/mp4" />
+          </video>
 
-      {/* SEÇÃO COMO FUNCIONA (CARDS FLUIDOS DO ADMIN) */}
-      <section className="max-w-6xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-          <div className="lg:col-span-4">
-            <p className="text-xs font-black uppercase tracking-widest text-teal-600 mb-2">
-              Fluxo Simplificado
-            </p>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tighter">
-              Agende sem burocracia ou intermediários.
-            </h2>
-            <p className="text-slate-400 text-sm font-normal mt-3 leading-relaxed">
-              Desenvolvemos um ecossistema limpo para que sua única preocupação
-              seja a partida.
-            </p>
-          </div>
+          <div className="absolute inset-0 bg-black/42" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,10,14,0.44)_0%,rgba(6,10,14,0.14)_40%,rgba(6,10,14,0.10)_74%,rgba(246,244,238,0)_89%,rgba(246,244,238,0.82)_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f6f4ee] via-[#f6f4ee]/55 to-transparent" />
 
-          <div className="lg:col-span-8 space-y-4">
-            {[
-              {
-                num: "01",
-                title: "Escolha a Quadra e o Horário",
-                desc: "Nossa grade mostra em tempo real as quadras e horários livres na Arena.",
-              },
-              {
-                num: "02",
-                title: "Identifique-se Instantaneamente",
-                desc: "Entre com sua conta rápida para vincular a reserva de forma segura.",
-              },
-              {
-                num: "03",
-                title: "Confirmação via PIX",
-                desc: "Integração de pagamento direto. Confirmou, a quadra já fica trancada no seu nome no painel.",
-              },
-            ].map((step, idx) => (
-              <div
-                key={idx}
-                className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-slate-300 flex items-start gap-6 transition-all group"
-              >
-                <span className="text-2xl font-mono font-black text-slate-300 group-hover:text-teal-600 transition-colors leading-none">
-                  {step.num}
-                </span>
-                <div className="space-y-1">
-                  <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
-                    {step.title}
-                  </h4>
-                  <p className="text-sm text-slate-500 leading-relaxed">
-                    {step.desc}
-                  </p>
+          <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-6xl items-center px-6 py-20 sm:py-16 lg:py-20">
+            <div className="grid w-full gap-10 lg:grid-cols-[1.16fr_0.84fr] lg:items-center">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-3 rounded-full border border-white/[0.15] bg-black/[0.15] px-4 py-2 backdrop-blur-sm">
+                  <span className="h-2 w-2 rounded-full bg-teal-300" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-teal-100">
+                    Grade de hoje aberta
+                  </span>
+                </div>
+
+                <h1 className="mt-6 text-[2.55rem] font-light leading-[0.9] text-white sm:text-6xl xl:text-[5.4rem]">
+                  Sorriso no rosto,
+                  <br />
+                  <span className="font-black text-white">areia nos pés.</span>
+                </h1>
+
+                <p className="mt-5 max-w-xl text-base leading-7 text-slate-200 sm:text-lg">
+                  A pahragon arena combina o minimalismo de um espaço planejado
+                  com a energia do beach tennis. Reserve sua quadra em segundos
+                  e viva uma experiência mais elegante, fluida e vibrante no
+                  Santa Quitéria.
+                </p>
+
+                <div className="mt-6 flex flex-wrap items-center gap-4">
+                  <button
+                    onClick={() => navigate("/agendar")}
+                    className="w-full rounded-2xl bg-white px-7 py-4 text-sm font-extrabold text-[#18201e] shadow-[0_14px_40px_rgba(0,0,0,0.18)] transition duration-300 hover:-translate-y-0.5 hover:bg-slate-100 sm:w-auto"
+                  >
+                    Agendar horário
+                  </button>
+                  <button
+                    onClick={() => navigate("/torneios")}
+                    className="w-full rounded-2xl border border-white/20 bg-black/10 px-6 py-4 text-sm font-bold text-white backdrop-blur-sm transition duration-300 hover:bg-white/10 sm:w-auto"
+                  >
+                    Ver torneios
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* CAL TO ACTION (ESTILO ALERTA DE CONFIRMAÇÃO) */}
-      <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="text-base text-teal-900 bg-teal-50 border border-teal-200/60 p-8 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-1 text-center md:text-left">
-            <h4 className="font-black text-xl text-[#1e2221]">
-              Quer garantir o melhor horário da semana?
-            </h4>
-            <p className="text-teal-800 text-sm font-medium">
-              Os horários nobres de fim de tarde costumam fechar rápido. Garanta
-              o seu.
+              <div className="mt-2 w-full lg:mt-0 lg:justify-self-end">
+                <div className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-black/[0.18] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-md sm:max-w-[320px] sm:p-5 lg:mx-0 lg:ml-auto">
+                  <div className="relative">
+                    <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-teal-100/90">
+                          Hoje
+                        </p>
+                        <h2 className="mt-1.5 text-xl font-black text-white">
+                          Quadra Central
+                        </h2>
+                      </div>
+                      <span className="rounded-xl border border-white/10 bg-white/10 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-white">
+                        R$ 90/h
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-2.5">
+                      {availability.slice(0, 3).map((slot) => (
+                        <div
+                          key={slot.time}
+                          className={`flex items-center justify-between rounded-2xl border px-3.5 py-3 transition ${
+                            slot.available
+                              ? "border-white/10 bg-white/[0.08]"
+                              : "border-white/10 bg-black/10 opacity-70"
+                          }`}
+                        >
+                          <div>
+                            <p
+                              className={`text-sm font-bold ${
+                                slot.available
+                                  ? "text-white"
+                                  : "text-slate-300/90"
+                              }`}
+                            >
+                              {slot.time}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] ${
+                              slot.available
+                                ? "bg-teal-300/[0.12] text-teal-100"
+                                : "bg-white/10 text-slate-300"
+                            }`}
+                          >
+                            {slot.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => navigate("/agendar")}
+                      className="mt-4 w-full rounded-2xl bg-white px-4 py-3.5 text-sm font-extrabold text-[#18201e] transition hover:bg-slate-100"
+                    >
+                      Ver grade completa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 text-center">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-teal-600">
+              Role para ver mais
             </p>
           </div>
-          <button
-            onClick={() => navigate("/register")}
-            className="px-6 py-3.5 rounded-xl bg-[#1e2221] hover:bg-black text-white text-sm font-bold shadow-md transition whitespace-nowrap w-full md:w-auto text-center"
-          >
-            Começar Agora
-          </button>
-        </div>
-      </section>
 
-      <footer className="bg-[#1e2221] text-slate-300">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between text-sm">
-          <div className="flex items-center gap-2 flex-wrap justify-center">
+        </section>
+
+        <section
+          id="experiencia"
+          className="mx-auto max-w-6xl px-6 pb-10 pt-20"
+        >
+          <div className="grid items-start gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+            <div className="max-w-xl pt-2">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-teal-600">
+                A experiência
+              </p>
+              <h2 className="mt-3 text-3xl font-black tracking-tighter text-slate-900 sm:text-4xl">
+                Um lugar para jogar bem, respirar leve e voltar sempre.
+              </h2>
+              <p className="mt-5 text-sm leading-7 text-slate-500 sm:text-base">
+                A proposta da pahragon arena é unir estética limpa, operação
+                simples e energia esportiva em uma experiência que parece
+                premium sem ficar carregada. Menos ruído, mais presença.
+              </p>
+            </div>
+
+            <div className="rounded-[2rem] border border-slate-200/90 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
+              <div className="border-b border-slate-100 pb-5">
+                <p className="max-w-2xl text-sm font-medium leading-7 text-slate-500">
+                  “Beach tennis com organização, conforto visual e uma jornada
+                  que começa no clique e continua dentro da quadra.”
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:gap-5">
+                {signaturePoints.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-[1.4rem] border border-slate-100 bg-slate-50/70 px-5 py-4"
+                  >
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-teal-600">
+                      {item.label}
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-slate-500">
+                      {item.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-6 py-16">
+          <div className="grid items-start gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+            <div className="lg:sticky lg:top-24">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-teal-600">
+                Fluxo simplificado
+              </p>
+              <h2 className="mt-3 text-3xl font-black tracking-tighter text-slate-900 sm:text-4xl">
+                Agende sem burocracia ou intermediários.
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-slate-500 sm:text-base">
+                A experiência precisa parecer leve do primeiro clique até a
+                confirmação. Mais clareza visual, menos ruído e mais confiança na
+                tomada de decisão.
+              </p>
+            </div>
+
+            <div className="space-y-4 lg:pt-8">
+              {steps.map((step) => (
+                <div
+                  key={step.num}
+                  className="group rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] transition duration-300 hover:border-teal-200 hover:shadow-[0_22px_55px_rgba(20,184,166,0.10)] sm:p-6"
+                >
+                  <div className="flex items-start gap-5">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-100 font-mono text-xl font-black text-slate-400 transition group-hover:bg-teal-50 group-hover:text-teal-600">
+                      {step.num}
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-extrabold text-slate-900 sm:text-xl">
+                        {step.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-7 text-slate-500 sm:text-base">
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
+          <div className="relative overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#13211f_0%,#0f1720_55%,#103a38_100%)] p-8 text-white shadow-[0_30px_100px_rgba(15,23,42,0.22)] sm:p-10">
+            <div className="absolute -right-10 top-0 h-48 w-48 rounded-full bg-teal-300/15 blur-3xl" />
+            <div className="absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+
+            <div className="relative flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-[11px] font-black uppercase tracking-[0.28em] text-teal-300">
+                  Última chamada
+                </p>
+                <h2 className="mt-3 text-3xl font-black tracking-tighter sm:text-4xl">
+                  Quer garantir o melhor horário da semana?
+                </h2>
+                <p className="mt-4 text-sm leading-7 text-slate-200 sm:text-base">
+                  Os horários nobres de fim de tarde costumam fechar rápido.
+                  Entre agora, finalize seu cadastro e reserve antes da grade
+                  virar.
+                </p>
+              </div>
+
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                <button
+                  onClick={() => navigate("/register")}
+                  className="rounded-2xl bg-white px-6 py-4 text-sm font-extrabold text-[#18201e] transition hover:bg-slate-100"
+                >
+                  Começar agora
+                </button>
+                <button
+                  onClick={() => navigate("/agendar")}
+                  className="rounded-2xl border border-white/15 bg-white/10 px-6 py-4 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/15"
+                >
+                  Ver horários
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-white/10 bg-[#18201e] text-slate-300">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm sm:flex-row">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-bold text-white">pahragon arena</span>
             <span className="opacity-40">•</span>
-            <span>Santa Quitéria — Curitiba</span>
+            <span>Santa Quitéria • Curitiba</span>
           </div>
-          <p className="mt-2 sm:mt-0 text-xs font-mono text-slate-400">
-            © 2026 — Premium Sand Experience
+          <p className="text-xs font-mono text-slate-400">
+            © 2026 • Premium Sand Experience
           </p>
         </div>
       </footer>
