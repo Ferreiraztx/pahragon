@@ -11,7 +11,7 @@ function enviarCookieToken(res, token) {
   res.cookie('token', token, {
     httpOnly: true, // 🔒 Impede o JavaScript (front-end) de ler o token. Proteção máxima contra XSS!
     secure: true,   // 🌐 Força o uso em HTTPS (essencial para Railway/Vercel)
-    sameSite: 'None', // 🔄 Permite cross-origin se o seu front estiver na Vercel e o back no Railway
+    sameSite: 'none', // 🔄 Permite cross-origin se o seu front estiver na Vercel e o back no Railway
     maxAge: 7 * 24 * 60 * 60 * 1000, // Tempo de vida: 7 dias
   });
 }
