@@ -22,20 +22,59 @@ export default function Register() {
   async function handleSubmit(e) {
     e.preventDefault();
     setErro("");
+
+    // 1. Validação de E-mail Real (Regex padrão)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setErro("Por favor, insira um e-mail válido.");
+      return;
+    }
+
+    // 2. Validação de Senha Forte
+    // Exige: mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial
+    const senhaRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!senhaRegex.test(form.senha)) {
+      setErro(
+        "A senha deve ter no mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas, números e caracteres especiais (ex: @, $, !, %).",
+      );
+      return;
+    }
+
+    // 3. Validação do Tamanho do Telefone
+    // Remove tudo que não for número para contar o tamanho real digitado
+    const apenasNumeros = form.telefone.replace(/\D/g, "");
+    // Aceita formatos com ou sem DDD (ex: 11 ou 10 dígitos)
+    if (
+      form.telefone &&
+      (apenasNumeros.length < 10 || apenasNumeros.length > 11)
+    ) {
+      setErro(
+        "Por favor, insira um telefone válido com DDD (10 ou 11 dígitos).",
+      );
+      return;
+    }
+
     try {
       await api.post("/auth/register", form);
-      
+
       // 🌟 Exibe o Toast no topo direito
       setShowToast(true);
-      
+
       // 🕒 Dá 3 segundos para ler antes de redirecionar para o login
       setTimeout(() => {
         setShowToast(false);
         navigate("/login");
       }, 3000);
-      
     } catch (_err) {
-      setErro("Erro ao cadastrar. Verifique seus dados e tente novamente.");
+      const msgDoServidor =
+        _err.response?.data?.message || _err.response?.data?.error;
+
+      if (msgDoServidor) {
+        setErro(msgDoServidor);
+      } else {
+        setErro("Erro ao cadastrar. Verifique seus dados e tente novamente.");
+      }
     }
   }
 
@@ -136,11 +175,21 @@ export default function Register() {
           <div className="p-4 rounded-3xl shadow-2xl border border-slate-100/80 backdrop-blur-xl flex items-start gap-4 max-w-sm bg-white/95">
             {/* Ícone de Sucesso */}
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm border border-emerald-100/60 mt-0.5">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
-            
+
             {/* Mensagem */}
             <div className="flex-1 pr-1">
               <p className="text-sm font-black text-slate-950 tracking-tight">
