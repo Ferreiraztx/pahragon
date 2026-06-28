@@ -15,6 +15,8 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import PagamentoAguardando from './pages/PagamentoAguardando';
 import Perfil from './pages/Perfil'
 import Estrutura from './pages/Estrutura';
+import ResetPassword from './pages/ResetPassword'
+import ForgotPassword from './pages/ForgotPassword'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -40,6 +42,8 @@ export default function App() {
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/perfil" element={<Perfil />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   )
 }

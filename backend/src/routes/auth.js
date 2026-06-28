@@ -14,5 +14,7 @@ router.put('/perfil', requireAuth, atualizarPerfil);
 router.get('/perfil', requireAuth, obterPerfil);
 router.get('/usuarios', requireAuth, listarAtletas);
 router.post('/logout', logout);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 module.exports = router;

@@ -8,20 +8,23 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  nome      String
-  email     String    @unique
-  cpf       String?
-  senha     String
-  telefone  String?
+  id             Int       @id @default(autoincrement())
+  nome           String
+  email          String    @unique
+  cpf            String?
+  senha          String
+  telefone       String?
   dataNascimento DateTime?
-  cep         String?
-  rua         String?
-  numero      String?
-  complemento String?
-  bairro      String?
-  cidade      String?
-  estado      String?
+  cep            String?
+  rua            String?
+  numero         String?
+  complemento    String?
+  bairro         String?
+  cidade         String?
+  estado         String?
+
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
 
   createdAt DateTime  @default(now())
   bookings  Booking[]
@@ -44,7 +47,7 @@ model Court {
 
 model Booking {
   id         Int      @id @default(autoincrement())
-  user       User?     @relation(fields: [userId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
   userId     Int?
   nomeAvulso String?
   court      Court    @relation(fields: [courtId], references: [id])
@@ -70,17 +73,17 @@ model Payment {
 }
 
 model Tournament {
-  id          Int      @id @default(autoincrement())
-  nome        String
-  descricao   String?
-  data        DateTime
-  dataFim     DateTime
-  vagas       Int
-  preco       Float
-  status      String   @default("aberto")
-  createdAt   DateTime @default(now())
-  whatsapp    String?
-  quadras     String[]
+  id        Int      @id @default(autoincrement())
+  nome      String
+  descricao String?
+  data      DateTime
+  dataFim   DateTime
+  vagas     Int
+  preco     Float
+  status    String   @default("aberto")
+  createdAt DateTime @default(now())
+  whatsapp  String?
+  quadras   String[]
 }
 
 model HorarioFuncionamento {
@@ -91,13 +94,14 @@ model HorarioFuncionamento {
   horaFechamento String   @default("23:00") // "HH:mm"
   updatedAt      DateTime @updatedAt
 }
+
 model BloqueioQuadra {
-  id          Int      @id @default(autoincrement())
-  quadraId    Int
-  data        String   // Salva no formato "YYYY-MM-DD" para evitar fuso horário
-  horaInicio  String   // Ex: "08:00"
-  horaFim     String   // Ex: "12:00"
-  motivo      String?  // Ex: "Manutenção da Areia"
-  
-  quadra      Booking   @relation(fields: [quadraId], references: [id])
+  id         Int     @id @default(autoincrement())
+  quadraId   Int
+  data       String // Salva no formato "YYYY-MM-DD" para evitar fuso horário
+  horaInicio String // Ex: "08:00"
+  horaFim    String // Ex: "12:00"
+  motivo     String? // Ex: "Manutenção da Areia"
+
+  quadra Booking @relation(fields: [quadraId], references: [id])
 }

@@ -1,10 +1,22 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { PrismaClient } = require('@prisma/client');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const prisma = new PrismaClient();
+
+// Configuração do Transportador de E-mail (Nodemailer)
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || "smtp.resend.com",
+  port: process.env.EMAIL_PORT || 465,
+  auth: {
+    user: process.env.RESEND_USER, // 🔄 Mudou aqui
+    pass: process.env.RESEND_PASS, // 🔄 Mudou aqui
+  },
+});
 
 // 💡 FUNÇÃO AUXILIAR: Centraliza a configuração de segurança do cookie
 function enviarCookieToken(res, token) {
@@ -14,6 +26,99 @@ function enviarCookieToken(res, token) {
     sameSite: 'none', // 🔄 Permite cross-origin se o seu front estiver na Vercel e o back no Railway
     maxAge: 7 * 24 * 60 * 60 * 1000, // Tempo de vida: 7 dias
   });
+}
+
+// 🔒 RECUPERAÇÃO: Esqueci minha senha
+async function forgotPassword(req, res) {
+  const { email } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.status(200).json({ 
+        message: "Se o e-mail existir em nossa base, um link de recuperação será enviado em instantes." 
+      });
+    }
+
+    const token = crypto.randomBytes(20).toString('hex');
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 1); // Expira em 1 hora
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        passwordResetToken: token,
+        passwordResetExpires: expires,
+      },
+    });
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
+    const mailOptions = {
+      to: email,
+      from: "Pahragon Beach Tennis <nao-responda@pahragon.com>",
+      subject: "Recuperação de Senha — Pahragon",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e2221; background-color: #faf9f6;">
+          <h1 style="font-size: 24px; font-weight: 900; tracking-tight: -0.04em;">Pahragon <span style="font-size: 10px; color: #0d9488;">BEACH TENNIS</span></h1>
+          <p style="font-size: 16px; margin-top: 20px;">Olá,</p>
+          <p style="font-size: 14px; line-height: 1.6; color: #475569;">Você solicitou a recuperação de senha da sua conta. Para definir uma nova senha de acesso, clique no botão abaixo:</p>
+          <div style="margin: 30px 0; text-align: center;">
+            <a href="${resetUrl}" style="background-color: #1e2221; color: #ffffff; text-decoration: none; padding: 14px 24px; font-weight: bold; border-radius: 12px; display: inline-block;">Redefinir Minha Senha</a>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">Se você não solicitou este e-mail, pode desconsiderá-lo com segurança. O link é válido por 1 hora.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.status(200).json({ 
+      message: "Se o e-mail existir em nossa base, um link de recuperação será enviado em instantes." 
+    });
+
+  } catch (err) {
+    console.error("Erro no forgot-password:", err);
+    return res.status(500).json({ error: "Erro interno ao processar a recuperação de senha." });
+  }
+}
+
+// 🔒 RECUPERAÇÃO: Definir nova senha
+async function resetPassword(req, res) {
+  const { token, senha } = req.body;
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpires: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "O link de recuperação expirou ou é inválido." });
+    }
+
+    const senhaHash = await bcrypt.hash(senha, 8);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        senha: senhaHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      }
+    });
+
+    return res.status(200).json({ message: "Senha atualizada com sucesso!" });
+
+  } catch (err) {
+    console.error("Erro no reset-password:", err);
+    return res.status(500).json({ error: "Erro interno ao redefinir a senha." });
+  }
 }
 
 async function loginGoogle(req, res) {
@@ -55,10 +160,8 @@ async function loginGoogle(req, res) {
       { expiresIn: '7d' }
     );
 
-    // 🍪 Envia o token trancado via Cookie seguro
     enviarCookieToken(res, tokenSistema);
 
-    // O JSON agora só envia os dados do usuário; o token vai oculto pelos cabeçalhos do navegador
     return res.json({
       user: {
         id: user.id,
@@ -192,7 +295,7 @@ async function loginAdmin(req, res) {
   }
 }
 
-// Rota de Logout: Limpa o cookie trancado do navegador
+// Rota de Logout
 async function logout(req, res) {
   res.clearCookie('token', {
     httpOnly: true,
@@ -321,5 +424,7 @@ module.exports = {
   atualizarPerfil, 
   obterPerfil, 
   listarAtletas,
-  logout // 💡 Adicionada rota de logout para limpar cookies
+  logout,
+  forgotPassword, // 🌟 Exportado
+  resetPassword  // 🌟 Exportado
 };
