@@ -924,22 +924,24 @@ export default function AdminDashboard() {
                       {totalPendentesNoPeriodo}
                     </span>
                   </div>
-                  <div>
+
+                  {/* Bloco das Canceladas alterado para Flexbox Vertical */}
+                  <div className="flex flex-col items-start">
                     <span className="text-xs sm:text-sm font-bold text-slate-400 block mb-1">
                       Canceladas
                     </span>
                     <span className="text-3xl sm:text-5xl font-light text-slate-400 font-mono tracking-tighter">
                       {totalCanceladasNoPeriodo}
                     </span>
-                    {totalCanceladasNoPeriodo > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleLimparCanceladas}
-                        className="text-[11px] font-bold text-rose-500 hover:text-rose-700 underline text-left mt-2 transition-colors"
-                      >
-                        Limpar histórico
-                      </button>
-                    )}
+
+                    {/* Botão posicionado logo abaixo do número */}
+                    <button
+                      type="button"
+                      onClick={handleLimparCanceladas}
+                      className="text-[11px] font-bold text-rose-500 hover:text-rose-700 underline text-left mt-2 transition-colors cursor-pointer"
+                    >
+                      Limpar histórico
+                    </button>
                   </div>
                 </div>
 
