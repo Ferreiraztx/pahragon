@@ -938,8 +938,21 @@ export default function AdminDashboard() {
                     <button
                       type="button"
                       onClick={handleLimparCanceladas}
-                      className="text-[11px] font-bold text-rose-500 hover:text-rose-700 underline text-left mt-2 transition-colors cursor-pointer"
+                      className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-2.5 py-1.5 rounded-xl transition-all duration-200 cursor-pointer border border-transparent hover:border-rose-100 shadow-sm"
                     >
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
                       Limpar histórico
                     </button>
                   </div>
@@ -1908,32 +1921,67 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* TOAST DE AVISO */}
       {aviso.aberto && (
-        <div className="fixed top-5 right-5 z-50">
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div
-            className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 bg-white ${aviso.tipo === "sucesso" ? "border-emerald-100" : "border-rose-100"}`}
+            className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3.5 backdrop-blur-md max-w-md bg-white/95 ${
+              aviso.tipo === "sucesso"
+                ? "border-emerald-100/80 shadow-emerald-100/20"
+                : "border-rose-100/80 shadow-rose-100/20"
+            }`}
           >
             <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${aviso.tipo === "sucesso" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                aviso.tipo === "sucesso"
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-rose-50 text-rose-600"
+              }`}
             >
               {aviso.tipo === "sucesso" ? (
-                <span className="font-extrabold text-lg">✓</span>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
               ) : (
-                <span className="font-extrabold text-lg">✕</span>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               )}
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-extrabold text-slate-900">
-                {aviso.tipo === "sucesso" ? "Sucesso!" : "Ops, algo deu errado"}
+
+            <div className="flex-1 pr-2">
+              <p className="text-sm font-bold text-slate-950">
+                {aviso.tipo === "sucesso" ? "Sucesso" : "Ops, algo deu errado"}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">{aviso.mensagem}</p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+                {aviso.mensagem}
+              </p>
             </div>
+
             <button
               onClick={() => setAviso({ ...aviso, aberto: false })}
-              className="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded-lg"
+              className="text-slate-400 hover:text-slate-600 text-xs font-bold p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
             >
-              Fechar
+              ✕
             </button>
           </div>
         </div>
