@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 
 const availability = [
@@ -58,6 +59,17 @@ const steps = [
 ];
 
 export default function Home() {
+  const { user } = useAuth();
+
+  const handleComecarAgora = () => {
+    if (user) {
+      // 🎾 Se já está logado, manda direto para a grade de agendamentos
+      navigate("/agendar");
+    } else {
+      // 🔑 Se está deslogado, aí sim manda para o fluxo unificado ou cadastro
+      navigate("/login");
+    }
+  };
   const navigate = useNavigate();
 
   return (
@@ -194,7 +206,6 @@ export default function Home() {
               Role para ver mais
             </p>
           </div>
-
         </section>
 
         <section
@@ -254,8 +265,8 @@ export default function Home() {
               </h2>
               <p className="mt-4 text-sm leading-7 text-slate-500 sm:text-base">
                 A experiência precisa parecer leve do primeiro clique até a
-                confirmação. Mais clareza visual, menos ruído e mais confiança na
-                tomada de decisão.
+                confirmação. Mais clareza visual, menos ruído e mais confiança
+                na tomada de decisão.
               </p>
             </div>
 
@@ -307,8 +318,9 @@ export default function Home() {
 
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
                 <button
-                  onClick={() => navigate("/register")}
-                  className="rounded-2xl bg-white px-6 py-4 text-sm font-extrabold text-[#18201e] transition hover:bg-slate-100"
+                  type="button"
+                  onClick={handleComecarAgora}
+                  className="px-6 py-3 bg-white text-slate-900 font-bold rounded-2xl hover:bg-slate-50 transition-all cursor-pointer shadow-md"
                 >
                   Começar agora
                 </button>
@@ -327,12 +339,12 @@ export default function Home() {
       <footer className="border-t border-white/10 bg-[#18201e] text-slate-300">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm sm:flex-row">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="font-bold text-white">pahragon arena</span>
+            <span className="font-bold text-white">Pahragon arena</span>
             <span className="opacity-40">•</span>
             <span>Santa Quitéria • Curitiba</span>
           </div>
           <p className="text-xs font-mono text-slate-400">
-            © 2026 • Premium Sand Experience
+            © 2026 • Desenvolvido por Matheus Ferreira
           </p>
         </div>
       </footer>
