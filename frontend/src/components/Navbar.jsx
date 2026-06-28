@@ -82,7 +82,7 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/register" onClick={() => setMenu(false)} className="block bg-[#1e2221] text-white font-bold text-sm px-5 py-2.5 rounded-xl text-center shadow-sm">Criar conta / Entrar</Link>
+              <Link to="/login" onClick={() => setMenu(false)} className="block bg-[#1e2221] text-white font-bold text-sm px-5 py-2.5 rounded-xl text-center shadow-sm">Criar conta / Entrar</Link>
             </>
           )}
         </div>
