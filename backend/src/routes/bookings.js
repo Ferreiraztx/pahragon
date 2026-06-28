@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-// 💡 ADICIONADO: 'criarManual' na lista de importações abaixo
+const requireAuth = require('../middlewares/auth');
+
 const { 
   criar, 
   minhasReservas, 
@@ -29,6 +30,6 @@ router.delete('/bloqueios/:id', auth, deletarBloqueio);
 router.post('/manual', auth, criarManual);
 router.put('/manual/:id', auth, atualizarManual);
 router.delete('/manual/:id', auth, deletarManual);
-router.delete('/bookings/limpar-canceladas', requireAuth, limparHistoricoCancelado);
+router.delete('/bookings/limpar-canceladas', requireAuth, bookingController.limparHistoricoCancelado);
 
 module.exports = router;
