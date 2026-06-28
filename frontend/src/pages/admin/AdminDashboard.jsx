@@ -2042,8 +2042,11 @@ export default function AdminDashboard() {
                     Limpar Histórico de Cancelamentos
                   </h3>
                   <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-                    Esta ação irá deletar **permanentemente** todas as reservas
-                    com o status{" "}
+                    Esta ação irá deletar 
+                    <span className="font-semibold text-slate-700">
+                      permanentemente
+                    </span> 
+                    todas as reservas com o status{" "}
                     <span className="font-semibold text-slate-700">
                       "cancelado"
                     </span>{" "}
@@ -2053,9 +2056,7 @@ export default function AdminDashboard() {
                   <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-3 mt-4 flex gap-2.5">
                     <span className="text-amber-600 text-sm font-bold">⚠️</span>
                     <p className="text-xs text-amber-800 font-medium leading-normal">
-                      Essa operação é irreversível e ideal para limpar
-                      agendamentos gerados durante a fase de testes e
-                      desenvolvimento do painel.
+                      Essa operação é irreversível
                     </p>
                   </div>
                   <div className="flex items-center justify-end gap-3 mt-6">
