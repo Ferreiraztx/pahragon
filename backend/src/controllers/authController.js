@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { PrismaClient } = require('@prisma/client');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -12,6 +12,7 @@ const prisma = new PrismaClient();
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.resend.com",
   port: process.env.EMAIL_PORT || 587,
+  secure: false,
   auth: {
     user: process.env.RESEND_USER, // 🔄 Mudou aqui
     pass: process.env.RESEND_PASS, // 🔄 Mudou aqui
