@@ -16,7 +16,37 @@ export default function Register() {
   const navigate = useNavigate();
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "telefone") {
+      setForm({ ...form, [name]: maskTelefone(value) });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
+  }
+
+  function maskTelefone(value) {
+    if (!value) return "";
+    // Remove tudo o que não for número
+    let numbers = value.replace(/\D/g, "");
+
+    // Se passar de 11 dígitos, limita ao tamanho máximo de um celular com DDD
+    if (numbers.length > 11) {
+      numbers = numbers.slice(0, 11);
+    }
+
+    // Aplica a formatação com base na quantidade de números digitados
+    if (numbers.length <= 2) {
+      return numbers.length > 0 ? `(${numbers}` : "";
+    }
+    if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    }
+    if (numbers.length <= 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    }
+    // Formato final para celular de 9 dígitos: (41) 99999-9999
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
   }
 
   async function handleSubmit(e) {
@@ -143,8 +173,10 @@ export default function Register() {
                   name={field.name}
                   type={field.type}
                   placeholder={field.placeholder}
+                  value={form[field.name]} // 🌟 Adicione essa linha para o input refletir a máscara na tela
                   onChange={handleChange}
                   required={field.name !== "telefone"}
+                  maxLength={field.name === "telefone" ? 15 : undefined} // 🔒 Deixe o limite em 15 por causa dos espaços/parênteses
                 />
               </div>
             ))}
