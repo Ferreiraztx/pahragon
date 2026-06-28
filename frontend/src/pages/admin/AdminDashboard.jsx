@@ -43,6 +43,13 @@ export default function AdminDashboard() {
     whatsapp: "",
     quadras: [],
   });
+
+  const [modalLimpeza, setModalLimpeza] = useState({
+    aberto: false,
+    carregando: false,
+    sucesso: false,
+    mensagem: "",
+  });
   const [mensagem, setMensagem] = useState("");
   const navigate = useNavigate();
 
@@ -338,13 +345,12 @@ export default function AdminDashboard() {
   }
 
   const handleLimparCanceladas = async () => {
-    if (
-      !window.confirm(
-        "Deseja realmente apagar DEFINITIVAMENTE todas as reservas canceladas do histórico?",
-      )
-    ) {
-      return;
-    }
+    setModalLimpeza((prev) => ({
+      ...prev,
+      carregando: true,
+      mensagem:
+        "Conectando ao banco de dados e removendo registros vinculados...",
+    }));
 
     try {
       const response = await api.delete("/bookings/limpar-canceladas", {
@@ -352,20 +358,25 @@ export default function AdminDashboard() {
         withCredentials: true,
       });
 
-      setAviso({
+      setModalLimpeza({
         aberto: true,
-        tipo: "sucesso",
-        mensagem: response.data.message || "Histórico limpo com sucesso!",
+        carregando: false,
+        sucesso: true,
+        mensagem:
+          response.data.message ||
+          "Todas as reservas canceladas e seus respectivos históricos de pagamentos foram removidos com sucesso.",
       });
 
-      // Recarrega os dados do dashboard para zerar o contador na tela na hora!
+      // Atualiza os contadores do painel de fundo
       carregarDados();
     } catch (error) {
       const msgErro =
-        error.response?.data?.error || "Erro ao tentar limpar o histórico.";
-      setAviso({
+        error.response?.data?.error ||
+        "Não foi possível completar a limpeza do banco de dados no momento.";
+      setModalLimpeza({
         aberto: true,
-        tipo: "erro",
+        carregando: false,
+        sucesso: false,
         mensagem: msgErro,
       });
     }
@@ -937,8 +948,15 @@ export default function AdminDashboard() {
                     {/* Botão posicionado logo abaixo do número */}
                     <button
                       type="button"
-                      onClick={handleLimparCanceladas}
-                      className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-2.5 py-1.5 rounded-xl transition-all duration-200 cursor-pointer border border-transparent hover:border-rose-100 shadow-sm"
+                      onClick={() =>
+                        setModalLimpeza({
+                          aberto: true,
+                          carregando: false,
+                          sucesso: false,
+                          mensagem: "",
+                        })
+                      }
+                      className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-2.5 py-1.5 rounded-xl transition-all duration-200 cursor-pointer border border-transparent hover:border-rose-100 shadow-sm font-sans"
                     >
                       <svg
                         className="w-3.5 h-3.5"
@@ -1983,6 +2001,161 @@ export default function AdminDashboard() {
             >
               ✕
             </button>
+          </div>
+        </div>
+      )}
+
+      {modalLimpeza.aberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Fundo escurecido com desfoque de segurança */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+            onClick={() =>
+              !modalLimpeza.carregando &&
+              setModalLimpeza({ ...modalLimpeza, aberto: false })
+            }
+          />
+
+          {/* Caixa do Modal */}
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 relative z-10 animate-in fade-in zoom-in-95 duration-200 font-sans">
+            {/* Estado 1: Confirmação Inicial (Antes de rodar) */}
+            {!modalLimpeza.carregando &&
+              !modalLimpeza.sucesso &&
+              modalLimpeza.mensagem === "" && (
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 shadow-sm">
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Limpar Histórico de Cancelamentos
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                    Esta ação irá deletar **permanentemente** todas as reservas
+                    com o status{" "}
+                    <span className="font-semibold text-slate-700">
+                      "cancelado"
+                    </span>{" "}
+                    do banco de dados, juntamente com seus respectivos registros
+                    de transações ou tentativas de pagamento pendentes.
+                  </p>
+                  <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-3 mt-4 flex gap-2.5">
+                    <span className="text-amber-600 text-sm font-bold">⚠️</span>
+                    <p className="text-xs text-amber-800 font-medium leading-normal">
+                      Essa operação é irreversível e ideal para limpar
+                      agendamentos gerados durante a fase de testes e
+                      desenvolvimento do painel.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setModalLimpeza({ ...modalLimpeza, aberto: false })
+                      }
+                      className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLimparCanceladas}
+                      className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20 transition-all cursor-pointer"
+                    >
+                      Confirmar Exclusão
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            {/* Estado 2: Carregando (Processando no Banco) */}
+            {modalLimpeza.carregando && (
+              <div className="flex flex-col items-center py-6 text-center">
+                <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-rose-600 animate-spin mb-4" />
+                <h3 className="text-base font-bold text-slate-900">
+                  Processando Limpeza...
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs leading-normal">
+                  {modalLimpeza.mensagem}
+                </p>
+              </div>
+            )}
+
+            {/* Estado 3: Sucesso ou Erro (Resultado Final) */}
+            {!modalLimpeza.carregando && modalLimpeza.mensagem !== "" && (
+              <div className="text-center py-2">
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm ${
+                    modalLimpeza.sucesso
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-rose-50 text-rose-600"
+                  }`}
+                >
+                  {modalLimpeza.sucesso ? (
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {modalLimpeza.sucesso
+                    ? "Banco de Dados Limpo!"
+                    : "Erro na Operação"}
+                </h3>
+                <p className="text-sm text-slate-500 mt-2 px-2 leading-relaxed">
+                  {modalLimpeza.mensagem}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setModalLimpeza({
+                      abierto: false,
+                      carregando: false,
+                      sucesso: false,
+                      mensagem: "",
+                    })
+                  }
+                  className="mt-6 w-full py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
+                >
+                  Fechar Janela
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
