@@ -838,4 +838,5 @@ module.exports = {
   deletarBloqueio,
   atualizarManual,
   deletarManual,
+  limparHistoricoCancelado,
 };
