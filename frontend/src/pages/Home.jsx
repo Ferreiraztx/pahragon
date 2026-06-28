@@ -115,7 +115,7 @@ export default function Home() {
                 </h1>
 
                 <p className="mt-5 max-w-xl text-base leading-7 text-slate-200 sm:text-lg">
-                  A pahragon arena combina o minimalismo de um espaço planejado
+                  A Pahragon Beach Tennis combina o minimalismo de um espaço planejado
                   com a energia do beach tennis. Reserve sua quadra em segundos
                   e viva uma experiência mais elegante, fluida e vibrante no
                   Santa Quitéria.
@@ -221,7 +221,7 @@ export default function Home() {
                 Um lugar para jogar bem, respirar leve e voltar sempre.
               </h2>
               <p className="mt-5 text-sm leading-7 text-slate-500 sm:text-base">
-                A proposta da pahragon arena é unir estética limpa, operação
+                A proposta da Pahragon Beach Tennis é unir estética limpa, operação
                 simples e energia esportiva em uma experiência que parece
                 premium sem ficar carregada. Menos ruído, mais presença.
               </p>
@@ -339,7 +339,7 @@ export default function Home() {
       <footer className="border-t border-white/10 bg-[#18201e] text-slate-300">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm sm:flex-row">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="font-bold text-white">Pahragon arena</span>
+            <span className="font-bold text-white">Pahragon Beach Tennis</span>
             <span className="opacity-40">•</span>
             <span>Santa Quitéria • Curitiba</span>
           </div>

@@ -26,8 +26,8 @@ export default function PagamentoFalha() {
           
           {/* Identidade Visual */}
           <div className="flex items-center justify-center gap-1.5 opacity-40">
-            <span className="font-black text-sm tracking-tighter text-[#1e2221]">pahragon</span>
-            <span className="text-[8px] font-extrabold uppercase tracking-widest text-rose-600">arena</span>
+            <span className="font-black text-sm tracking-tighter text-[#1e2221]">Pahragon</span>
+            <span className="text-[8px] font-extrabold uppercase tracking-widest text-rose-600">Beach Tennis</span>
           </div>
 
           {/* Ícone de Erro */}

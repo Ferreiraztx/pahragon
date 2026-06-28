@@ -38,10 +38,10 @@ export default function Register() {
         <div className="text-center mb-10">
           <Link to="/" className="inline-flex items-baseline gap-2 mb-4">
             <span className="font-black text-4xl tracking-tighter text-[#1e2221]">
-              pahragon
+              Pahragon
             </span>
             <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">
-              arena
+              Beach Tennis
             </span>
           </Link>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">

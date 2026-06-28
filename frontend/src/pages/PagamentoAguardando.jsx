@@ -177,10 +177,10 @@ export default function PagamentoAguardando() {
           {/* Identidade Visual Discreta no topo do card */}
           <div className="flex items-center justify-center gap-1.5 opacity-40">
             <span className="font-black text-sm tracking-tighter text-[#1e2221]">
-              pahragon
+              Pahragon
             </span>
             <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">
-              arena
+              Beach Tennis
             </span>
           </div>
 

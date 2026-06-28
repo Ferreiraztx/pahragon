@@ -13,8 +13,8 @@ export default function Navbar() {
         
         {/* Identidade Visual Idêntica ao Cabeçalho do Admin */}
         <Link to="/" className="flex items-baseline gap-2" onClick={() => setMenu(false)}>
-          <span className="font-black text-2xl tracking-tighter text-[#1e2221]">pahragon</span>
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-600">arena</span>
+          <span className="font-black text-2xl tracking-tighter text-[#1e2221]">Pahragon</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-600">Beach Tennis</span>
         </Link>
 
         {/* Desktop Menu (Estilo Admin Minimalista) */}

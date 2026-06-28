@@ -27,7 +27,7 @@ export default function AdminLogin() {
         {/* Header da marca */}
         <div className="text-center mb-8">
           <h1 className="font-black text-3xl tracking-tighter text-[#1e2221]">
-            pahragon
+            Pahragon
           </h1>
           <h2 className="text-xs font-extrabold uppercase tracking-widest text-teal-600 mt-1">
             Painel de Administração

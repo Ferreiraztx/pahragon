@@ -735,10 +735,10 @@ export default function AdminDashboard() {
       <header className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 flex items-center justify-between border-b border-slate-200/80">
         <div className="flex items-baseline gap-2.5">
           <span className="font-black text-2xl sm:text-3xl tracking-tighter text-[#1e2221]">
-            pahragon
+            Pahragon
           </span>
           <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">
-            arena
+            Beach Tennis
           </span>
         </div>
         <div className="hidden lg:flex items-center gap-8 text-sm sm:text-base">

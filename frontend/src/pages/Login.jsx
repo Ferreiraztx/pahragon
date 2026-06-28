@@ -49,8 +49,8 @@ export default function Login() {
         {/* Identidade Visual Homogênea */}
         <div className="text-center mb-10">
           <Link to="/" className="inline-flex items-baseline gap-2 mb-4">
-            <span className="font-black text-4xl tracking-tighter text-[#1e2221]">pahragon</span>
-            <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">arena</span>
+            <span className="font-black text-4xl tracking-tighter text-[#1e2221]">Pahragon</span>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">Beach Tennis</span>
           </Link>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Acesse sua conta</h1>
           <p className="text-slate-500 text-sm mt-1">Conecte-se para gerenciar seus horários.</p>

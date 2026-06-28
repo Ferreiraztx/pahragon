@@ -46,8 +46,8 @@ export default function PagamentoSucesso() {
         <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-8 shadow-sm relative overflow-hidden">
           
           <div className="flex items-center justify-center gap-1.5 opacity-40">
-            <span className="font-black text-sm tracking-tighter text-[#1e2221]">pahragon</span>
-            <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">arena</span>
+            <span className="font-black text-sm tracking-tighter text-[#1e2221]">Pahragon</span>
+            <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">Beach Tennis</span>
           </div>
 
           {/* Ícone de Sucesso */}
