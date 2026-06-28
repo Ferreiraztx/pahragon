@@ -2042,10 +2042,10 @@ export default function AdminDashboard() {
                     Limpar Histórico de Cancelamentos
                   </h3>
                   <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-                    Esta ação irá deletar 
+                    Esta ação irá deletar{" "}
                     <span className="font-semibold text-slate-700">
                       permanentemente
-                    </span> 
+                    </span>{" "}
                     todas as reservas com o status{" "}
                     <span className="font-semibold text-slate-700">
                       "cancelado"
