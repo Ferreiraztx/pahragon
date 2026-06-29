@@ -35,7 +35,7 @@ async function forgotPassword(req, res) {
 
     const token = crypto.randomBytes(20).toString('hex');
     const expires = new Date();
-    expires.setHours(expires.getHours() + 1); // Expira em 1 hora
+    expires.setHours(expires.getHours() + 1);
 
     await prisma.user.update({
       where: { email },
@@ -47,9 +47,10 @@ async function forgotPassword(req, res) {
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
-    const mailOptions = {
-      to: email,
-      from: "Pahragon Beach Tennis <nao-responda@pahragon.com>",
+    // 🚀 AQUI ESTAVA O ERRO! Substitua pelo envio oficial via HTTP do Resend:
+    await resend.emails.send({
+      from: "Pahragon Beach Tennis <onboarding@resend.dev>",
+      to: email, // Lembre-se: no modo de teste do Resend, envie para o SEU e-mail de cadastro neles.
       subject: "Recuperação de Senha — Pahragon",
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e2221; background-color: #faf9f6;">
@@ -62,9 +63,7 @@ async function forgotPassword(req, res) {
           <p style="font-size: 12px; color: #94a3b8; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">Se você não solicitou este e-mail, pode desconsiderá-lo com segurança. O link é válido por 1 hora.</p>
         </div>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
 
     return res.status(200).json({ 
       message: "Se o e-mail existir em nossa base, um link de recuperação será enviado em instantes." 
