@@ -905,4 +905,5 @@ module.exports = {
   atualizarManual,
   deletarManual,
   limparHistoricoCancelado,
+  enviarEmailConfirmacao
 };

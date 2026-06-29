@@ -1,6 +1,8 @@
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago')
 const { PrismaClient } = require('@prisma/client')
-const { enviarConfirmacaoReserva } = require('../services/emailService')
+
+// 🔄 Importa a função oficial do Resend direto do seu bookingController
+const { enviarEmailConfirmacao } = require('./bookingController')
 
 const prisma = new PrismaClient()
 
@@ -117,6 +119,24 @@ async function criarPagamento(req, res) {
   }
 }
 
+// 💡 FUNÇÃO AUXILIAR INTERNA: Organiza e padroniza a formatação para o Resend
+async function processarEnvioEmail(booking) {
+  const dataApenasStr = new Date(booking.data).toLocaleDateString('pt-BR');
+  const horaInic = new Date(booking.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  const horaTerm = new Date(booking.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+  // Fallback para o e-mail de testes cadastrado no Sandbox do Resend
+  const emailDestinatario = booking.user?.email || "mathxtzferreira@gmail.com";
+
+  await enviarEmailConfirmacao(emailDestinatario, {
+    nomeAtleta: booking.user?.nome || booking.user?.name || "Atleta",
+    nomeQuadra: booking.court?.nome || "Quadra Pahragon",
+    data: dataApenasStr,
+    horaInicio: horaInic,
+    horaFim: horaTerm
+  });
+}
+
 async function webhook(req, res) {
   const { type, data } = req.body
 
@@ -144,8 +164,9 @@ async function webhook(req, res) {
           data: { status: 'aprovado', metodo: payment.payment_type_id }
         })
 
+        // 🚀 DISPARO OFICIAL VIA WEBHOOK DO MERCADO PAGO
         try {
-          await enviarConfirmacaoReserva(bookingAtualizado)
+          await processarEnvioEmail(bookingAtualizado)
         } catch (emailErr) {
           console.error('Erro ao enviar e-mail via webhook:', emailErr.message)
         }
@@ -177,8 +198,9 @@ async function confirmarPagamento(req, res) {
         data: { status: 'aprovado' }
       })
 
+      // 🚀 DISPARO OFICIAL VIA CONFIRMAÇÃO DIRETA (RETORNO DE TELA)
       try {
-        await enviarConfirmacaoReserva(bookingAtualizado)
+        await processarEnvioEmail(bookingAtualizado)
       } catch (emailErr) {
         console.error('Erro ao enviar e-mail via confirmação direta:', emailErr.message)
       }
