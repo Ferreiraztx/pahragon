@@ -1,5 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_PASS);
 
 async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
   const [ano, mes, dia] = dataAgendamentoString.split('-').map(Number);
@@ -150,10 +152,6 @@ async function criar(req, res) {
   }
 }
 
-// 💡 FUNÇÃO ATUALIZADA: Com travas para não permitir agendamentos no passado
-// 💡 FUNÇÃO CORRIGIDA: Usa o horário de término do formulário e resolve o bug de escopo
-// 💡 FUNÇÃO ATUALIZADA: Alimenta a tabela de agendamentos E o fluxo de caixa (Payment)
-// Criar reserva manual no Balcão (Admin - Blindagem Definitiva contra Torneios)
 async function criarManual(req, res) {
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
 
@@ -237,7 +235,7 @@ async function criarManual(req, res) {
         where: {
           courtId: Number(courtId),
           data: dataFormatada,
-          OR: [{ status: 'confirmado' }, { status: 'pendente' }],
+          OR: [{ status: 'confirmado' }, { status: 'pago' }, { status: 'pendente' }],
           AND: [
             {
               OR: [
@@ -283,6 +281,21 @@ async function criarManual(req, res) {
       return novoBooking;
     });
 
+    // 🚀 DISPARO AUTOMÁTICO SE ADICIONADO COMO PAGO NO BALCÃO
+    if (statusPagamento === 'pago') {
+      const dataApenasStr = new Date(booking.data).toLocaleDateString('pt-BR');
+      const horaInic = new Date(booking.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+      const horaTerm = new Date(booking.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+      await enviarEmailConfirmacao(process.env.RESEND_USER_TEST || "mathxtzferreira@gmail.com", {
+        nomeAtleta: booking.nomeAvulso || "Atleta",
+        nomeQuadra: booking.court?.nome || "Quadra Pahragon",
+        data: dataApenasStr,
+        horaInicio: horaInic,
+        horaFim: horaTerm
+      });
+    }
+
     return res.status(201).json(booking);
   } catch (err) {
     if (err.message === 'SLOT_TAKEN') return res.status(409).json({ error: 'Este horário já está reservado.' });
@@ -291,8 +304,54 @@ async function criarManual(req, res) {
   }
 }
 
-// 💡 FUNÇÃO ATUALIZADA: Sincroniza as alterações de valores e status também na tabela de pagamentos
-// Atualizar reserva manual no Balcão (Admin - Blindagem na Edição contra Torneios)
+async function enviarEmailConfirmacao(emailAtleta, dadosReserva) {
+  const { nomeAtleta, nomeQuadra, data, horaInicio, horaFim } = dadosReserva;
+
+  try {
+    await resend.emails.send({
+      from: "Pahragon Beach Tennis <onboarding@resend.dev>", 
+      to: emailAtleta, 
+      subject: "Sua quadra está garantida! 🎾 — Pahragon",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e2221; background-color: #faf9f6;">
+          <h1 style="font-size: 24px; font-weight: 900; tracking-tight: -0.04em;">Pahragon <span style="font-size: 10px; color: #0d9488;">BEACH TENNIS</span></h1>
+          
+          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 24px; margin-top: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <h2 style="font-size: 18px; font-weight: 800; margin-top: 0; color: #0f172a;">Reserva Confirmada, ${nomeAtleta}!</h2>
+            <p style="font-size: 14px; color: #475569; line-height: 1.5;">Seu horário foi agendado com sucesso em nossa arena. Confira os detalhes:</p>
+            
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+            
+            <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px 0; color: #94a3b8; font-weight: bold; text-transform: uppercase; font-size: 11px; width: 35%;">Quadra</td>
+                <td style="padding: 6px 0; color: #1e2221; font-weight: bold;">${nomeQuadra}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #94a3b8; font-weight: bold; text-transform: uppercase; font-size: 11px;">Data</td>
+                <td style="padding: 6px 0; color: #1e2221; font-weight: bold;">${data}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #94a3b8; font-weight: bold; text-transform: uppercase; font-size: 11px;">Horário</td>
+                <td style="padding: 6px 0; color: #1e2221; font-weight: bold;">${horaInicio} às ${horaFim}</td>
+              </tr>
+            </table>
+            
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+            
+            <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 0;">
+              Prepare a raquete! Chegue com alguns minutos de antecedência para aproveitar ao máximo seu tempo em quadra. 🏝️
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    console.log("✉️ E-mail de confirmação de quadra enviado com sucesso!");
+  } catch (error) {
+    console.error("Erro ao enviar e-mail de reserva:", error);
+  }
+}
+
 async function atualizarManual(req, res) {
   const { id } = req.params;
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
@@ -366,17 +425,15 @@ async function atualizarManual(req, res) {
           status: novoStatus,
           nomeAvulso: nomeAtleta
         },
-        include: { court: true }
+        include: { court: true, user: true }
       });
 
       const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
       const valorCalculado = (booking.court?.precoPorHora || 0) * totalHoras;
 
       if (statusPagamento === 'pago') {
-        await tx.payment.upsert({
-          where: { bookingId: booking.id },
-          update: { status: 'aprovado', valor: valorCalculado },
-          create: {
+        await tx.payment.create({
+          data: {
             bookingId: booking.id,
             valor: valorCalculado,
             metodo: 'dinheiro_balcao',
@@ -384,20 +441,29 @@ async function atualizarManual(req, res) {
           }
         });
       } else {
-        await tx.payment.upsert({
-          where: { bookingId: booking.id },
-          update: { status: 'pendente' },
-          create: {
-            bookingId: booking.id,
-            valor: valorCalculado,
-            metodo: 'dinheiro_balcao',
-            status: 'pendente'
-          }
-        });
+        await tx.payment.deleteMany({ where: { bookingId: booking.id } });
       }
 
       return booking;
     });
+
+    // 🚀 DISPARO AUTOMÁTICO SE MUDOU PARA PAGO NA EDIÇÃO
+    if (statusPagamento === 'pago') {
+      const dataApenasStr = new Date(reservaAtualizada.data).toLocaleDateString('pt-BR');
+      const horaInic = new Date(reservaAtualizada.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+      const horaTerm = new Date(reservaAtualizada.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+      // Envia para o usuário do cadastro, ou para o seu e-mail de teste padrão
+      const emailDestinatario = reservaAtualizada.user?.email || "mathxtzferreira@gmail.com";
+
+      await enviarEmailConfirmacao(emailDestinatario, {
+        nomeAtleta: reservaAtualizada.nomeAvulso || reservaAtualizada.user?.nome || "Atleta",
+        nomeQuadra: reservaAtualizada.court?.nome || "Quadra Pahragon",
+        data: dataApenasStr,
+        horaInicio: horaInic,
+        horaFim: horaTerm
+      });
+    }
 
     return res.json(reservaAtualizada);
   } catch (error) {
