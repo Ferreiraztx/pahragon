@@ -1,7 +1,7 @@
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
-const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -35,7 +35,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Deixa explícito os métodos aceitos
-  allowedHeaders: ['Content-Type', 'Authorization'], // Garante que os headers enviados pelo axios passem
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'], // Garante que os headers enviados pelo axios passem
   credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204 // Responde com sucesso imediatamente para o teste OPTIONS do navegador
