@@ -83,9 +83,9 @@ async function criarPagamento(req, res) {
           email: booking.user.email
         },
         back_urls: {
-          success: `${process.env.FRONTEND_URL}/pagamento/sucesso?bookingId=${booking.id}`,
-          failure: `${process.env.FRONTEND_URL}/pagamento/falha?bookingId=${booking.id}`,
-          pending: `${process.env.FRONTEND_URL}/pagamento/pendente?bookingId=${booking.id}`
+          success: `${process.env.FRONTEND_URL}/pagamento/processar?bookingId=${booking.id}`,
+          failure: `${process.env.FRONTEND_URL}/pagamento/processar?bookingId=${booking.id}`,
+          pending: `${process.env.FRONTEND_URL}/pagamento/processar?bookingId=${booking.id}`
         },
         external_reference: String(booking.id),
         payment_methods: {
@@ -183,40 +183,35 @@ async function webhook(req, res) {
 }
 
 async function confirmarPagamento(req, res) {
-  const { bookingId, status } = req.body
+  const { bookingId } = req.body; // 💡 Agora o front só precisa mandar o ID da reserva
+
+  const idSeguro = Number(bookingId);
+  if (!idSeguro || isNaN(idSeguro)) {
+    return res.status(400).json({ error: "ID de reserva inválido." });
+  }
 
   try {
-    // Se o status retornado pelo gateway for aprovado, atualiza independente de quem está logado
-    if (status === 'approved') {
-      const bookingAtualizado = await prisma.booking.update({
-        where: { id: Number(bookingId) },
-        data: { status: 'confirmado' },
-        include: { court: true, user: true }
-      })
-      
-      await prisma.payment.update({
-        where: { bookingId: Number(bookingId) },
-        data: { status: 'aprovado' }
-      })
+    // Busca a reserva atualizada diretamente no banco de dados
+    const booking = await prisma.booking.findUnique({
+      where: { id: idSeguro },
+      include: { court: true, user: true }
+    });
 
-      try {
-        await processarEnvioEmail(bookingAtualizado)
-      } catch (emailErr) {
-        console.error('Erro ao enviar e-mail via confirmação direta:', emailErr.message)
-      }
-
-      return res.json(bookingAtualizado)
+    if (!booking) {
+      return res.status(404).json({ error: "Reserva não encontrada." });
     }
 
-    const booking = await prisma.booking.findUnique({
-      where: { id: Number(bookingId) },
-      include: { court: true, user: true }
-    })
+    // 🚀 SE JÁ TIVER SIDO PAGO (Seja pelo Webhook ou aprovação direta)
+    if (booking.status === 'confirmado' || booking.status === 'pago') {
+      return res.json({pago: true, booking});
+    }
 
-    return res.json(booking)
+    // Se ainda estiver pendente no banco
+    return res.json({pago: false, booking});
+
   } catch (err) {
-    console.error('Erro ao confirmar pagamento:', err)
-    return res.status(500).json({ error: 'Erro ao confirmar pagamento' })
+    console.error('Erro ao verificar status do pagamento:', err);
+    return res.status(500).json({ error: 'Erro interno ao verificar pagamento' });
   }
 }
 

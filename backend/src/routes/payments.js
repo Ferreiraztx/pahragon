@@ -5,6 +5,6 @@ const auth = require('../middlewares/auth')
 
 router.post('/criar-preferencia', auth, criarPagamento)
 router.post('/webhook', webhook)
-router.post('/confirmar', auth, confirmarPagamento)
+router.post('/confirmar', confirmarPagamento)
 
 module.exports = router
