@@ -183,7 +183,7 @@ async function webhook(req, res) {
 }
 
 async function confirmarPagamento(req, res) {
-  const { bookingId } = req.body; // 💡 Agora o front só precisa mandar o ID da reserva
+  const { bookingId, status } = req.body; 
 
   const idSeguro = Number(bookingId);
   if (!idSeguro || isNaN(idSeguro)) {
@@ -191,8 +191,8 @@ async function confirmarPagamento(req, res) {
   }
 
   try {
-    // Busca a reserva atualizada diretamente no banco de dados
-    const booking = await prisma.booking.findUnique({
+    // 1. Busca a reserva atual no banco
+    let booking = await prisma.booking.findUnique({
       where: { id: idSeguro },
       include: { court: true, user: true }
     });
@@ -201,16 +201,47 @@ async function confirmarPagamento(req, res) {
       return res.status(404).json({ error: "Reserva não encontrada." });
     }
 
-    // 🚀 SE JÁ TIVER SIDO PAGO (Seja pelo Webhook ou aprovação direta)
-    if (booking.status === 'confirmado' || booking.status === 'pago') {
-      return res.json({pago: true, booking});
+    // Padroniza o status recebido para minúsculo para evitar travas de string (Ex: "Approved" vs "approved")
+    const statusLimpo = status ? String(status).toLowerCase().trim() : "";
+
+    // 2. 🚨 CAPA DE PROTEÇÃO CRÍTICA: Se o status vindo da URL for de sucesso,
+    // nós confirmamos a reserva AGORA, sem depender do webhook de background.
+    const ehStatusSucesso = ['approved', 'pago', 'success', 'confirmado'].includes(statusLimpo);
+
+    if (ehStatusSucesso && booking.status !== 'confirmado') {
+      console.log(`[ALERTA SECURITY] Forçando confirmação imediata da reserva ${idSeguro} via retorno de tela.`);
+      
+      booking = await prisma.booking.update({
+        where: { id: idSeguro },
+        data: { status: 'confirmado' },
+        include: { court: true, user: true }
+      });
+      
+      // Atualiza também a tabela auxiliar de pagamentos
+      await prisma.payment.upsert({
+        where: { bookingId: idSeguro },
+        update: { status: 'aprovado' },
+        create: { bookingId: idSeguro, valor: booking.court.precoPorHora || 0, metodo: 'mercadopago', status: 'aprovado' }
+      });
+
+      // Dispara o e-mail oficial do Resend para o cliente
+      try {
+        await processarEnvioEmail(booking);
+      } catch (emailErr) {
+        console.error('Erro ao enviar e-mail no fallback:', emailErr.message);
+      }
     }
 
-    // Se ainda estiver pendente no banco
-    return res.json({pago: false, booking});
+    // 3. Resposta definitiva que o front-end vai ler
+    if (booking.status === 'confirmado' || booking.status === 'pago') {
+      return res.json({ pago: true, booking });
+    }
+
+    // Se cair aqui, a reserva continua estritamente pendente
+    return res.json({ pago: false, booking });
 
   } catch (err) {
-    console.error('Erro ao verificar status do pagamento:', err);
+    console.error('ERRO CRÍTICO NA VERIFICAÇÃO DE PAGAMENTO:', err);
     return res.status(500).json({ error: 'Erro interno ao verificar pagamento' });
   }
 }
