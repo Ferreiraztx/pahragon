@@ -34,9 +34,9 @@ export default function MinhasReservas() {
           const dataHoraA = obterHora(a.data, a.horaInicio);
           const dataHoraB = obterHora(b.data, b.horaInicio);
 
-          // 1. REGRA PRINCIPAL: Ordena por proximidade de data e hora (Mais próximas primeiro)
+          // 1. REGRA PRINCIPAL: Ordena por data e hora decrescente (Mais RECENTES primeiro no topo)
           if (dataHoraA.getTime() !== dataHoraB.getTime()) {
-            return dataHoraA.getTime() - dataHoraB.getTime();
+            return dataHoraB.getTime() - dataHoraA.getTime(); // 💡 Invertido (B - A) para trazer o mais recente para cima
           }
 
           // 2. CRITÉRIO DE DESEMPATE: Se no mesmo dia e mesma hora, ordena pelo peso do status
@@ -52,7 +52,7 @@ export default function MinhasReservas() {
         setReservas(dadosOrdenados);
       })
       .catch((err) => console.error("Erro ao carregar reservas:", err));
-  }
+  } 
 
   useEffect(() => {
     // 1. Carrega logo quando o componente monta na tela
