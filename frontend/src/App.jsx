@@ -17,6 +17,7 @@ import Perfil from './pages/Perfil'
 import Estrutura from './pages/Estrutura';
 import ResetPassword from './pages/ResetPassword'
 import ForgotPassword from './pages/ForgotPassword'
+import ProcessarPagamento from "./pages/ProcessarPagamento";
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/agendar" element={<PrivateRoute><Booking /></PrivateRoute>} />
       <Route path="/minhas-reservas" element={<PrivateRoute><MinhasReservas /></PrivateRoute>} />
       <Route path="/pagamento/aguardando" element={<PagamentoAguardando />} />
+      <Route path="/pagamento/processar" element={<ProcessarPagamento />} />
       <Route path="/pagamento/sucesso" element={<PrivateRoute><PagamentoSucesso /></PrivateRoute>} />
       <Route path="/pagamento/falha" element={<PrivateRoute><PagamentoFalha /></PrivateRoute>} />
       <Route path="/pagamento/pendente" element={<PrivateRoute><PagamentoSucesso /></PrivateRoute>} />
