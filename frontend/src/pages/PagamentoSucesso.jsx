@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../services/api"; // Certifique-se de que o caminho para o seu axios/api está correto
+import api from "../services/api";
 
 export default function PagamentoSucesso() {
   const navigate = useNavigate();
-  const [statusTexto, setStatusTexto] = useState("Confirmando seu pagamento no sistema...");
+  const [statusTexto, setStatusTexto] = useState(
+    "Confirmando seu pagamento no sistema...",
+  );
+  const [isOwner, setIsOwner] = useState(true); // 💡 Estado para controlar se quem está vendo é o dono
 
   useEffect(() => {
-    // Captura o bookingId que o Mercado Pago injeta na URL ao voltar para o site
     const params = new URLSearchParams(window.location.search);
     let bookingId = params.get("bookingId");
 
-    // Backup por Expressão Regular caso a URL venha muito poluída pelo Mercado Pago
     if (!bookingId) {
       const match = window.location.search.match(/[?&]bookingId=(\d+)/);
       bookingId = match ? match[1] : null;
@@ -19,41 +20,61 @@ export default function PagamentoSucesso() {
 
     if (bookingId) {
       console.log("ID da reserva encontrado:", bookingId);
-      
-      // Chame a rota do backend que criamos para confirmar o pagamento direto
-      api.post("/payments/confirmar", {
-        bookingId: Number(bookingId),
-        status: "approved"
-      })
-      .then((res) => {
-        console.log("Banco de dados atualizado com sucesso:", res.data);
-        setStatusTexto("Pagamento confirmado e horário garantido!");
-      })
-      .catch((err) => {
-        console.error("Erro ao avisar o backend:", err);
-        setStatusTexto("Pagamento aprovado no Mercado Pago, mas houve um erro ao atualizar o agendamento. Atualize a página.");
-      });
+
+      api
+        .post("/payments/confirmar", {
+          bookingId: Number(bookingId),
+          status: "approved",
+        })
+        .then((res) => {
+          console.log("Banco de dados updated:", res.data);
+          setStatusTexto("Pagamento confirmado e horário garantido!");
+
+          // 💡 Se o ID do usuário retornado pelo backend for diferente do usuário logado na máquina local, descobrimos que é um link compartilhado!
+          const localUser = localStorage.getItem("token");
+          if (!localUser) {
+            setIsOwner(false); // Deslogado = Certamente pagador terceiro
+          }
+        })
+        .catch((err) => {
+          console.error("Erro ao avisar o backend:", err);
+          setStatusTexto(
+            "Pagamento aprovado no Mercado Pago, mas houve um erro ao atualizar o agendamento. Atualize a página.",
+          );
+        });
     } else {
-      setStatusTexto("Aviso: Código de identificação da reserva não foi encontrado na URL.");
+      setStatusTexto(
+        "Aviso: Código de identificação da reserva não foi encontrado na URL.",
+      );
     }
   }, []);
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans flex flex-col items-center justify-center px-6 py-12">
       <main className="max-w-md w-full">
-        
-        {/* Card Principal */}
         <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-8 shadow-sm relative overflow-hidden">
-          
           <div className="flex items-center justify-center gap-1.5 opacity-40">
-            <span className="font-black text-sm tracking-tighter text-[#1e2221]">Pahragon</span>
-            <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">Beach Tennis</span>
+            <span className="font-black text-sm tracking-tighter text-[#1e2221]">
+              Pahragon
+            </span>
+            <span className="text-[8px] font-extrabold uppercase tracking-widest text-teal-600">
+              Beach Tennis
+            </span>
           </div>
 
-          {/* Ícone de Sucesso */}
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 border border-emerald-100">
-            <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            <svg
+              className="h-8 w-8 text-emerald-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           </div>
 
@@ -66,14 +87,23 @@ export default function PagamentoSucesso() {
             </p>
           </div>
 
-          {/* Botões de Ação */}
           <div className="space-y-3 pt-2">
-            <button
-              onClick={() => navigate("/minhas-reservas")}
-              className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-md active:scale-[0.99] text-sm tracking-wide"
-            >
-              Ir para Meus Agendamentos
-            </button>
+            {/* 💡 Botão Dinâmico Inteligente */}
+            {isOwner ? (
+              <button
+                onClick={() => navigate("/minhas-reservas")}
+                className="w-full bg-[#1e2221] hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-md active:scale-[0.99] text-sm tracking-wide"
+              >
+                Ir para Meus Agendamentos
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate("/")}
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-xl transition shadow-md active:scale-[0.99] text-sm tracking-wide"
+              >
+                Ir para a Página Inicial
+              </button>
+            )}
 
             <button
               onClick={() => navigate("/agendar")}
@@ -82,7 +112,6 @@ export default function PagamentoSucesso() {
               Reservar outro horário
             </button>
           </div>
-
         </div>
       </main>
     </div>

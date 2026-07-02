@@ -186,6 +186,7 @@ async function confirmarPagamento(req, res) {
   const { bookingId, status } = req.body
 
   try {
+    // Se o status retornado pelo gateway for aprovado, atualiza independente de quem está logado
     if (status === 'approved') {
       const bookingAtualizado = await prisma.booking.update({
         where: { id: Number(bookingId) },
@@ -198,7 +199,6 @@ async function confirmarPagamento(req, res) {
         data: { status: 'aprovado' }
       })
 
-      // 🚀 DISPARO OFICIAL VIA CONFIRMAÇÃO DIRETA (RETORNO DE TELA)
       try {
         await processarEnvioEmail(bookingAtualizado)
       } catch (emailErr) {
