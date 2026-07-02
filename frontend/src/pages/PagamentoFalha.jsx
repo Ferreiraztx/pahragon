@@ -45,7 +45,7 @@ export default function PagamentoFalha() {
               Ocorreu um Problema
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed max-w-xs mx-auto">
-              Não conseguimos detectar a aprovação do seu pagamento no banco de dados. Caso já tenha pago, o sistema pode levar alguns minutos para confirmar via Pix.
+              Não conseguimos detectar a aprovação do seu pagamento. Caso já tenha pago, o sistema pode levar alguns minutos para confirmar.
             </p>
           </div>
 
