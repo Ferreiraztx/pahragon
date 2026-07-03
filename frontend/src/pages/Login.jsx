@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -103,6 +102,7 @@ export default function Login() {
                 className="w-full mt-1.5 bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-300 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition"
                 type="password"
                 placeholder="••••••••"
+                autoComplete="current-password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
@@ -143,7 +143,6 @@ export default function Login() {
               size="large"
               shape="circle"
               locale="pt-BR"
-              width="100%"
             />
           </div>
 
