@@ -19,9 +19,22 @@ export default function Login() {
       login(res.data.user, res.data.token);
       navigate("/");
     } catch (err) {
-      // 💡 Captura o erro dinâmico vindo do express-rate-limit ou do login
-      if (err.response && err.response.data && err.response.data.error) {
-        setErro(err.response.data.error);
+      // 💡 Verifica se há uma resposta de erro estruturada do servidor
+      if (err.response && err.response.data) {
+        const erroServidor = err.response.data.error;
+
+        // Se o erro for um objeto (como acontece em algumas respostas do rate-limit), extrai a propriedade certa
+        if (typeof erroServidor === "object" && erroServidor !== null) {
+          setErro(
+            erroServidor.error ||
+              "Muitas tentativas. Tente novamente mais tarde.",
+          );
+        } else if (erroServidor) {
+          // Se for uma string comum ("E-mail ou senha incorretos")
+          setErro(erroServidor);
+        } else {
+          setErro("E-mail ou senha incorretos.");
+        }
       } else {
         setErro("E-mail ou senha incorretos.");
       }
