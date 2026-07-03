@@ -52,7 +52,7 @@ export default function MinhasReservas() {
         setReservas(dadosOrdenados);
       })
       .catch((err) => console.error("Erro ao carregar reservas:", err));
-  } 
+  }
 
   useEffect(() => {
     // 1. Carrega logo quando o componente monta na tela
@@ -198,42 +198,63 @@ export default function MinhasReservas() {
               </div>
 
               {/* Rodapé de Ações do Card */}
-              {r.status !== "cancelado" && (
-                <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end gap-2">
-                  {/* Botão de Pagar - Visível apenas para pendentes */}
-                  {r.status === "pendente" && (
-                    <button
-                      onClick={() =>
-                        navigate(`/pagamento/aguardando?bookingId=${r.id}`)
-                      }
-                      className="text-xs font-bold uppercase tracking-wider text-white bg-[#1e2221] hover:bg-black px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5"
-                    >
-                      <svg
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth="2.5"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"
-                        />
-                      </svg>
-                      Pagar Horário
-                    </button>
-                  )}
+              {r.status !== "cancelado" &&
+                (() => {
+                  // 1. Extrai o horário de término da reserva de forma robusta
+                  const obterDataHoraFim = (dataStr, horaFimStr) => {
+                    const ISORegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+                    if (ISORegex.test(horaFimStr)) return new Date(horaFimStr);
+                    return new Date(
+                      `${dataStr.split("T")[0]}T${horaFimStr.slice(0, 5)}:00`,
+                    );
+                  };
 
-                  {/* Botão de Cancelamento Discreto */}
-                  <button
-                    onClick={() => abrirModalCancelamento(r.id)}
-                    className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 bg-white hover:bg-rose-50/50 px-4 py-2.5 rounded-xl transition"
-                  >
-                    Cancelar reserva
-                  </button>
-                </div>
-              )}
+                  const dataHoraFim = obterDataHoraFim(r.data, r.horaFim);
+                  const agora = new Date();
+
+                  // 2. Se o horário de término for MENOR que o horário de agora, a reserva já passou
+                  const jaPassou = dataHoraFim.getTime() < agora.getTime();
+
+                  // Se já passou do horário E a reserva está confirmada, não mostra nenhum botão de ação
+                  if (jaPassou) return null;
+
+                  return (
+                    <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end gap-2">
+                      {/* Botão de Pagar - Visível apenas para pendentes */}
+                      {r.status === "pendente" && (
+                        <button
+                          onClick={() =>
+                            navigate(`/pagamento/aguardando?bookingId=${r.id}`)
+                          }
+                          className="text-xs font-bold uppercase tracking-wider text-white bg-[#1e2221] hover:bg-black px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5"
+                        >
+                          <svg
+                            className="h-3.5 w-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="2.5"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"
+                            />
+                          </svg>
+                          Pagar Horário
+                        </button>
+                      )}
+
+                      {/* Botão de Cancelamento - Sumirá se já tiver passado do horário */}
+                      <button
+                        onClick={() => abrirModalCancelamento(r.id)}
+                        className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 bg-white hover:bg-rose-50/50 px-4 py-2.5 rounded-xl transition"
+                      >
+                        Cancelar reserva
+                      </button>
+                    </div>
+                  );
+                })()}
             </div>
           ))
         )}
