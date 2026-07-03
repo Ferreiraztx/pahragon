@@ -1,14 +1,33 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit'); // 💡 1. Importa o limitador
+
+// 💡 2. Cria a regra de bloqueio (máximo 5 tentativas a cada 15 minutos)
+const limitadorLogin = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Limite de 5 requisições por IP
+  message: { 
+    error: "Muitas tentativas de login vindas deste aparelho. Por favor, tente novamente após 15 minutos." 
+  },
+  standardHeaders: true, 
+  legacyHeaders: false,
+});
+
 // 💡 Adicionado o 'logout' aqui na desestruturação:
 const { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil, listarAtletas, logout, forgotPassword, resetPassword } = require('../controllers/authController');
 const requireAuth = require('../middlewares/auth');
 const { listar } = require('../controllers/courtController');
 
 router.post('/register', register);
-router.post('/login', login);
+
+// 💡 3. Aplica o limitador aqui na rota de login de usuários
+router.post('/login', limitadorLogin, login);
+
 router.post('/admin/register', registerAdmin);
-router.post('/admin/login', loginAdmin);
+
+// 💡 4. Aplica o limitador aqui também na rota de login do Admin
+router.post('/admin/login', limitadorLogin, loginAdmin);
+
 router.post('/google', loginGoogle);
 router.put('/perfil', requireAuth, atualizarPerfil);
 router.get('/perfil', requireAuth, obterPerfil);
