@@ -30,9 +30,7 @@ async function criar(req, res) {
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
   try {
-    // ==========================================================
-    // TRAVA DE SEGURANÇA: Validação usando Strings Locais
-    // ==========================================================
+
     const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
     const ano = agoraBR.getUTCFullYear();
     const mes = String(agoraBR.getUTCMonth() + 1).padStart(2, '0');
@@ -51,7 +49,14 @@ async function criar(req, res) {
     if (dataAgendamentoString === hojeString && horaAgendamentoStr <= horaAtualStr) {
       return res.status(400).json({ error: 'Não é possível agendar em um horário que já passou hoje.' });
     }
-    // ==========================================================
+
+    const dataAgendamento = new Date(req.body.data);
+    const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias
+
+    if (dataAgendamento < hoje) {
+      return res.status(400).json({ error: "Não é possível agendar em datas passadas." });
+    }
 
     const checkFuncionamento = await validarFuncionamento(dataAgendamentoString, horaAgendamentoStr);
     if (!checkFuncionamento.liberado) {
