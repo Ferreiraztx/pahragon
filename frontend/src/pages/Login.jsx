@@ -19,8 +19,13 @@ export default function Login() {
       const res = await api.post("/auth/login", { email, senha });
       login(res.data.user, res.data.token);
       navigate("/");
-    } catch (_err) {
-      setErro("E-mail ou senha incorretos.");
+    } catch (err) {
+      // 💡 Captura o erro dinâmico vindo do express-rate-limit ou do login
+      if (err.response && err.response.data && err.response.data.error) {
+        setErro(err.response.data.error);
+      } else {
+        setErro("E-mail ou senha incorretos.");
+      }
     }
   }
 
