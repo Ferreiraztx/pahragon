@@ -11,6 +11,7 @@ const paymentRoutes = require('./routes/payments');
 const tournamentRoutes = require('./routes/tournaments');
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(
   helmet({

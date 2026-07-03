@@ -6,8 +6,10 @@ const rateLimit = require('express-rate-limit'); // 💡 1. Importa o limitador
 const limitadorLogin = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 5, // Limite de 5 requisições por IP
-  message: { 
-    error: "Muitas tentativas de login vindas deste aparelho. Por favor, tente novamente após 15 minutos." 
+  handler: (req, res) => {
+    res.status(429).json({ 
+      error: "Muitas tentativas de login vindas deste aparelho. Por favor, tente novamente após 15 minutos." 
+    });
   },
   standardHeaders: true, 
   legacyHeaders: false,
