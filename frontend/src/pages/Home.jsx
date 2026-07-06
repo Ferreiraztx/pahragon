@@ -1,8 +1,29 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
-import api from "../services/api";
+
+const availability = [
+  {
+    time: "18:00h - 19:00h",
+    status: "Reservado",
+    available: false,
+  },
+  {
+    time: "19:00h - 20:00h",
+    status: "Disponível",
+    available: true,
+  },
+  {
+    time: "20:00h - 21:00h",
+    status: "Disponível",
+    available: true,
+  },
+  {
+    time: "21:00h - 22:00h",
+    status: "Últimas vagas",
+    available: true,
+  },
+];
 
 const signaturePoints = [
   {
@@ -39,83 +60,17 @@ const steps = [
 
 export default function Home() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-
-  // 🛠️ ESTADOS ADICIONADOS: Para renderizar dados dinâmicos e reais da API
-  const [nomeQuadra, setNomeQuadra] = useState("Quadra Central");
-  const [precoQuadra, setPrecoQuadra] = useState(90);
-  const [gradeDisponibilidade, setGradeDisponibilidade] = useState([
-    { time: "18:00h - 19:00h", status: "Disponível", available: true },
-    { time: "19:00h - 20:00h", status: "Disponível", available: true },
-    { time: "20:00h - 21:00h", status: "Disponível", available: true },
-  ]);
-
-  useEffect(() => {
-    // Busca os dados reais de quadras e agendamentos do dia de hoje no banco
-    async function carregarDadosReaisHome() {
-      try {
-        // 1. Busca as quadras cadastradas no sistema
-        const resQuadras = await api.get("/courts");
-        if (resQuadras.data && resQuadras.data.length > 0) {
-          const quadraPrincipal = resQuadras.data[0]; // Pega a primeira quadra ativa
-          setNomeQuadra(quadraPrincipal.nome);
-          setPrecoQuadra(
-            quadraPrincipal.precoHora || quadraPrincipal.preco || 90,
-          );
-
-          // Hoje formatado em string YYYY-MM-DD
-          const hojeStr = new Date().toISOString().split("T")[0];
-
-          // 2. Busca todas as reservas ativas daquela quadra específica para o dia de hoje
-          const resReservas = await api.get(
-            `/bookings?courtId=${quadraPrincipal.id}&data=${hojeStr}`,
-          );
-          const reservasDoDia = resReservas.data || [];
-
-          // 3. Define as faixas de horário padrões que você exibe no card fixo da Home
-          const slotsPadrao = [
-            { inicio: "18:00", fim: "19:00", label: "18:00h - 19:00h" },
-            { inicio: "19:00", fim: "20:00", label: "19:00h - 20:00h" },
-            { inicio: "20:00", fim: "21:00", label: "20:00h - 21:00h" },
-          ];
-
-          // 4. Mapeia cruzando com o banco real para ver se há alguma reserva ativa (confirmada/pendente)
-          const gradeAtualizada = slotsPadrao.map((slot) => {
-            const jaReservado = reservasDoDia.some((b) => {
-              const statusValido = b.status !== "cancelado";
-
-              // Trata se o banco retornar string direta "18:00" ou ISO completo
-              const horaInicioBanco = b.horaInicio.includes("T")
-                ? b.horaInicio.split("T")[1].slice(0, 5)
-                : b.horaInicio.slice(0, 5);
-
-              return horaInicioBanco === slot.inicio && statusValido;
-            });
-
-            return {
-              time: slot.label,
-              status: jaReservado ? "Reservado" : "Disponível",
-              available: !jaReservado,
-            };
-          });
-
-          setGradeDisponibilidade(gradeAtualizada);
-        }
-      } catch (error) {
-        console.error("Erro ao sincronizar dados dinâmicos da Home:", error);
-      }
-    }
-
-    carregarDadosReaisHome();
-  }, []);
 
   const handleComecarAgora = () => {
     if (user) {
+      // 🎾 Se já está logado, manda direto para a grade de agendamentos
       navigate("/agendar");
     } else {
+      // 🔑 Se está deslogado, aí sim manda para o fluxo unificado ou cadastro
       navigate("/login");
     }
   };
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#f6f4ee] text-[#1f2523] antialiased tracking-tight font-sans">
@@ -160,10 +115,10 @@ export default function Home() {
                 </h1>
 
                 <p className="mt-5 max-w-xl text-base leading-7 text-slate-200 sm:text-lg">
-                  A Pahragon Beach Tennis combina o minimalismo de um space
-                  planejado com a energia do beach tennis. Reserve sua quadra em
-                  segundos e viva uma experiência mais elegante, fluida e
-                  vibrante no Santa Quitéria.
+                  A Pahragon Beach Tennis combina o minimalismo de um espaço planejado
+                  com a energia do beach tennis. Reserve sua quadra em segundos
+                  e viva uma experiência mais elegante, fluida e vibrante no
+                  Santa Quitéria.
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -182,7 +137,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 📊 PAINEL DE DISPONIBILIDADE ALTERADO PARA REALISTA */}
               <div className="mt-2 w-full lg:mt-0 lg:justify-self-end">
                 <div className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-black/[0.18] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-md sm:max-w-[320px] sm:p-5 lg:mx-0 lg:ml-auto">
                   <div className="relative">
@@ -191,29 +145,31 @@ export default function Home() {
                         <p className="text-[11px] font-black uppercase tracking-[0.25em] text-teal-100/90">
                           Hoje
                         </p>
-                        <h2 className="mt-1.5 text-xl font-black text-white leading-tight">
-                          {nomeQuadra}
+                        <h2 className="mt-1.5 text-xl font-black text-white">
+                          Quadra 1
                         </h2>
                       </div>
-                      <span className="rounded-xl border border-white/10 bg-white/10 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-white whitespace-nowrap">
-                        R$ {precoQuadra}/h
+                      <span className="rounded-xl border border-white/10 bg-white/10 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-white">
+                        R$ 80/h
                       </span>
                     </div>
 
                     <div className="mt-4 space-y-2.5">
-                      {gradeDisponibilidade.map((slot) => (
+                      {availability.slice(0, 3).map((slot) => (
                         <div
                           key={slot.time}
                           className={`flex items-center justify-between rounded-2xl border px-3.5 py-3 transition ${
                             slot.available
                               ? "border-white/10 bg-white/[0.08]"
-                              : "border-white/10 bg-black/10 opacity-60"
+                              : "border-white/10 bg-black/10 opacity-70"
                           }`}
                         >
                           <div>
                             <p
                               className={`text-sm font-bold ${
-                                slot.available ? "text-white" : "text-slate-400"
+                                slot.available
+                                  ? "text-white"
+                                  : "text-slate-300/90"
                               }`}
                             >
                               {slot.time}
@@ -224,7 +180,7 @@ export default function Home() {
                             className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] ${
                               slot.available
                                 ? "bg-teal-300/[0.12] text-teal-100"
-                                : "bg-white/10 text-slate-400"
+                                : "bg-white/10 text-slate-300"
                             }`}
                           >
                             {slot.status}
@@ -252,7 +208,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Demais seções continuam inalteradas */}
         <section
           id="experiencia"
           className="mx-auto max-w-6xl px-6 pb-10 pt-20"
@@ -266,9 +221,9 @@ export default function Home() {
                 Um lugar para jogar bem, respirar leve e voltar sempre.
               </h2>
               <p className="mt-5 text-sm leading-7 text-slate-500 sm:text-base">
-                A proposta da Pahragon Beach Tennis é unir estética limpa,
-                operação simples e energia esportiva em uma experiência que
-                parece premium sem ficar carregada. Menos ruído, mais presença.
+                A proposta da Pahragon Beach Tennis é unir estética limpa, operação
+                simples e energia esportiva em uma experiência que parece
+                premium sem ficar carregada. Menos ruído, mais presença.
               </p>
             </div>
 
