@@ -7,23 +7,24 @@ export default function MinhasReservas() {
   const [modalAberto, setModalAberto] = useState(false);
   const [reservaParaCancelar, setReservaParaCancelar] = useState(null);
   const navigate = useNavigate();
-  const [filtroData, setFiltroData] = useState("");
+
+  // ADICIONADO: Estados para o controle dos novos filtros de período
+  const [periodo, setPeriodo] = useState("todos"); // todos, 7dias, 30dias, personalizado
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
 
   // Função isolada para buscar as reservas atualizadas do banco e ordenar
   function carregarReservas() {
     api
       .get("/bookings/minhas")
       .then((res) => {
-        // Mapeamento de prioridade dos status para desempate cronológico
         const prioridadeStatus = {
           confirmado: 1,
           pendente: 2,
           cancelado: 3,
         };
 
-        // Ordenação robusta combinando Data + Horário com desempate por Status
         const dadosOrdenados = res.data.sort((a, b) => {
-          // Extrai o horário de início (trata ISO completo ou strings simples)
           const obterHora = (dataStr, horaStr) => {
             const ISORegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
             if (ISORegex.test(horaStr)) return new Date(horaStr);
@@ -35,12 +36,10 @@ export default function MinhasReservas() {
           const dataHoraA = obterHora(a.data, a.horaInicio);
           const dataHoraB = obterHora(b.data, b.horaInicio);
 
-          // 1. REGRA PRINCIPAL: Ordena por data e hora decrescente (Mais RECENTES primeiro no topo)
           if (dataHoraA.getTime() !== dataHoraB.getTime()) {
-            return dataHoraB.getTime() - dataHoraA.getTime(); // 💡 Invertido (B - A) para trazer o mais recente para cima
+            return dataHoraB.getTime() - dataHoraA.getTime();
           }
 
-          // 2. CRITÉRIO DE DESEMPATE: Se no mesmo dia e mesma hora, ordena pelo peso do status
           const statusA = String(a.status).toLowerCase();
           const statusB = String(b.status).toLowerCase();
 
@@ -91,12 +90,51 @@ export default function MinhasReservas() {
     cancelado: "bg-slate-50 text-slate-400 border-slate-200",
   };
 
-  // Filtragem das reservas com base no estado "filtroData"
+  // ADICIONADO: Lógica robusta de filtragem por períodos matemáticos
   const reservasFiltradas = reservas.filter((r) => {
-    if (!filtroData) return true;
-    const dataReservaISO = r.data.split("T")[0];
-    return dataReservaISO === filtroData;
+    if (periodo === "todos") return true;
+
+    // Converte a data da reserva para um objeto Date puro da meia-noite (ignora timezone)
+    const dataReserva = new Date(r.data.split("T")[0] + "T00:00:00");
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    if (periodo === "7dias") {
+      const seteDiasAtras = new Date(hoje);
+      seteDiasAtras.setDate(hoje.getDate() - 7);
+      return dataReserva >= seteDiasAtras && dataReserva <= hoje;
+    }
+
+    if (periodo === "30dias") {
+      const trintaDiasAtras = new Date(hoje);
+      trintaDiasAtras.setDate(hoje.getDate() - 30);
+      return dataReserva >= trintaDiasAtras && dataReserva <= hoje;
+    }
+
+    if (periodo === "personalizado") {
+      // Se escolheu personalizado mas não preencheu as datas ainda, não esconde tudo
+      if (!dataInicio && !dataFim) return true;
+
+      if (dataInicio) {
+        const dInicio = new Date(dataInicio + "T00:00:00");
+        if (dataReserva < dInicio) return false;
+      }
+      if (dataFim) {
+        const dFim = new Date(dataFim + "T00:00:00");
+        if (dataReserva > dFim) return false;
+      }
+      return true;
+    }
+
+    return true;
   });
+
+  // Limpa os filtros voltando ao estado inicial
+  function limparFiltros() {
+    setPeriodo("todos");
+    setDataInicio("");
+    setDataFim("");
+  }
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base relative">
@@ -123,33 +161,75 @@ export default function MinhasReservas() {
 
       {/* Área de Conteúdo Centralizada */}
       <main className="max-w-xl mx-auto px-6 py-10 space-y-4">
-        
-        {/* ADICIONADO: Painel de Filtro por Data (Apenas se o usuário tiver alguma reserva no histórico) */}
+        {/* ALTERADO: Seletor de Períodos Dinâmico */}
         {reservas.length > 0 && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Filtrar por dia de jogo
-              </label>
-              <input
-                type="date"
-                value={filtroData}
-                onChange={(e) => setFiltroData(e.target.value)}
-                className="px-3 py-2 bg-[#faf9f6] border border-slate-200 rounded-xl text-sm font-mono font-bold text-slate-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all w-full"
-              />
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col gap-1 w-full sm:w-64">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Filtrar por Período
+                </label>
+                <select
+                  value={periodo}
+                  onChange={(e) => {
+                    setPeriodo(e.target.value);
+                    if (e.target.value !== "personalizado") {
+                      setDataInicio("");
+                      setDataFim("");
+                    }
+                  }}
+                  className="px-3 py-2 bg-[#faf9f6] border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all cursor-pointer"
+                >
+                  <option value="todos">Todas as reservas</option>
+                  <option value="7dias">Últimos 7 dias</option>
+                  <option value="30dias">Últimos 30 dias</option>
+                  <option value="personalizado">
+                    Período Personalizado...
+                  </option>
+                </select>
+              </div>
+
+              {periodo !== "todos" && (
+                <button
+                  onClick={limparFiltros}
+                  className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 px-4 py-2.5 rounded-xl transition self-end sm:self-center"
+                >
+                  Limpar Filtro
+                </button>
+              )}
             </div>
-            {filtroData && (
-              <button
-                onClick={() => setFiltroData("")}
-                className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 px-4 py-2.5 rounded-xl transition self-end sm:self-center"
-              >
-                Limpar Filtro
-              </button>
+
+            {/* Campos adicionais que "abrem" se o usuário escolher Personalizado */}
+            {periodo === "personalizado" && (
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 animate-fadeIn">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    Data de Início
+                  </label>
+                  <input
+                    type="date"
+                    value={dataInicio}
+                    onChange={(e) => setDataInicio(e.target.value)}
+                    className="px-3 py-1.5 bg-[#faf9f6] border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 shadow-inner focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    Data de Fim
+                  </label>
+                  <input
+                    type="date"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    className="px-3 py-1.5 bg-[#faf9f6] border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 shadow-inner focus:outline-none"
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}
 
-        {/* Estado Vazio Absoluto (Sem nenhuma reserva na conta) */}
+        {/* Estado Vazio Absoluto */}
         {reservas.length === 0 ? (
           <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm">
             <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-4 text-xl">
@@ -159,7 +239,8 @@ export default function MinhasReservas() {
               Nenhuma reserva encontrada
             </h3>
             <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto">
-              Você ainda não agendou nenhum horário na areia para as próximas semanas.
+              Você ainda não agendou nenhum horário na areia para as próximas
+              semanas.
             </p>
             <button
               onClick={() => navigate("/agendar")}
@@ -168,23 +249,23 @@ export default function MinhasReservas() {
               Agendar agora
             </button>
           </div>
-        ) : /* Estado Vazio do Filtro (Tem reservas, mas nenhuma na data escolhida) */
+        ) : /* Estado Vazio do Filtro por Período */
         reservasFiltradas.length === 0 ? (
           <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl shadow-sm">
             <div className="w-10 h-10 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-center mx-auto mb-3 text-lg">
               📅
             </div>
             <h3 className="font-extrabold text-slate-900 text-base tracking-tight">
-              Nenhum jogo agendado para este dia
+              Nenhum agendamento neste período
             </h3>
             <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto px-4">
-              Você não possui agendamentos para a data selecionada no filtro.
+              Você não possui reservas correspondentes ao filtro selecionado.
             </p>
             <button
-              onClick={() => setFiltroData("")}
+              onClick={limparFiltros}
               className="mt-4 inline-block bg-slate-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition shadow-sm"
             >
-              Ver todos os horários
+              Remover Filtros
             </button>
           </div>
         ) : (
@@ -195,7 +276,6 @@ export default function MinhasReservas() {
               className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between group"
             >
               <div>
-                {/* Linha de Cima: Título e Badge de Status */}
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
@@ -212,7 +292,6 @@ export default function MinhasReservas() {
                   </span>
                 </div>
 
-                {/* Grid de Metadados Cronológicos */}
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-sm">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
@@ -300,7 +379,7 @@ export default function MinhasReservas() {
         )}
       </main>
 
-      {/* Modal de Confirmação de Cancelamento Customizado */}
+      {/* Modal de Confirmação de Cancelamento */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity duration-200">
           <div className="bg-white border border-slate-200 w-full max-w-sm rounded-2xl p-6 text-center space-y-6 shadow-xl transform scale-100 transition-all duration-200">
