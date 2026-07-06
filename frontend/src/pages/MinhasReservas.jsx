@@ -7,6 +7,7 @@ export default function MinhasReservas() {
   const [modalAberto, setModalAberto] = useState(false);
   const [reservaParaCancelar, setReservaParaCancelar] = useState(null);
   const navigate = useNavigate();
+  const [filtroData, setFiltroData] = useState("");
 
   // Função isolada para buscar as reservas atualizadas do banco e ordenar
   function carregarReservas() {
@@ -55,10 +56,8 @@ export default function MinhasReservas() {
   }
 
   useEffect(() => {
-    // 1. Carrega logo quando o componente monta na tela
     carregarReservas();
 
-    // 2. Evento de segurança: Sempre que o usuário voltar para essa aba/tela, recarrega os dados
     const dispararNoFoco = () => {
       carregarReservas();
     };
@@ -67,19 +66,16 @@ export default function MinhasReservas() {
     return () => window.removeEventListener("focus", dispararNoFoco);
   }, []);
 
-  // Apenas abre o modal e guarda o ID da reserva alvo
   function abrirModalCancelamento(id) {
     setReservaParaCancelar(id);
     setModalAberto(true);
   }
 
-  // Executa o cancelamento real após a confirmação no modal customizado
   async function executarCancelamento() {
     if (!reservaParaCancelar) return;
 
     try {
       await api.patch(`/bookings/${reservaParaCancelar}/cancelar`);
-      // Após o patch, recarrega as reservas do banco para aplicar a ordenação correta com o novo status
       carregarReservas();
     } catch (err) {
       console.error("Erro ao cancelar reserva:", err);
@@ -89,12 +85,18 @@ export default function MinhasReservas() {
     }
   }
 
-  // Mapeamento de estilos usando tons pastéis elegantes e bordas finas idênticas ao Admin
   const statusStyle = {
     pendente: "bg-amber-50 text-amber-800 border-amber-200/60",
     confirmado: "bg-teal-50 text-teal-900 border-teal-200/60",
     cancelado: "bg-slate-50 text-slate-400 border-slate-200",
   };
+
+  // Filtragem das reservas com base no estado "filtroData"
+  const reservasFiltradas = reservas.filter((r) => {
+    if (!filtroData) return true;
+    const dataReservaISO = r.data.split("T")[0];
+    return dataReservaISO === filtroData;
+  });
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans text-base relative">
@@ -121,7 +123,33 @@ export default function MinhasReservas() {
 
       {/* Área de Conteúdo Centralizada */}
       <main className="max-w-xl mx-auto px-6 py-10 space-y-4">
-        {/* Estado Vazio Traduzido para o Design Limpo */}
+        
+        {/* ADICIONADO: Painel de Filtro por Data (Apenas se o usuário tiver alguma reserva no histórico) */}
+        {reservas.length > 0 && (
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Filtrar por dia de jogo
+              </label>
+              <input
+                type="date"
+                value={filtroData}
+                onChange={(e) => setFiltroData(e.target.value)}
+                className="px-3 py-2 bg-[#faf9f6] border border-slate-200 rounded-xl text-sm font-mono font-bold text-slate-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition-all w-full"
+              />
+            </div>
+            {filtroData && (
+              <button
+                onClick={() => setFiltroData("")}
+                className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 px-4 py-2.5 rounded-xl transition self-end sm:self-center"
+              >
+                Limpar Filtro
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Estado Vazio Absoluto (Sem nenhuma reserva na conta) */}
         {reservas.length === 0 ? (
           <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm">
             <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-4 text-xl">
@@ -131,8 +159,7 @@ export default function MinhasReservas() {
               Nenhuma reserva encontrada
             </h3>
             <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto">
-              Você ainda não agendou nenhum horário na areia para as próximas
-              semanas.
+              Você ainda não agendou nenhum horário na areia para as próximas semanas.
             </p>
             <button
               onClick={() => navigate("/agendar")}
@@ -141,9 +168,28 @@ export default function MinhasReservas() {
               Agendar agora
             </button>
           </div>
+        ) : /* Estado Vazio do Filtro (Tem reservas, mas nenhuma na data escolhida) */
+        reservasFiltradas.length === 0 ? (
+          <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="w-10 h-10 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-center mx-auto mb-3 text-lg">
+              📅
+            </div>
+            <h3 className="font-extrabold text-slate-900 text-base tracking-tight">
+              Nenhum jogo agendado para este dia
+            </h3>
+            <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto px-4">
+              Você não possui agendamentos para a data selecionada no filtro.
+            </p>
+            <button
+              onClick={() => setFiltroData("")}
+              className="mt-4 inline-block bg-slate-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition shadow-sm"
+            >
+              Ver todos os horários
+            </button>
+          </div>
         ) : (
-          /* Lista de Reservas Individuais */
-          reservas.map((r) => (
+          /* Lista de Reservas Filtradas e Ordenadas */
+          reservasFiltradas.map((r) => (
             <div
               key={r.id}
               className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between group"
@@ -200,7 +246,6 @@ export default function MinhasReservas() {
               {/* Rodapé de Ações do Card */}
               {r.status !== "cancelado" &&
                 (() => {
-                  // 1. Extrai o horário de término da reserva de forma robusta
                   const obterDataHoraFim = (dataStr, horaFimStr) => {
                     const ISORegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
                     if (ISORegex.test(horaFimStr)) return new Date(horaFimStr);
@@ -211,16 +256,12 @@ export default function MinhasReservas() {
 
                   const dataHoraFim = obterDataHoraFim(r.data, r.horaFim);
                   const agora = new Date();
-
-                  // 2. Se o horário de término for MENOR que o horário de agora, a reserva já passou
                   const jaPassou = dataHoraFim.getTime() < agora.getTime();
 
-                  // Se já passou do horário E a reserva está confirmada, não mostra nenhum botão de ação
                   if (jaPassou) return null;
 
                   return (
                     <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end gap-2">
-                      {/* Botão de Pagar - Visível apenas para pendentes */}
                       {r.status === "pendente" && (
                         <button
                           onClick={() =>
@@ -245,7 +286,6 @@ export default function MinhasReservas() {
                         </button>
                       )}
 
-                      {/* Botão de Cancelamento - Sumirá se já tiver passado do horário */}
                       <button
                         onClick={() => abrirModalCancelamento(r.id)}
                         className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 bg-white hover:bg-rose-50/50 px-4 py-2.5 rounded-xl transition"
@@ -264,7 +304,6 @@ export default function MinhasReservas() {
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity duration-200">
           <div className="bg-white border border-slate-200 w-full max-w-sm rounded-2xl p-6 text-center space-y-6 shadow-xl transform scale-100 transition-all duration-200">
-            {/* Ícone de Alerta Minimalista */}
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 border border-amber-100">
               <svg
                 className="h-5 w-5 text-amber-600"
@@ -291,7 +330,6 @@ export default function MinhasReservas() {
               </p>
             </div>
 
-            {/* Ações Alinhadas ao Design do Sistema */}
             <div className="flex flex-col gap-2 pt-2">
               <button
                 onClick={executarCancelamento}
