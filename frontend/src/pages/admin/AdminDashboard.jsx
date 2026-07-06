@@ -660,12 +660,12 @@ export default function AdminDashboard() {
                       {atletaSelecionado.telefone || "—"}
                     </span>
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <span className="text-xs font-bold text-slate-400 block mb-0.5">
                       CPF
                     </span>
-                    <span className="text-slate-800 font-semibold">
-                      {atletaSelecionado.cpf || "—"}
+                    <span className="text-sm font-semibold text-slate-900">
+                      {formatarCPF(atleta.cpf)}
                     </span>
                   </div>
                   <div>
