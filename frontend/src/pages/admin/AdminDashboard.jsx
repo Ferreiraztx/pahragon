@@ -513,6 +513,13 @@ export default function AdminDashboard() {
     return true;
   });
 
+  const formatarCPF = (cpf) => {
+    if (!cpf) return "";
+    const numeros = cpf.replace(/\D/g, "");
+    if (numeros.length !== 11) return cpf;
+    return `${numeros.substring(0, 3)}.***.***-${numeros.substring(9)}`;
+  };
+
   const totalFiltradoPorPeriodo = paymentsFiltradosPorPeriodo.reduce(
     (soma, p) => soma + p.valor,
     0,
@@ -1386,6 +1393,17 @@ export default function AdminDashboard() {
                                 <span className="font-mono text-slate-400 text-xs sm:text-sm">
                                   {at.email}
                                 </span>
+
+                                {/* ADICIONADO: Exibição do CPF Mascarado */}
+                                {at.cpf && (
+                                  <>
+                                    <span className="opacity-40">•</span>
+                                    <span className="font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-xs">
+                                      CPF: {formatarCPF(at.cpf)}
+                                    </span>
+                                  </>
+                                )}
+
                                 {at.telefone && (
                                   <>
                                     <span className="opacity-40">•</span>
