@@ -665,7 +665,7 @@ export default function AdminDashboard() {
                       CPF
                     </span>
                     <span className="text-sm font-semibold text-slate-900">
-                      {formatarCPF(atleta.cpf)}
+                      {formatarCPF(atletaSelecionado.cpf)}
                     </span>
                   </div>
                   <div>
