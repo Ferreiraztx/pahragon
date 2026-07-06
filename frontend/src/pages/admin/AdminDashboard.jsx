@@ -1021,8 +1021,8 @@ export default function AdminDashboard() {
                                 {r.court?.nome || "Quadra"}
                               </span>
                               <span className="text-sm font-mono font-medium text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded">
-                                {r.horaInicio || "00:00"}h –{" "}
-                                {r.horaFim || "00:00"}h
+                                {r.horaInicioStr || r.horaInicio || "00:00"}h –{" "}
+                                {r.horaFimStr || r.horaFim || "00:00"}h
                               </span>
                             </div>
                             <div className="text-sm text-slate-500 mt-1.5 flex items-center flex-wrap gap-x-2">
