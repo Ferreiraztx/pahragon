@@ -57,9 +57,10 @@ export default function Perfil() {
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: "", texto: "" });
 
-  // Estados adicionados para a trava de CPF e Modal de Exclusão
+  // Estados para a trava de CPF e Modais de Exclusão
   const [isCpfBloqueado, setIsCpfBloqueado] = useState(false);
   const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false);
+  const [statusExclusao, setStatusExclusao] = useState(null); // 'processando' | 'sucesso' | 'erro' | null
 
   // Campos obrigatórios (complemento e e-mail ficam fora)
   const camposObrigatorios = [
@@ -194,7 +195,7 @@ export default function Perfil() {
     try {
       const response = await api.put("/auth/perfil", formData);
 
-      setMensagem({ tipo: "sucesso", texto: "Perfil updated com sucesso!" });
+      setMensagem({ tipo: "sucesso", texto: "Perfil atualizado com sucesso!" });
 
       if (response.data?.user) {
         const atualizado = response.data.user;
@@ -235,18 +236,25 @@ export default function Perfil() {
   };
 
   const handleConfirmarExclusao = async () => {
+    setStatusExclusao("processando");
     try {
       await api.delete("/auth/me/excluir-conta");
-      await logout();
-      alert(
-        "A sua conta foi excluída e seus dados foram removidos em conformidade com a LGPD.",
-      );
-      navigate("/");
+      setStatusExclusao("sucesso");
     } catch (err) {
       console.error(err);
-      alert("Erro ao tentar excluir a conta. Tente novamente mais tarde.");
-    } finally {
+      setStatusExclusao("erro");
+    }
+  };
+
+  const handleFecharModalExclusao = async () => {
+    if (statusExclusao === "sucesso") {
+      await logout();
       setModalExclusaoAberto(false);
+      setStatusExclusao(null);
+      navigate("/");
+    } else {
+      setModalExclusaoAberto(false);
+      setStatusExclusao(null);
     }
   };
 
@@ -508,7 +516,7 @@ export default function Perfil() {
           </div>
         </form>
 
-        {/* ADICIONADO: SEÇÃO ZONA DE PERIGO (LGPD) */}
+        {/* SEÇÃO ZONA DE PERIGO (LGPD) */}
         <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm space-y-4">
           <h2 className="text-xs font-bold text-rose-600 uppercase tracking-widest border-b border-slate-100 pb-2">
             Zona de Perigo
@@ -530,37 +538,104 @@ export default function Perfil() {
         </div>
       </div>
 
-      {/* ADICIONADO: MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+      {/* MODAL INTEGRADO DE EXCLUSÃO (ESTADOS COMBINADOS) */}
       {modalExclusaoAberto && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
-            <div className="text-center space-y-2">
-              <span className="text-2xl block">⚠️</span>
-              <h4 className="text-base font-black text-slate-900">
-                Confirmar exclusão definitiva?
-              </h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Essa ação é absolutamente irreversível. Suas credenciais de
-                login expiram na hora e seu perfil será inteiramente anonimizado
-                em nosso banco de dados.
-              </p>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setModalExclusaoAberto(false)}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmarExclusao}
-                className="w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-3 rounded-xl transition"
-              >
-                Sim, excluir tudo
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 text-center shadow-xl space-y-4">
+            
+            {/* ESTADO 1: CONFIRMAÇÃO INICIAL */}
+            {statusExclusao === null && (
+              <>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+                  <span className="text-xl">⚠️</span>
+                </div>
+                <h4 className="text-base font-black text-slate-900">
+                  Confirmar exclusão definitiva?
+                </h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Essa ação é absolutamente irreversível. Suas credenciais de
+                  login expiram na hora e seu perfil será inteiramente anonimizado
+                  em nosso banco de dados.
+                </p>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalExclusaoAberto(false)}
+                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmarExclusao}
+                    className="w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-3 rounded-xl transition shadow-sm"
+                  >
+                    Sim, excluir tudo
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ESTADO 2: CARREGANDO / PROCESSANDO */}
+            {statusExclusao === "processando" && (
+              <div className="py-6 space-y-3">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-rose-600 rounded-full animate-spin mx-auto"></div>
+                <h4 className="text-sm font-bold text-slate-700">Removendo seus dados...</h4>
+                <p className="text-xs text-slate-400">Processando requisição de privacidade (LGPD).</p>
+              </div>
+            )}
+
+            {/* ESTADO 3: SUCESSO COESIVO */}
+            {statusExclusao === "sucesso" && (
+              <>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-600">
+                  <span className="text-xl">✅</span>
+                </div>
+                <h4 className="text-base font-black text-slate-900">Conta Excluída!</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  A sua conta foi excluída e seus dados foram inteiramente removidos em conformidade com as diretrizes da LGPD.
+                </p>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleFecharModalExclusao}
+                    className="w-full bg-slate-900 hover:bg-black text-white text-xs font-bold py-3 rounded-xl transition"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ESTADO 4: ERRO TRATADO */}
+            {statusExclusao === "erro" && (
+              <>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+                  <span className="text-xl">❌</span>
+                </div>
+                <h4 className="text-base font-black text-slate-900">Falha na operação</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Não foi possível processar a exclusão automática. Tente novamente ou contate o administrador.
+                </p>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setStatusExclusao(null)}
+                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFecharModalExclusao}
+                    className="w-full bg-slate-900 hover:bg-black text-white text-xs font-bold py-3 rounded-xl transition"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}
