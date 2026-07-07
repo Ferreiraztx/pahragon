@@ -593,7 +593,7 @@ export default function Perfil() {
                 </div>
                 <h4 className="text-base font-black text-slate-900">Conta Excluída!</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  A sua conta foi excluída e seus dados foram inteiramente removidos em conformidade com as diretrizes da LGPD.
+                  A sua conta foi excluída e seus dados foram inteiramente removidos.
                 </p>
                 <div className="pt-2">
                   <button
