@@ -236,7 +236,7 @@ export default function Perfil() {
 
   const handleConfirmarExclusao = async () => {
     try {
-      await api.delete("/users/me/excluir-conta");
+      await api.delete("/auth/me/excluir-conta");
       await logout();
       alert(
         "A sua conta foi excluída e seus dados foram removidos em conformidade com a LGPD.",
