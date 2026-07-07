@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+const { randomUUID } = require("crypto");
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
