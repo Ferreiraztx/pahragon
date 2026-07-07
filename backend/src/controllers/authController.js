@@ -270,31 +270,47 @@ async function registerAdmin(req, res) {
 }
 
 async function deleteAccount(req, res) {
-  const userId = req.user.id;
+  // Ajuste preventivo: captura se o ID está em req.userId ou req.user.id
+  const userId = req.userId || req.user?.id; 
+
+  if (!userId) {
+    return res.status(401).json({ error: "Usuário não autenticado." });
+  }
+
+  // Converte para número caso o ID das tabelas no seu banco sejam numéricos inteiros
+  const idFormatado = isNaN(Number(userId)) ? userId : Number(userId);
 
   try {
-    const usuario = await prisma.user.findUnique({ where: { id: userId } });
-    if (!usuario) {
+    // 1. Verifica se o usuário existe utilizando o ID normalizado
+    const usuarioExcluir = await prisma.user.findUnique({ where: { id: idFormatado } });
+    if (!usuarioExcluir) {
       return res.status(404).json({ error: "Usuário não encontrado." });
     }
 
+    // 2. Cria identificadores únicos robustos para evitar duplicação em campos @unique
+    const sufixoUnico = randomUUID ? randomUUID() : Math.random().toString(36).substring(2);
+
+    // 3. Atualiza os dados de perfil de forma genérica preservando o mapeamento correto do Prisma
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: idFormatado },
       data: {
         nome: "Usuário Excluído",
-        email: `deleted-${randomUUID()}@pahragon.com`,
+        email: `deleted-${sufixoUnico}@pahragon.com`,
         telefone: "00000000000",
-        cpf: `deleted-${randomUUID()}`,
-        senha: null, 
-        isActive: false 
+        cpf: `deleted-${sufixoUnico}`,
+        senha: null, // Força a remoção da credencial de senha antiga
+        isActive: false // Altera a flag lógica de exclusão
       }
     });
 
-    const hojeStr = new Date().toISOString().split("T")[0];
+    // 4. Cancela agendamentos futuros usando Date puro para evitar estouro de tipo no PostgreSQL/Prisma
+    const hojeComecoDia = new Date();
+    hojeComecoDia.setHours(0, 0, 0, 0);
+
     await prisma.booking.updateMany({
       where: {
-        userId: userId,
-        data: { gte: hojeStr }, 
+        userId: idFormatado,
+        data: { gte: hojeComecoDia },
         status: { in: ["confirmado", "pendente"] }
       },
       data: {
@@ -304,7 +320,7 @@ async function deleteAccount(req, res) {
 
     return res.json({ message: "Conta excluída e dados pessoais removidos com sucesso." });
   } catch (error) {
-    console.error("Erro ao excluir conta:", error);
+    console.error("ERRO COMPLETO NA EXCLUSÃO LOGICA:", error.message || error);
     return res.status(500).json({ error: "Erro interno ao processar a exclusão." });
   }
 }
