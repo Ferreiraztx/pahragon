@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -115,6 +117,10 @@ async function resetPassword(req, res) {
 async function loginGoogle(req, res) {
   const { token } = req.body;
 
+  if (!usuario.isActive) {
+  return res.status(401).json({ error: "Esta conta foi excluída." });
+}
+
   if (!token) {
     return res.status(400).json({ error: 'Token do Google é obrigatório.' });
   }
@@ -202,6 +208,10 @@ async function register(req, res) {
 async function login(req, res) {
   const { email, senha } = req.body;
 
+  if (!usuario.isActive) {
+  return res.status(401).json({ error: "Esta conta foi excluída." });
+}
+
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -254,6 +264,50 @@ async function registerAdmin(req, res) {
     return res.status(201).json({ admin: { id: admin.id, nome, email, role: 'admin' } });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao cadastrar admin' });
+  }
+}
+
+async function deleteAccount(req, res) {
+  const userId = req.user.id; // ID do usuário vindo do token JWT
+
+  try {
+    // 1. Verifica se o usuário existe
+    const usuario = await prisma.user.findUnique({ where: { id: userId } });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    // 2. Anonimiza os dados (substitui por dados genéricos irreconhecíveis)
+    // Usamos um UUID no e-mail e CPF para evitar conflitos de registros únicos no Prisma
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        nome: "Usuário Excluído",
+        email: `deleted-${randomUUID()}@pahragon.com`,
+        telefone: "00000000000",
+        cpf: `deleted-${randomUUID()}`,
+        password: null, // Remove a senha por completo
+        isActive: false // Marca a conta como inativa
+      }
+    });
+
+    // 3. (Opcional) Cancela reservas futuras que este usuário tinha pendentes/confirmadas
+    const hojeStr = new Date().toISOString().split("T")[0];
+    await prisma.booking.updateMany({
+      where: {
+        userId: userId,
+        data: { gte: hojeStr }, // Apenas datas maiores ou iguais a hoje
+        status: { in: ["confirmado", "pendente"] }
+      },
+      data: {
+        status: "cancelado"
+      }
+    });
+
+    return res.json({ message: "Conta excluída e dados pessoais removidos com sucesso." });
+  } catch (error) {
+    console.error("Erro ao excluir conta:", error);
+    return res.status(500).json({ error: "Erro interno ao processar a exclusão." });
   }
 }
 

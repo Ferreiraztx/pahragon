@@ -57,6 +57,10 @@ export default function Perfil() {
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: "", texto: "" });
 
+  // Estados adicionados para a trava de CPF e Modal de Exclusão
+  const [isCpfBloqueado, setIsCpfBloqueado] = useState(false);
+  const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false);
+
   // Campos obrigatórios (complemento e e-mail ficam fora)
   const camposObrigatorios = [
     "nome",
@@ -88,7 +92,7 @@ export default function Perfil() {
               : "",
             celular: dadosDoBanco.telefone
               ? aplicarMascaraCelular(dadosDoBanco.telefone)
-              : "", // mapeado de 'telefone'
+              : "",
             email: dadosDoBanco.email || "",
             cep: dadosDoBanco.cep ? aplicarMascaraCEP(dadosDoBanco.cep) : "",
             rua: dadosDoBanco.rua || "",
@@ -98,6 +102,11 @@ export default function Perfil() {
             cidade: dadosDoBanco.cidade || "",
             estado: dadosDoBanco.estado || "",
           });
+
+          // Trava o input de CPF caso ele já venha preenchido do banco de dados
+          if (dadosDoBanco.cpf && dadosDoBanco.cpf.trim() !== "") {
+            setIsCpfBloqueado(true);
+          }
         }
       } catch (err) {
         console.error("Erro ao buscar dados do perfil:", err);
@@ -168,7 +177,6 @@ export default function Perfil() {
     e.preventDefault();
     setMensagem({ tipo: "", texto: "" });
 
-    // ✅ Validação dos campos obrigatórios
     const faltando = camposObrigatorios.filter(
       (campo) => !formData[campo] || !formData[campo].toString().trim(),
     );
@@ -184,10 +192,9 @@ export default function Perfil() {
     setCarregando(true);
 
     try {
-      // Faz o PUT enviando os dados do formulário
       const response = await api.put("/auth/perfil", formData);
 
-      setMensagem({ tipo: "sucesso", texto: "Perfil atualizado com sucesso!" });
+      setMensagem({ tipo: "sucesso", texto: "Perfil updated com sucesso!" });
 
       if (response.data?.user) {
         const atualizado = response.data.user;
@@ -197,7 +204,7 @@ export default function Perfil() {
           cpf: atualizado.cpf ? aplicarMascaraCPF(atualizado.cpf) : prev.cpf,
           dataNascimento: atualizado.dataNascimento
             ? atualizado.dataNascimento.split("T")[0]
-            : prev.dataNascimento, // 📅 100% Corrigido aqui!
+            : prev.dataNascimento,
           celular: atualizado.telefone
             ? aplicarMascaraCelular(atualizado.telefone)
             : prev.celular,
@@ -209,6 +216,10 @@ export default function Perfil() {
           cidade: atualizado.cidade || prev.cidade,
           estado: atualizado.estado || prev.estado,
         }));
+
+        if (atualizado.cpf && atualizado.cpf.trim() !== "") {
+          setIsCpfBloqueado(true);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -223,11 +234,27 @@ export default function Perfil() {
     }
   };
 
+  const handleConfirmarExclusao = async () => {
+    try {
+      await api.delete("/users/me/excluir-conta");
+      await logout();
+      alert(
+        "A sua conta foi excluída e seus dados foram removidos em conformidade com a LGPD.",
+      );
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao tentar excluir a conta. Tente novamente mais tarde.");
+    } finally {
+      setModalExclusaoAberto(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#faf9f6] pt-28 pb-12 px-4 sm:px-6 lg:px-8">
       <Navbar />
 
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto space-y-6">
         <form
           onSubmit={handleSalvar}
           className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm space-y-8"
@@ -285,8 +312,18 @@ export default function Perfil() {
                   onChange={handleChange}
                   placeholder="000.000.000-00"
                   required
-                  className="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-teal-500 transition"
+                  disabled={isCpfBloqueado}
+                  className={`w-full mt-1.5 border rounded-xl px-4 py-3 font-medium focus:outline-none transition ${
+                    isCpfBloqueado
+                      ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                      : "bg-slate-50 border-slate-200 text-slate-700 focus:border-teal-500"
+                  }`}
                 />
+                {isCpfBloqueado && (
+                  <span className="text-[10px] text-slate-400 mt-1 block ml-1">
+                    O CPF não pode ser alterado após o preenchimento.
+                  </span>
+                )}
               </div>
 
               <div>
@@ -470,7 +507,64 @@ export default function Perfil() {
             </button>
           </div>
         </form>
+
+        {/* ADICIONADO: SEÇÃO ZONA DE PERIGO (LGPD) */}
+        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm space-y-4">
+          <h2 className="text-xs font-bold text-rose-600 uppercase tracking-widest border-b border-slate-100 pb-2">
+            Zona de Perigo
+          </h2>
+          <p className="text-slate-500 text-xs leading-relaxed">
+            Ao excluir sua conta, todas as suas informações de cadastro pessoais
+            (Nome, Telefone, CPF e Endereço) serão removidas de forma definitiva
+            e irrecuperável do nosso ecossistema de dados, em total conformidade
+            com as diretrizes da Lei Geral de Proteção de Dados (LGPD).
+          </p>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setModalExclusaoAberto(true)}
+              className="text-xs font-bold text-rose-600 hover:text-white bg-rose-50/50 hover:bg-rose-600 border border-rose-200 rounded-xl px-4 py-2.5 transition cursor-pointer"
+            >
+              Excluir minha conta definitivamente
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* ADICIONADO: MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+      {modalExclusaoAberto && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
+            <div className="text-center space-y-2">
+              <span className="text-2xl block">⚠️</span>
+              <h4 className="text-base font-black text-slate-900">
+                Confirmar exclusão definitiva?
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Essa ação é **absolutamente irreversível**. Suas credenciais de
+                login expiram na hora e seu perfil será inteiramente anonimizado
+                em nosso banco de dados.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setModalExclusaoAberto(false)}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarExclusao}
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-3 rounded-xl transition"
+              >
+                Sim, excluir tudo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

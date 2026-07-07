@@ -22,7 +22,7 @@ model User {
   bairro         String?
   cidade         String?
   estado         String?
-
+  isActive  Boolean  @default(true)
   passwordResetToken   String?
   passwordResetExpires DateTime?
 
