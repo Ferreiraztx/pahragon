@@ -516,8 +516,7 @@ export default function Perfil() {
           <p className="text-slate-500 text-xs leading-relaxed">
             Ao excluir sua conta, todas as suas informações de cadastro pessoais
             (Nome, Telefone, CPF e Endereço) serão removidas de forma definitiva
-            e irrecuperável do nosso ecossistema de dados, em total conformidade
-            com as diretrizes da Lei Geral de Proteção de Dados (LGPD).
+            e irrecuperável do nosso sistema de dados.
           </p>
           <div className="pt-2">
             <button
@@ -541,7 +540,7 @@ export default function Perfil() {
                 Confirmar exclusão definitiva?
               </h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Essa ação é **absolutamente irreversível**. Suas credenciais de
+                Essa ação é absolutamente irreversível. Suas credenciais de
                 login expiram na hora e seu perfil será inteiramente anonimizado
                 em nosso banco de dados.
               </p>
