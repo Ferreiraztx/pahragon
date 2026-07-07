@@ -470,6 +470,7 @@ module.exports = {
   obterPerfil, 
   listarAtletas,
   logout,
-  forgotPassword, // 🌟 Exportado
-  resetPassword  // 🌟 Exportado
+  forgotPassword,
+  resetPassword,
+  deleteAccount  
 };

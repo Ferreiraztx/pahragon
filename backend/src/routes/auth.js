@@ -16,7 +16,7 @@ const limitadorLogin = rateLimit({
 });
 
 // 💡 Adicionado o 'logout' aqui na desestruturação:
-const { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil, listarAtletas, logout, forgotPassword, resetPassword, excluirPerfil } = require('../controllers/authController');
+const { register, login, registerAdmin, loginAdmin, loginGoogle, atualizarPerfil, obterPerfil, listarAtletas, logout, forgotPassword, resetPassword, deleteAccount } = require('../controllers/authController');
 const requireAuth = require('../middlewares/auth');
 const { listar } = require('../controllers/courtController');
 
@@ -37,6 +37,6 @@ router.get('/usuarios', requireAuth, listarAtletas);
 router.post('/logout', logout);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.delete("/me/excluir-conta", requireAuth, excluirPerfil);
+router.delete("/me/excluir-conta", requireAuth, deleteAccount);
 
 module.exports = router;
