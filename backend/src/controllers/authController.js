@@ -49,10 +49,9 @@ async function forgotPassword(req, res) {
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
-    // 🚀 AQUI ESTAVA O ERRO! Substitua pelo envio oficial via HTTP do Resend:
     await resend.emails.send({
       from: "Pahragon Beach Tennis <onboarding@resend.dev>",
-      to: email, // Lembre-se: no modo de teste do Resend, envie para o SEU e-mail de cadastro neles.
+      to: email,
       subject: "Recuperação de Senha — Pahragon",
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e2221; background-color: #faf9f6;">
@@ -117,10 +116,6 @@ async function resetPassword(req, res) {
 async function loginGoogle(req, res) {
   const { token } = req.body;
 
-  if (!usuario.isActive) {
-  return res.status(401).json({ error: "Esta conta foi excluída." });
-}
-
   if (!token) {
     return res.status(400).json({ error: 'Token do Google é obrigatório.' });
   }
@@ -137,6 +132,11 @@ async function loginGoogle(req, res) {
     let user = await prisma.user.findUnique({
       where: { email }
     });
+
+    // 🔒 CORRIGIDO: Valida o status da conta assim que encontrar o registro no banco
+    if (user && user.isActive === false) {
+      return res.status(401).json({ error: "Esta conta foi excluída." });
+    }
 
     if (!user) {
       const senhaInutilizada = await bcrypt.hash(Math.random().toString(36).substring(2), 8);
@@ -208,14 +208,16 @@ async function register(req, res) {
 async function login(req, res) {
   const { email, senha } = req.body;
 
-  if (!usuario.isActive) {
-  return res.status(401).json({ error: "Esta conta foi excluída." });
-}
-
   try {
     const user = await prisma.user.findUnique({ where: { email } });
+    
     if (!user) {
       return res.status(400).json({ error: 'E-mail ou senha incorretos' });
+    }
+
+    // 🔒 CORRIGIDO: Valida o status da conta somente após garantir a existência de "user"
+    if (user.isActive === false) {
+      return res.status(401).json({ error: "Esta conta foi excluída." });
     }
 
     const senhaCorreta = await bcrypt.compare(senha, user.senha);
@@ -268,17 +270,14 @@ async function registerAdmin(req, res) {
 }
 
 async function deleteAccount(req, res) {
-  const userId = req.user.id; // ID do usuário vindo do token JWT
+  const userId = req.user.id;
 
   try {
-    // 1. Verifica se o usuário existe
     const usuario = await prisma.user.findUnique({ where: { id: userId } });
     if (!usuario) {
       return res.status(404).json({ error: "Usuário não encontrado." });
     }
 
-    // 2. Anonimiza os dados (substitui por dados genéricos irreconhecíveis)
-    // Usamos um UUID no e-mail e CPF para evitar conflitos de registros únicos no Prisma
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -286,17 +285,16 @@ async function deleteAccount(req, res) {
         email: `deleted-${randomUUID()}@pahragon.com`,
         telefone: "00000000000",
         cpf: `deleted-${randomUUID()}`,
-        password: null, // Remove a senha por completo
-        isActive: false // Marca a conta como inativa
+        senha: null, 
+        isActive: false 
       }
     });
 
-    // 3. (Opcional) Cancela reservas futuras que este usuário tinha pendentes/confirmadas
     const hojeStr = new Date().toISOString().split("T")[0];
     await prisma.booking.updateMany({
       where: {
         userId: userId,
-        data: { gte: hojeStr }, // Apenas datas maiores ou iguais a hoje
+        data: { gte: hojeStr }, 
         status: { in: ["confirmado", "pendente"] }
       },
       data: {
