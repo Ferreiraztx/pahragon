@@ -270,47 +270,44 @@ async function registerAdmin(req, res) {
 }
 
 async function deleteAccount(req, res) {
-  // Ajuste preventivo: captura se o ID está em req.userId ou req.user.id
   const userId = req.userId || req.user?.id; 
 
   if (!userId) {
     return res.status(401).json({ error: "Usuário não autenticado." });
   }
 
-  // Converte para número caso o ID das tabelas no seu banco sejam numéricos inteiros
-  const idFormatado = isNaN(Number(userId)) ? userId : Number(userId);
+  const idFormatado = Number(userId);
 
   try {
-    // 1. Verifica se o usuário existe utilizando o ID normalizado
     const usuarioExcluir = await prisma.user.findUnique({ where: { id: idFormatado } });
     if (!usuarioExcluir) {
-      return res.status(404).json({ error: "Usuário não encontrado." });
+      return res.status(404).json({ error: "Atleta não encontrado." });
     }
 
-    // 2. Cria identificadores únicos robustos para evitar duplicação em campos @unique
-    const sufixoUnico = randomUUID ? randomUUID() : Math.random().toString(36).substring(2);
+    const sufixoAleatorio = crypto.randomBytes(4).toString('hex');
 
-    // 3. Atualiza os dados de perfil de forma genérica preservando o mapeamento correto do Prisma
+    // 🔒 Gera um hash hash forte e impossível de ser descoberto para substituir a senha antiga
+    const senhaInutilizavel = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 8);
+
     await prisma.user.update({
       where: { id: idFormatado },
       data: {
         nome: "Usuário Excluído",
-        email: `deleted-${sufixoUnico}@pahragon.com`,
+        email: `deleted-${sufixoAleatorio}-${idFormatado}@pahragon.com`,
         telefone: "00000000000",
-        cpf: `deleted-${sufixoUnico}`,
-        senha: null, // Força a remoção da credencial de senha antiga
-        isActive: false // Altera a flag lógica de exclusão
+        cpf: `del-${sufixoAleatorio}`, 
+        senha: senhaInutilizavel, // ✅ Passa a senha criptografada em vez de null
+        isActive: false 
       }
     });
 
-    // 4. Cancela agendamentos futuros usando Date puro para evitar estouro de tipo no PostgreSQL/Prisma
-    const hojeComecoDia = new Date();
-    hojeComecoDia.setHours(0, 0, 0, 0);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
 
     await prisma.booking.updateMany({
       where: {
         userId: idFormatado,
-        data: { gte: hojeComecoDia },
+        data: { gte: hoje },
         status: { in: ["confirmado", "pendente"] }
       },
       data: {
@@ -318,10 +315,11 @@ async function deleteAccount(req, res) {
       }
     });
 
-    return res.json({ message: "Conta excluída e dados pessoais removidos com sucesso." });
+    return res.json({ message: "Conta excluída com sucesso." });
+
   } catch (error) {
     console.error("ERRO COMPLETO NA EXCLUSÃO LOGICA:", error.message || error);
-    return res.status(500).json({ error: "Erro interno ao processar a exclusão." });
+    return res.status(500).json({ error: "Erro interno do servidor ao processar exclusão." });
   }
 }
 
