@@ -31,6 +31,7 @@ export default function AgendaAdmin({
   const [erroMensagem, setErroMensagem] = useState("");
 
   const [quadraFiltrada, setQuadraFiltrada] = useState("todas");
+  const [qtdRaquetes, setQtdRaquetes] = useState(0); // 💡 Movido para dentro do componente corretamente
 
   const [dadosForm, setDadosForm] = useState({
     atleta: "",
@@ -74,12 +75,10 @@ export default function AgendaAdmin({
     .map((r) => {
       const idDaQuadraReserva = r.court?.id || r.courtId;
 
-      // Captura com segurança a data YYYY-MM-DD
       const dataApenas = r.data
         ? r.data.split("T")[0]
         : new Date().toISOString().split("T")[0];
 
-      // Pega as strings limpas vindas do back-end ou faz fallback seguro
       const hInicio =
         r.horaInicioStr ||
         new Date(r.horaInicio).toLocaleTimeString("pt-BR", {
@@ -93,7 +92,6 @@ export default function AgendaAdmin({
           minute: "2-digit",
         });
 
-      // 1. Customização visual: TORNEIO
       if (r.tipo === "torneio") {
         return {
           id: r.id,
@@ -108,7 +106,6 @@ export default function AgendaAdmin({
         };
       }
 
-      // 2. Customização visual: BLOQUEIO MANUAL
       if (r.tipo === "bloqueio") {
         return {
           id: r.id,
@@ -124,7 +121,6 @@ export default function AgendaAdmin({
         };
       }
 
-      // 3. Layout das Reservas normais dos clientes
       const isPendente = r.status ? r.status.startsWith("pendente") : false;
       const indiceQuadra = quadras.findIndex((q) => q.id === idDaQuadraReserva);
       const estileteCor = CORES_QUADRAS[indiceQuadra % 6] || CORES_QUADRAS[0];
@@ -181,18 +177,26 @@ export default function AgendaAdmin({
       const terminoSugerido = `${String(horas + 1).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
 
       setModoEdicao(false);
+      setQtdRaquetes(0); // Reseta a quantidade para novas reservas
       setErroMensagem("");
       setConfirmarExclusao(false);
       setDadosForm({
         atleta: "",
         data: dataSelecionada,
-        horario: horarioSelecionado,
-        horarioFim: terminoSugerido,
+        horario: SandyHorarioManual(horarioSelecionado),
+        horarioFim: SandyHorarioManual(terminoSugerido),
         quadraId: info.resource.id,
         statusPagamento: "pago",
       });
       setModalAberto(true);
     }
+  };
+
+  // Função auxiliar para garantir formato de horários redondos
+  const SandyHorarioManual = (horarioStr) => {
+    if (!horarioStr) return "08:00";
+    const [h, m] = horarioStr.split(":");
+    return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
   };
 
   const handleCliqueNaReservaExistente = (info) => {
@@ -207,24 +211,30 @@ export default function AgendaAdmin({
       typeof r.data === "string"
         ? r.data.split("T")[0]
         : new Date(r.data).toISOString().split("T")[0];
-    const hInicio = new Date(r.horaInicio).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const hFim = new Date(r.horaFim).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+
+    const hInicio =
+      r.horaInicioStr ||
+      new Date(r.horaInicio).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    const hFim =
+      r.horaFimStr ||
+      new Date(r.horaFim).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
     setModoEdicao(true);
     setReservaIdAtual(r.id);
+    setQtdRaquetes(r.qtdRaquetes || 0); // 💡 Carrega as raquetes salvas no banco
     setErroMensagem("");
     setConfirmarExclusao(false);
     setDadosForm({
       atleta: r.nomeAvulso || r.user?.nome || r.user?.name || "",
       data: dataFormatada,
-      horario: hInicio,
-      horarioFim: hFim,
+      horario: SandyHorarioManual(hInicio),
+      horarioFim: SandyHorarioManual(hFim),
       quadraId: r.court?.id || r.courtId,
       statusPagamento: isPendente ? "pendente" : "pago",
     });
@@ -233,6 +243,7 @@ export default function AgendaAdmin({
 
   const handleAbrirReservaManualFixa = () => {
     setModoEdicao(false);
+    setQtdRaquetes(0); // Reseta para nova reserva
     setErroMensagem("");
     setConfirmarExclusao(false);
     setDadosForm({
@@ -255,7 +266,7 @@ export default function AgendaAdmin({
 
   const handleSalvarReserva = async (e) => {
     e.preventDefault();
-    setLoading(true); // 💡 CORRIGIDO: Antes estava loading(true), o que gerava o crash
+    setLoading(true);
     setErroMensagem("");
 
     if (dadosForm.horarioFim <= dadosForm.horario) {
@@ -282,6 +293,7 @@ export default function AgendaAdmin({
           horarioFim: dadosForm.horarioFim,
           courtId: dadosForm.quadraId,
           statusPagamento: dadosForm.statusPagamento,
+          qtdRaquetes: Number(qtdRaquetes), // 💡 Enviando a quantidade para o backend
         },
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -543,6 +555,42 @@ export default function AgendaAdmin({
                           })
                         }
                       />
+                    </div>
+                  </div>
+
+                  {/* 💡 ADICIONADO: Seletor de Raquetes Extras para o Balcão Admin */}
+                  <div className="space-y-2 pt-1">
+                    <label className="text-xs font-bold text-slate-500 ml-0.5 uppercase tracking-wider block">
+                      Aluguel de Raquetes Extras (Balcão)
+                    </label>
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                      <span className="text-xs font-semibold text-slate-600">
+                        Quantidade incluída:
+                      </span>
+
+                      <div className="flex items-center gap-3 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQtdRaquetes((prev) => Math.max(0, prev - 1))
+                          }
+                          className="w-7 h-7 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition cursor-pointer select-none"
+                        >
+                          -
+                        </button>
+                        <span className="text-xs font-black text-slate-800 w-5 text-center">
+                          {qtdRaquetes}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQtdRaquetes((prev) => Math.min(4, prev + 1))
+                          }
+                          className="w-7 h-7 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition cursor-pointer select-none"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
 

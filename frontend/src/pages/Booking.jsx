@@ -6,6 +6,10 @@ export default function Booking() {
   const [quadras, setQuadras] = useState([]);
   const [quadraSelecionada, setQuadraSelecionada] = useState("");
 
+  // Preço fixo definido para o aluguel por unidade
+  const PRECO_RAQUETE = 15.0;
+  const [qtdRaquetes, setQtdRaquetes] = useState(0);
+
   // Função auxiliar para obter a string correta de HOJE no fuso horário local (AAAA-MM-DD)
   const obterDataHojeLocal = () => {
     const hoje = new Date();
@@ -58,6 +62,21 @@ export default function Booking() {
 
   const navigate = useNavigate();
 
+  // Encontra o objeto da quadra selecionada atualmente para saber o preço dela
+  const dadosQuadraAtual = quadras.find(
+    (q) => String(q.id) === String(quadraSelecionada),
+  );
+
+  // Função para calcular o valor total (Horas de Quadra + Aluguel de Raquetes)
+  const calcularTotalGeral = () => {
+    if (!dadosQuadraAtual) return 0;
+    // Como cada bloco representa 30 minutos, multiplicamos o preço por hora por (blocos / 2)
+    const valorQuadra =
+      (blocosSelecionados.length / 2) * dadosQuadraAtual.precoPorHora;
+    const valorRaquetes = qtdRaquetes * PRECO_RAQUETE;
+    return valorQuadra + valorRaquetes;
+  };
+
   async function buscarHorarios() {
     if (!quadraSelecionada || !data) return;
     try {
@@ -108,6 +127,7 @@ export default function Booking() {
       setHorariosProcessados([]);
     }
     setBlocosSelecionados([]);
+    setQtdRaquetes(0); // Reseta a contagem ao mudar de quadra ou data
   }, [quadraSelecionada, data]);
 
   function lidarComSelecaoDeBloco(horarioClicado) {
@@ -220,6 +240,7 @@ export default function Booking() {
         data: dataLimpa,
         horaInicio: horaInicioISO,
         horaFim: horaFimISO,
+        qtdRaquetes: qtdRaquetes, // Envia a quantidade escolhida de raquetes para o backend
       });
 
       navigate(`/pagamento/aguardando?bookingId=${resBooking.data.id}`);
@@ -230,7 +251,6 @@ export default function Booking() {
     }
   }
 
-  // Função para formatar a data na tela sem sofrer alteração de fuso horário
   const formatarDataExibicao = (dataStr) => {
     if (!dataStr) return "Selecione uma data";
     const [ano, mes, dia] = dataStr.split("-");
@@ -424,25 +444,86 @@ export default function Booking() {
           </div>
         )}
 
-        {/* Botão de Confirmação */}
+        {/* SEÇÃO ADICIONADA: COMPONENTES VISUAIS DE ALUGUEL DE RAQUETES */}
         {blocosSelecionados.length > 0 && (
-          <button
-            onClick={handleAgendar}
-            className={`w-full font-bold py-4 rounded-xl transition text-lg mt-4 shadow-lg ${
-              blocosSelecionados.length >= 2
-                ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-600/20"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-            }`}
-          >
-            {blocosSelecionados.length >= 2
-              ? `Confirmar Reserva (${blocosSelecionados[0]} às ${(() => {
-                  const ult = blocosSelecionados[blocosSelecionados.length - 1];
-                  const [h, m] = ult.split(":").map(Number);
-                  const minF = m + 30;
-                  return `${String(minF === 60 ? h + 1 : h).padStart(2, "0")}:${String(minF === 60 ? 0 : 30).padStart(2, "0")}`;
-                })()})`
-              : "Selecione pelo menos 1 hora"}
-          </button>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Aluguel de Raquetes
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+                  Não tem equipamento próprio? Adicione raquetes extras ao seu
+                  período.
+                </p>
+              </div>
+              <span className="text-[11px] font-black bg-teal-50 border border-teal-100 text-teal-700 px-2.5 py-1 rounded-lg">
+                R$ {PRECO_RAQUETE.toFixed(2)} / un
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Quantidade
+              </span>
+
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 p-1.5 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setQtdRaquetes((prev) => Math.max(0, prev - 1))
+                  }
+                  className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 font-extrabold hover:bg-slate-100 flex items-center justify-center transition active:scale-95 cursor-pointer select-none"
+                >
+                  -
+                </button>
+                <span className="text-sm font-black text-slate-800 w-6 text-center">
+                  {qtdRaquetes}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setQtdRaquetes((prev) => Math.min(4, prev + 1))
+                  } // Limite técnico seguro de até 4 raquetes por reserva
+                  className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 font-extrabold hover:bg-slate-100 flex items-center justify-center transition active:scale-95 cursor-pointer select-none"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Botão de Confirmação com o Resumo Financeiro Dinâmico */}
+        {blocosSelecionados.length > 0 && (
+          <div className="space-y-2 pt-2">
+            <button
+              onClick={handleAgendar}
+              disabled={blocosSelecionados.length < 2}
+              className={`w-full font-bold py-4 rounded-xl transition text-lg shadow-lg flex flex-col items-center justify-center leading-tight ${
+                blocosSelecionados.length >= 2
+                  ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-600/20"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              }`}
+            >
+              <span>
+                {blocosSelecionados.length >= 2
+                  ? `Confirmar Reserva (${blocosSelecionados[0]} às ${(() => {
+                      const ult =
+                        blocosSelecionados[blocosSelecionados.length - 1];
+                      const [h, m] = ult.split(":").map(Number);
+                      const minF = m + 30;
+                      return `${String(minF === 60 ? h + 1 : h).padStart(2, "0")}:${String(minF === 60 ? 0 : 30).padStart(2, "0")}`;
+                    })()})`
+                  : "Selecione pelo menos 1 hora"}
+              </span>
+              {blocosSelecionados.length >= 2 && (
+                <span className="text-xs font-normal text-teal-100 mt-0.5">
+                  Valor Total: R$ {calcularTotalGeral().toFixed(2)}
+                </span>
+              )}
+            </button>
+          </div>
         )}
       </main>
     </div>

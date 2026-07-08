@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_PASS);
+const crypto = require('crypto');
 
 async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
   const [ano, mes, dia] = dataAgendamentoString.split('-').map(Number);
@@ -22,15 +23,15 @@ async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
   return { liberado: true };
 }
 
-// Criar reserva (Versão Corrigida com Validação Local e Lógica de Conflito Blindada + Trava de Bloqueios)
+// Criar reserva (Módulo do Atleta integrado com Aluguel de Raquetes e cálculo automático)
 async function criar(req, res) {
-  const { courtId, data, horaInicio, horaFim } = req.body;
+  const { courtId, data, horaInicio, horaFim, qtdRaquetes } = req.body;
+  const PRECO_RAQUETE_FIXO = 15.00; // Valor fixado por unidade
   
   const rawUserId = req.user?.id || req.userId;
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
 
   try {
-
     const agoraBR = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
     const ano = agoraBR.getUTCFullYear();
     const mes = String(agoraBR.getUTCMonth() + 1).padStart(2, '0');
@@ -40,7 +41,7 @@ async function criar(req, res) {
     const horaAtualStr = `${String(agoraBR.getUTCHours()).padStart(2, '0')}:${String(agoraBR.getUTCMinutes()).padStart(2, '0')}`;
 
     const dataAgendamentoString = data.split('T')[0]; 
-    const horaAgendamentoStr = horaInicio.split('T')[1].substring(0, 5); // "20:30"
+    const horaAgendamentoStr = horaInicio.split('T')[1].substring(0, 5); 
 
     if (dataAgendamentoString < hojeString) {
       return res.status(400).json({ error: 'Não é possível agendar em um dia que já passou.' });
@@ -52,7 +53,7 @@ async function criar(req, res) {
 
     const dataAgendamento = new Date(req.body.data);
     const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias
+    hoje.setHours(0, 0, 0, 0); 
 
     if (dataAgendamento < hoje) {
       return res.status(400).json({ error: "Não é possível agendar em datas passadas." });
@@ -63,9 +64,7 @@ async function criar(req, res) {
       return res.status(400).json({ error: checkFuncionamento.motivo });
     }
 
-    // ==========================================================
     // TRAVA COMPLEMENTAR: Verifica se o horário escolhido não está bloqueado
-    // ==========================================================
     const bloqueiosAtivos = await prisma.bloqueioQuadra.findMany({
       where: {
         quadraId: Number(courtId),
@@ -80,7 +79,12 @@ async function criar(req, res) {
     if (estaNoBloqueio) {
       return res.status(400).json({ error: 'Este horário está indisponível ou bloqueado para manutenção.' });
     }
-    // ==========================================================
+
+    // Busca o valor por hora da quadra para cálculo matemático confiável
+    const quadraDados = await prisma.court.findUnique({ where: { id: Number(courtId) } });
+    if (!quadraDados) {
+      return res.status(404).json({ error: 'Quadra não encontrada.' });
+    }
 
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horaInicio}`;
@@ -112,18 +116,9 @@ async function criar(req, res) {
           AND: [
             {
               OR: [
-                {
-                  horaInicio: { lte: inicioFormatado },
-                  horaFim: { gt: inicioFormatado }
-                },
-                {
-                  horaInicio: { lt: fimFormatado },
-                  horaFim: { gte: fimFormatado }
-                },
-                {
-                  horaInicio: { gte: inicioFormatado },
-                  horaFim: { lte: fimFormatado }
-                }
+                { horaInicio: { lte: inicioFormatado }, horaFim: { gt: inicioFormatado } },
+                { horaInicio: { lt: fimFormatado }, horaFim: { gte: fimFormatado } },
+                { horaInicio: { gte: inicioFormatado }, horaFim: { lte: fimFormatado } }
               ]
             }
           ]
@@ -134,6 +129,11 @@ async function criar(req, res) {
         throw new Error('SLOT_TAKEN');
       }
 
+      // Calcula as frações financeiras com os novos campos de raquete
+      const quantidadeDeRaquetes = Number(qtdRaquetes || 0);
+      const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
+      const valorTotalCalculado = (quadraDados.precoPorHora * totalHoras) + (quantidadeDeRaquetes * PRECO_RAQUETE_FIXO);
+
       return tx.booking.create({
         data: {
           userId, 
@@ -141,7 +141,10 @@ async function criar(req, res) {
           data: dataFormatada,
           horaInicio: inicioFormatado,
           horaFim: fimFormatado,
-          status: 'pendente'
+          status: 'pendente',
+          qtdRaquetes: quantidadeDeRaquetes,
+          precoRaquete: PRECO_RAQUETE_FIXO,
+          valorTotal: valorTotalCalculado
         },
         include: { court: true, user: true }
       });
@@ -158,7 +161,8 @@ async function criar(req, res) {
 }
 
 async function criarManual(req, res) {
-  const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
+  const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento, qtdRaquetes } = req.body;
+  const PRECO_RAQUETE_FIXO = 15.00;
 
   try {
     const dataAgendamentoString = data.split('T')[0];
@@ -179,12 +183,9 @@ async function criarManual(req, res) {
       return res.status(400).json({ error: checkFuncionamento.motivo });
     }
 
-    // ==========================================================
-    // 🏆 TRAVA MATEMÁTICA: Impede agendamento se houver Torneio
-    // ==========================================================
+    // TRAVA MATEMÁTICA: Impede agendamento se houver Torneio
     const todosTorneios = await prisma.tournament.findMany();
     
-    // Converte o horário que o Admin quer agendar para minutos totais
     const [hIniM, mIniM] = horarioInicio.split(':').map(Number);
     const [hFimM, mFimM] = horarioFim.split(':').map(Number);
     const minutosInicioManual = hIniM * 60 + mIniM;
@@ -197,14 +198,12 @@ async function criarManual(req, res) {
       
       if (!pertenceAEstaQuadra) return false;
 
-      // Extrai a data ISO pura do torneio para comparar o dia
       const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
       const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
       
       const diaBate = dataAgendamentoString >= dataTorneioStr && dataAgendamentoString <= dataFimTorneioStr;
       if (!diaBate) return false;
 
-      // Extrai os horários do torneio e converte para minutos totais do dia
       const incioTorneioStr = new Date(t.data).toISOString().substring(11, 16);
       const fimTorneioStr = new Date(t.dataFim).toISOString().substring(11, 16);
 
@@ -214,14 +213,12 @@ async function criarManual(req, res) {
       const minutosInicioTorneio = hIniT * 60 + mIniT;
       const minutosFimTorneio = hFimT * 60 + mFimT;
 
-      // Validação de colisão de intervalos matemáticos
       return (minutosInicioManual < minutosFimTorneio && minutosFimManual > minutosInicioTorneio);
     });
 
     if (temTorneio) {
       return res.status(400).json({ error: 'Bloqueio! Este horário está reservado para um Torneio nesta quadra.' });
     }
-    // ==========================================================
 
     const booking = await prisma.$transaction(async (tx) => {
       const lockKey = `${courtId}-${dataAgendamentoString}-${horarioInicio}`;
@@ -257,7 +254,9 @@ async function criarManual(req, res) {
 
       const quadra = await tx.court.findUnique({ where: { id: Number(courtId) } });
       const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
-      const valorCalculado = (quadra?.precoPorHora || 0) * totalHoras;
+      
+      const quantidadeDeRaquetes = Number(qtdRaquetes || 0);
+      const valorCalculadoGeral = ((quadra?.precoPorHora || 0) * totalHoras) + (quantidadeDeRaquetes * PRECO_RAQUETE_FIXO);
 
       const novoBooking = await tx.booking.create({
         data: {
@@ -267,7 +266,10 @@ async function criarManual(req, res) {
           horaInicio: inicioFormatado,
           horaFim: fimFormatado,
           status: statusPagamento === 'pago' ? 'confirmado' : 'pendente',
-          nomeAvulso: nomeAtleta 
+          nomeAvulso: nomeAtleta,
+          qtdRaquetes: quantidadeDeRaquetes,
+          precoRaquete: PRECO_RAQUETE_FIXO,
+          valorTotal: valorCalculadoGeral
         },
         include: { court: true, user: true }
       });
@@ -276,7 +278,7 @@ async function criarManual(req, res) {
         await tx.payment.create({
           data: {
             bookingId: novoBooking.id,
-            valor: valorCalculado,
+            valor: valorCalculadoGeral,
             metodo: 'dinheiro_balcao',
             status: 'aprovado'
           }
@@ -286,7 +288,6 @@ async function criarManual(req, res) {
       return novoBooking;
     });
 
-    // 🚀 DISPARO AUTOMÁTICO SE ADICIONADO COMO PAGO NO BALCÃO
     if (statusPagamento === 'pago') {
       const dataApenasStr = new Date(booking.data).toLocaleDateString('pt-BR');
       const horaInic = new Date(booking.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
@@ -359,17 +360,15 @@ async function enviarEmailConfirmacao(emailAtleta, dadosReserva) {
 
 async function atualizarManual(req, res) {
   const { id } = req.params;
-  const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento } = req.body;
+  const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento, qtdRaquetes } = req.body;
+  const PRECO_RAQUETE_FIXO = 15.00;
 
   try {
     const dataAgendamentoString = data.split('T')[0];
     
-    // ==========================================================
-    // 🏆 TRAVA MATEMÁTICA NA EDIÇÃO: Impede salvar por cima de Torneio
-    // ==========================================================
+    // TRAVA MATEMÁTICA NA EDIÇÃO: Impede salvar por cima de Torneio
     const todosTorneios = await prisma.tournament.findMany();
     
-    // Converte os novos horários da edição para minutos totais do dia
     const [hIniM, mIniM] = horarioInicio.split(':').map(Number);
     const [hFimM, mFimM] = horarioFim.split(':').map(Number);
     const minutosInicioManual = hIniM * 60 + mIniM;
@@ -382,14 +381,12 @@ async function atualizarManual(req, res) {
       
       if (!pertenceAEstaQuadra) return false;
 
-      // Extrai a data ISO pura do torneio para verificar o dia
       const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
       const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
       
       const diaBate = dataAgendamentoString >= dataTorneioStr && dataAgendamentoString <= dataFimTorneioStr;
       if (!diaBate) return false;
 
-      // Extrai os horários originais salvos do torneio em minutos totais do dia
       const incioTorneioStr = new Date(t.data).toISOString().substring(11, 16);
       const fimTorneioStr = new Date(t.dataFim).toISOString().substring(11, 16);
 
@@ -399,14 +396,12 @@ async function atualizarManual(req, res) {
       const minutosInicioTorneio = hIniT * 60 + mIniT;
       const minutosFimTorneio = hFimT * 60 + mFimT;
 
-      // Colisão de intervalos de tempo
       return (minutosInicioManual < minutosFimTorneio && minutosFimManual > minutosInicioTorneio);
     });
 
     if (temTorneio) {
       return res.status(400).json({ error: 'Bloqueio! O novo horário escolhido coincide com um Torneio ativo nesta quadra.' });
     }
-    // ==========================================================
 
     const [anoStr, mesStr, diaStr] = dataAgendamentoString.split('-');
     const [hInicio, mInicio] = horarioInicio.split(':');
@@ -417,9 +412,13 @@ async function atualizarManual(req, res) {
     const fimFormatado = new Date(Date.UTC(Number(anoStr), Number(mesStr) - 1, Number(diaStr), Number(hFim) + 3, Number(mFim), 0));
 
     const novoStatus = statusPagamento === 'pago' ? 'confirmado' : 'pendente';
+    const quantidadeDeRaquetes = Number(qtdRaquetes || 0);
 
-    // Executa a atualização e sincroniza o fluxo financeiro em transação isolada
     const reservaAtualizada = await prisma.$transaction(async (tx) => {
+      const quadra = await tx.court.findUnique({ where: { id: Number(courtId) } });
+      const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
+      const valorCalculadoGeral = ((quadra?.precoPorHora || 0) * totalHoras) + (quantidadeDeRaquetes * PRECO_RAQUETE_FIXO);
+
       const booking = await tx.booking.update({
         where: { id: Number(id) },
         data: {
@@ -428,19 +427,20 @@ async function atualizarManual(req, res) {
           horaInicio: inicioFormatado,
           horaFim: fimFormatado,
           status: novoStatus,
-          nomeAvulso: nomeAtleta
+          nomeAvulso: nomeAtleta,
+          qtdRaquetes: quantidadeDeRaquetes,
+          precoRaquete: PRECO_RAQUETE_FIXO,
+          valorTotal: valorCalculadoGeral
         },
         include: { court: true, user: true }
       });
 
-      const totalHoras = (fimFormatado - inicioFormatado) / (1000 * 60 * 60);
-      const valorCalculado = (booking.court?.precoPorHora || 0) * totalHoras;
-
       if (statusPagamento === 'pago') {
+        await tx.payment.deleteMany({ where: { bookingId: booking.id } });
         await tx.payment.create({
           data: {
             bookingId: booking.id,
-            valor: valorCalculado,
+            valor: valorCalculadoGeral,
             metodo: 'dinheiro_balcao',
             status: 'aprovado'
           }
@@ -452,13 +452,11 @@ async function atualizarManual(req, res) {
       return booking;
     });
 
-    // 🚀 DISPARO AUTOMÁTICO SE MUDOU PARA PAGO NA EDIÇÃO
     if (statusPagamento === 'pago') {
       const dataApenasStr = new Date(reservaAtualizada.data).toLocaleDateString('pt-BR');
       const horaInic = new Date(reservaAtualizada.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
       const horaTerm = new Date(reservaAtualizada.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 
-      // Envia para o usuário do cadastro, ou para o seu e-mail de teste padrão
       const emailDestinatario = reservaAtualizada.user?.email || "mathxtzferreira@gmail.com";
 
       await enviarEmailConfirmacao(emailDestinatario, {
@@ -482,12 +480,10 @@ async function deletarManual(req, res) {
 
   try {
     await prisma.$transaction(async (tx) => {
-      // 1. 💡 Remove primeiro o registro do fluxo de caixa (se existir)
       await tx.payment.deleteMany({
         where: { bookingId: Number(id) }
       });
 
-      // 2. Depois deleta a reserva com segurança
       await tx.booking.delete({
         where: { id: Number(id) }
       });
@@ -500,7 +496,6 @@ async function deletarManual(req, res) {
   }
 }
 
-// Listar reservas do usuário logado
 async function minhasReservas(req, res) {
   const rawUserId = req.user?.id || req.userId;
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
@@ -522,12 +517,10 @@ async function minhasReservas(req, res) {
 
 async function limparHistoricoCancelado(req, res) {
   try {
-    // 🛡️ Segurança: Só deixa prosseguir se for Admin logado
     if (req.user?.role !== 'admin' && req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
     }
 
-    // 1. Busca os IDs das reservas canceladas
     const canceladas = await prisma.booking.findMany({
       where: { status: 'cancelado' },
       select: { id: true }
@@ -539,12 +532,10 @@ async function limparHistoricoCancelado(req, res) {
       return res.json({ message: 'Nenhuma reserva cancelada para limpar!' });
     }
 
-    // 2. Deleta os pagamentos em cascata
     await prisma.payment.deleteMany({
       where: { bookingId: { in: ids } }
     });
 
-    // 3. Deleta as reservas
     await prisma.booking.deleteMany({
       where: { id: { in: ids } }
     });
@@ -556,7 +547,6 @@ async function limparHistoricoCancelado(req, res) {
   }
 }
 
-// Cancelar reserva
 async function cancelar(req, res) {
   const { id } = req.params;
   const rawUserId = req.user?.id || req.userId;
@@ -588,7 +578,6 @@ async function cancelar(req, res) {
 
 async function horariosDisponiveis(req, res) {
   const { courtId, data } = req.query;
-
   const horariocut = Number(courtId);
 
   const horariosBase = [
@@ -640,7 +629,6 @@ async function horariosDisponiveis(req, res) {
 
     let disponiveis = horariosBase.filter(h => h >= horarioDoDia.horaAbertura && h < horarioDoDia.horaFechamento);
 
-    // 1. Filtro de Bloqueios de manutenção normais
     const bloqueios = await prisma.bloqueioQuadra.findMany({
       where: {
         quadraId: Number(courtId),
@@ -654,9 +642,6 @@ async function horariosDisponiveis(req, res) {
       });
     }
 
-    // ==========================================================
-    // 🏆 CORREÇÃO DEFINITIVA: Bloqueio estrito de Torneios por String ISO
-    // ==========================================================
     const todosTorneios = await prisma.tournament.findMany();
 
     const torneiosDoDiaDessaQuadra = todosTorneios.filter(t => {
@@ -669,7 +654,6 @@ async function horariosDisponiveis(req, res) {
       
       if (!pertenceAEstaQuadra) return false;
 
-      // Extração segura baseada nas strings ISO nativas do banco
       const dataTorneioStr = new Date(t.data).toISOString().split('T')[0];
       const dataFimTorneioStr = new Date(t.dataFim).toISOString().split('T')[0];
       
@@ -682,7 +666,6 @@ async function horariosDisponiveis(req, res) {
         const horaMinutoTexto = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
         return !torneiosDoDiaDessaQuadra.some(t => {
-          // Captura "HH:MM" puro direto da gravação original (independente de OS ou Timezone)
           const incioTexto = new Date(t.data).toISOString().substring(11, 16);
           const fimTexto = new Date(t.dataFim).toISOString().substring(11, 16);
           
@@ -690,7 +673,6 @@ async function horariosDisponiveis(req, res) {
         });
       });
     }
-    // ==========================================================
 
     if (dataSelecionadaString === hojeString) {
       const horaAtual = agoraBR.getUTCHours();
@@ -699,6 +681,7 @@ async function horariosDisponiveis(req, res) {
       disponiveis = disponiveis.filter(h => {
         const [hBotao, mBotao] = h.split(':').map(Number);
         if (hBotao > horaAtual) return true;
+        if (hBotao === horaAtual && mBotao > minutoAtual) return true;
         if (hBotao === horaAtual && mBotao > minutoAtual) return true;
         return false;
       });
@@ -730,26 +713,20 @@ async function horariosDisponiveis(req, res) {
   }
 }
 
-// Admin: listar todas as reservas
 async function listarTodas(req, res) {
   try {
-    // 1. Busca as reservas tradicionais dos atletas
     const bookings = await prisma.booking.findMany({
       include: { court: true, user: true },
       orderBy: { data: 'asc' }
     });
 
-    // 2. Busca os bloqueios de manutenção normais
     const bloqueios = await prisma.bloqueioQuadra.findMany({
       include: { quadra: true }
     });
 
-    // 3. Busca todos os torneios agendados
     const torneios = await prisma.tournament.findMany();
 
-    // 4. Formata as reservas comuns
     const agendaCompleta = bookings.map(b => {
-      // Força a extração de strings limpas para evitar distorções no FullCalendar
       const dataApenasStr = new Date(b.data).toISOString().split('T')[0];
       const horaInic = new Date(b.horaInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
       const horaFim = new Date(b.horaFim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
@@ -757,24 +734,25 @@ async function listarTodas(req, res) {
       return {
         id: b.id,
         data: dataApenasStr,
-        horaInicioStr: horaInic, // 👈 String limpa "08:00"
-        horaFimStr: horaFim,     // 👈 String limpa "09:00"
+        horaInicioStr: horaInic, 
+        horaFimStr: horaFim,     
         courtId: b.courtId,
         status: b.status,
         nomeAvulso: b.nomeAvulso || b.user?.name || b.user?.nome || 'Atleta',
         tipo: 'reserva',
         court: b.court,
-        user: b.user
+        user: b.user,
+        qtdRaquetes: b.qtdRaquetes,
+        valorTotal: b.valorTotal
       };
     });
 
-    // 5. Injeta os Bloqueios de Manutenção na lista
     bloqueios.forEach(b => {
       agendaCompleta.push({
         id: `bloqueio-${b.id}`,
         data: b.data, 
-        horaInicioStr: b.horaInicio, // Já é string "08:00" do banco
-        horaFimStr: b.horaFim,       // Já é string "12:00" do banco
+        horaInicioStr: b.horaInicio, 
+        horaFimStr: b.horaFim,      
         courtId: b.quadraId,
         status: 'confirmado',
         nomeAvulso: `🚧 Bloqueio: ${b.motivo || 'Manutenção'}`,
@@ -783,21 +761,17 @@ async function listarTodas(req, res) {
       });
     });
 
-    // 6. Injeta os Torneios mapeando por quadra afetada com string pura
     torneios.forEach(t => {
       const dataInicioStr = new Date(t.data).toISOString().split('T')[0];
-      
-      // Extrai os caracteres de hora idênticos ao que foi digitado no formulário
       const horaInic = new Date(t.data).toISOString().substring(11, 16);
       const horaFim = new Date(t.dataFim).toISOString().substring(11, 16);
-      
       const quadrasArray = t.quadras || [];
 
       const criarObjetoTorneio = (qId) => ({
         id: `torneio-${t.id}-${qId}`,
         data: dataInicioStr,
-        horaInicioStr: horaInic, // 👈 String limpa "09:00"
-        horaFimStr: horaFim,   // 👈 String limpa "13:00"
+        horaInicioStr: horaInic, 
+        horaFimStr: horaFim,   
         courtId: Number(qId),
         status: 'confirmado',
         nomeAvulso: `🏆 Torneio: ${t.nome}`,
@@ -840,7 +814,6 @@ async function criarBloqueio(req, res) {
   }
 }
 
-// Listar todos os bloqueios criados
 async function listarBloqueios(req, res) {
   try {
     const bloqueios = await prisma.bloqueioQuadra.findMany({
@@ -854,7 +827,6 @@ async function listarBloqueios(req, res) {
   }
 }
 
-// Cancelar/Deletar um bloqueio específico
 async function deletarBloqueio(req, res) {
   const { id } = req.params;
   try {

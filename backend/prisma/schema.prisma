@@ -58,7 +58,9 @@ model Booking {
   status     String   @default("pendente")
   createdAt  DateTime @default(now())
   payment    Payment?
-
+  qtdRaquetes   Int      @default(0)
+  precoRaquete  Float    @default(0.0) // Registra quanto custava a raquete no dia
+  valorTotal    Float    @default(0.0) // Valor da quadra + (qtdRaquetes * precoRaquete)
   bloqueios BloqueioQuadra[]
 }
 
