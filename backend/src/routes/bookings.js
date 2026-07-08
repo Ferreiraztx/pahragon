@@ -15,7 +15,8 @@ const {
   criarManual,
   atualizarManual,
   deletarManual,
-  limparHistoricoCancelado // 👈 1. Adicionado aqui!
+  limparHistoricoCancelado,
+  obterPrecoRaquete
 } = require('../controllers/bookingController');
 const auth = require('../middlewares/auth');
 
@@ -32,5 +33,6 @@ router.post('/manual', auth, criarManual);
 router.put('/manual/:id', auth, atualizarManual);
 router.delete('/manual/:id', auth, deletarManual);
 router.delete('/limpar-canceladas', requireAuth, limparHistoricoCancelado);
+router.get('/preco-raquete', obterPrecoRaquete);
 
 module.exports = router;

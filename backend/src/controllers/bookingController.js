@@ -4,6 +4,17 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_PASS);
 const crypto = require('crypto');
 
+// 💡 Definição única e global do preço da raquete no backend (Evita discrepâncias entre atleta e balcão)
+const PRECO_RAQUETE_FIXO = 10.00; 
+
+async function obterPrecoRaquete(req, res) {
+  try {
+    return res.json({ preco: PRECO_RAQUETE_FIXO });
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao obter preço da raquete." });
+  }
+}
+
 async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
   const [ano, mes, dia] = dataAgendamentoString.split('-').map(Number);
   const diaSemana = new Date(Date.UTC(ano, mes - 1, dia, 12)).getUTCDay();
@@ -26,7 +37,6 @@ async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
 // Criar reserva (Módulo do Atleta integrado com Aluguel de Raquetes e cálculo automático)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim, qtdRaquetes } = req.body;
-  const PRECO_RAQUETE_FIXO = 10.00; // Valor fixado por unidade
   
   const rawUserId = req.user?.id || req.userId;
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
@@ -53,9 +63,9 @@ async function criar(req, res) {
 
     const dataAgendamento = new Date(req.body.data);
     const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0); 
-
-    if (dataAgendamento < hoje) {
+    const hojeStringNormal = hoje.toISOString().split('T')[0];
+    
+    if (dataAgendamentoString < hojeStringNormal) {
       return res.status(400).json({ error: "Não é possível agendar em datas passadas." });
     }
 
@@ -162,7 +172,6 @@ async function criar(req, res) {
 
 async function criarManual(req, res) {
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento, qtdRaquetes } = req.body;
-  const PRECO_RAQUETE_FIXO = 15.00;
 
   try {
     const dataAgendamentoString = data.split('T')[0];
@@ -361,7 +370,6 @@ async function enviarEmailConfirmacao(emailAtleta, dadosReserva) {
 async function atualizarManual(req, res) {
   const { id } = req.params;
   const { nomeAtleta, data, horarioInicio, horarioFim, courtId, statusPagamento, qtdRaquetes } = req.body;
-  const PRECO_RAQUETE_FIXO = 15.00;
 
   try {
     const dataAgendamentoString = data.split('T')[0];
@@ -682,7 +690,6 @@ async function horariosDisponiveis(req, res) {
         const [hBotao, mBotao] = h.split(':').map(Number);
         if (hBotao > horaAtual) return true;
         if (hBotao === horaAtual && mBotao > minutoAtual) return true;
-        if (hBotao === horaAtual && mBotao > minutoAtual) return true;
         return false;
       });
     }
@@ -742,7 +749,7 @@ async function listarTodas(req, res) {
         tipo: 'reserva',
         court: b.court,
         user: b.user,
-        qtdRaquetes: b.qtdRaquetes,
+        qtdRaquetes: b.qtdRaquetes, // 💡 IMPORTANTE: Devolvendo a quantidade para carregar perfeitamente no Front-end
         valorTotal: b.valorTotal
       };
     });
@@ -882,5 +889,6 @@ module.exports = {
   atualizarManual,
   deletarManual,
   limparHistoricoCancelado,
-  enviarEmailConfirmacao
+  enviarEmailConfirmacao,
+  obterPrecoRaquete
 };

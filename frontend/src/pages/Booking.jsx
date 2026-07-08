@@ -6,8 +6,8 @@ export default function Booking() {
   const [quadras, setQuadras] = useState([]);
   const [quadraSelecionada, setQuadraSelecionada] = useState("");
 
-  // Preço fixo definido para o aluguel por unidade
-  const PRECO_RAQUETE = 15.0;
+  // 💡 MODIFICADO: O preço agora inicia em 0 e busca dinamicamente do backend
+  const [precoRaquete, setPrecoRaquete] = useState(0);
   const [qtdRaquetes, setQtdRaquetes] = useState(0);
 
   // Função auxiliar para obter a string correta de HOJE no fuso horário local (AAAA-MM-DD)
@@ -73,7 +73,7 @@ export default function Booking() {
     // Como cada bloco representa 30 minutos, multiplicamos o preço por hora por (blocos / 2)
     const valorQuadra =
       (blocosSelecionados.length / 2) * dadosQuadraAtual.precoPorHora;
-    const valorRaquetes = qtdRaquetes * PRECO_RAQUETE;
+    const valorRaquetes = qtdRaquetes * precoRaquete; // 💡 MODIFICADO: Multiplicando pelo preço vindo da API
     return valorQuadra + valorRaquetes;
   };
 
@@ -116,8 +116,23 @@ export default function Booking() {
     }
   }
 
+  // 💡 MODIFICADO: Carrega as quadras e define um fallback estático de 15.00 para o preço
+  // 💡 CORRIGIDO: Busca o preço em tempo real direto do back-end sem valores locais
   useEffect(() => {
-    api.get("/courts").then((res) => setQuadras(res.data));
+    // 1. Busca a lista de quadras
+    api.get("/courts")
+      .then((res) => setQuadras(res.data))
+      .catch((err) => console.error("Erro ao buscar quadras", err));
+    
+    // 2. Busca o preço oficial da raquete definido no back-end
+    api.get("/bookings/preco-raquete")
+      .then((res) => {
+        setPrecoRaquete(Number(res.data.preco));
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar preço da raquete do backend, usando fallback", err);
+        setPrecoRaquete(10.00); // Fallback de segurança caso a rota falhe
+      });
   }, []);
 
   useEffect(() => {
@@ -170,7 +185,7 @@ export default function Booking() {
   async function handleAgendar() {
     if (blocosSelecionados.length < 2) {
       setMensagem(
-        "⚠️ O tempo mínimo de agendamento é de 1 hora (Selecione pelo menos 2 blocos).",
+        "⚠️ O tempo mínimo de agendamento é de 1 hora (Selecione pelo menos 2 blocks).",
       );
       return;
     }
@@ -195,11 +210,11 @@ export default function Booking() {
       return encontrado ? encontrado.status : null;
     };
 
-    const minutos30Antes = primeiroMinutos - 30;
-    const minutos60Antes = primeiroMinutos - 60;
+    const minutes30Antes = primeiroMinutos - 30;
+    const minutes60Antes = primeiroMinutos - 60;
     if (
-      obterStatusPorMinutos(minutos30Antes) === "disponivel" &&
-      obterStatusPorMinutos(minutos60Antes) === "ocupado"
+      obterStatusPorMinutos(minutes30Antes) === "disponivel" &&
+      obterStatusPorMinutos(minutes60Antes) === "ocupado"
     ) {
       const msgAntes =
         "Sua reserva deixará um intervalo vago de apenas 30 minutos antes do seu jogo. Por favor, inclua esse horário ou junte com a reserva anterior.";
@@ -208,10 +223,10 @@ export default function Booking() {
       return;
     }
 
-    const minutos30Depois = ultimoMinutos + 30;
+    const minutes30Depois = ultimoMinutos + 30;
     const minutes60Depois = ultimoMinutos + 60;
     if (
-      obterStatusPorMinutos(minutos30Depois) === "disponivel" &&
+      obterStatusPorMinutos(minutes30Depois) === "disponivel" &&
       obterStatusPorMinutos(minutes60Depois) === "ocupado"
     ) {
       const msgDepois =
@@ -457,8 +472,9 @@ export default function Booking() {
                   período.
                 </p>
               </div>
+              {/* 💡 MODIFICADO: Puxando o preço dinâmico do estado atualizado */}
               <span className="text-[11px] font-black bg-teal-50 border border-teal-100 text-teal-700 px-2.5 py-1 rounded-lg">
-                R$ {PRECO_RAQUETE.toFixed(2)} / un
+                R$ {precoRaquete.toFixed(2)} / un
               </span>
             </div>
 
