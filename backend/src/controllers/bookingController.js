@@ -26,7 +26,7 @@ async function validarFuncionamento(dataAgendamentoString, horaAgendamentoStr) {
 // Criar reserva (Módulo do Atleta integrado com Aluguel de Raquetes e cálculo automático)
 async function criar(req, res) {
   const { courtId, data, horaInicio, horaFim, qtdRaquetes } = req.body;
-  const PRECO_RAQUETE_FIXO = 15.00; // Valor fixado por unidade
+  const PRECO_RAQUETE_FIXO = 10.00; // Valor fixado por unidade
   
   const rawUserId = req.user?.id || req.userId;
   const userId = isNaN(Number(rawUserId)) ? rawUserId : Number(rawUserId);
