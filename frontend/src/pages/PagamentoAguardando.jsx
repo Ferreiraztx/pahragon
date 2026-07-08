@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 export default function PagamentoAguardando() {
@@ -23,57 +23,14 @@ export default function PagamentoAguardando() {
 
     async function inicializarPagamento() {
       try {
+        // 💡 Busca os detalhes da reserva salvos no banco de dados
         const resBooking = await api.get(`/bookings/detalhes/${bookingId}`);
 
-        const precoPorHora = resBooking.data.court?.precoPorHora || 80;
-        let valorCalculado = precoPorHora; // Começa com o valor padrão de 1 hora
+        // 💡 MODIFICADO: Puxa o valor total e exato já calculado pelo backend (Quadra + Raquetes)
+        const totalOficial = resBooking.data.valorTotal || resBooking.data.court?.precoPorHora || 0;
+        setValorTotal(Number(totalOficial));
 
-        // Try/Catch isolado para o cálculo: se falhar aqui, não trava o Mercado Pago
-        try {
-          const stringInicio = resBooking.data.horaInicio;
-          const stringFim = resBooking.data.horaFim;
-
-          if (
-            stringInicio &&
-            stringFim &&
-            stringInicio.includes("T") &&
-            stringFim.includes("T")
-          ) {
-            // Extrai o trecho "HH:MM" de forma segura
-            const [hInicio, mInicio] = stringInicio
-              .split("T")[1]
-              .substring(0, 5)
-              .split(":")
-              .map(Number);
-            const [hFim, mFim] = stringFim
-              .split("T")[1]
-              .substring(0, 5)
-              .split(":")
-              .map(Number);
-
-            // Converte para minutos totais desde o início do dia
-            const minutosInicio = hInicio * 60 + mInicio;
-            const minutosFim = hFim * 60 + mFim;
-
-            // Calcula a diferença real em minutos
-            const diferencaEmMinutos = minutosFim - minutosInicio;
-
-            if (diferencaEmMinutos > 0) {
-              const totalHoras = diferencaEmMinutos / 60;
-              valorCalculado = totalHoras * precoPorHora;
-            }
-          }
-        } catch (calcError) {
-          console.error(
-            "Erro ao calcular valor proporcional, usando valor padrão:",
-            calcError,
-          );
-        }
-
-        // Define o valor total (seja o calculado ou o padrão)
-        setValorTotal(valorCalculado);
-
-        // Fluxo do Mercado Pago (completamente isolado do cálculo acima)
+        // Fluxo do Mercado Pago
         const resPagamento = await api.post("/payments/criar-preferencia", {
           bookingId,
         });
@@ -165,7 +122,6 @@ export default function PagamentoAguardando() {
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#2d3130] antialiased tracking-tight font-sans flex flex-col items-center justify-center px-6 py-12">
       <main className="max-w-md w-full space-y-6">
-        {/* Alerta de erro estilo Admin */}
         {erro && (
           <div className="bg-rose-50 border border-rose-100 text-rose-700 text-sm px-4 py-3 rounded-xl text-center font-medium">
             {erro}
@@ -199,7 +155,7 @@ export default function PagamentoAguardando() {
             <span className="text-xs font-bold text-teal-700 uppercase tracking-widest block mb-1">
               Tempo Restante
             </span>
-            <span className="text-4xl font-light text-[#1e2221] tracking-tighter font-mono font-bold">
+            <span className="text-4xl font-mono font-bold text-[#1e2221] tracking-tighter block">
               {tempoRestante}
             </span>
           </div>
@@ -215,7 +171,7 @@ export default function PagamentoAguardando() {
 
             <button
               onClick={cancelarEVoltar}
-              className="w-full text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider py-2 transition"
+              className="w-full text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider py-2 transition cursor-pointer"
             >
               ← Cancelar e liberar horário
             </button>

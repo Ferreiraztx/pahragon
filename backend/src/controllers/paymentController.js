@@ -53,10 +53,8 @@ async function criarPagamento(req, res) {
       })
     }
 
-    const inicio = new Date(booking.horaInicio)
-    const fim = new Date(booking.horaFim)
-    const horas = (fim - inicio) / (1000 * 60 * 60)
-    const valor = booking.court.precoPorHora * horas
+    // 💡 MODIFICADO: Puxa o valor total exato já calculado no banco (Tempo Proporcional + Raquetes)
+    const valor = Number(booking.valorTotal);
 
     // Configuração de expiração de 10 minutos
     const dataExpiracao = new Date(Date.now() + 10 * 60 * 1000).toISOString()
@@ -74,7 +72,7 @@ async function criarPagamento(req, res) {
             title: `Reserva - ${booking.court.nome}`,
             description: `${new Date(booking.data).toLocaleDateString('pt-BR')}`,
             quantity: 1,
-            unit_price: valor,
+            unit_price: valor, // 💡 Agora enviando o preço cheio correto para o Mercado Pago
             currency_id: 'BRL'
           }
         ],
@@ -209,7 +207,7 @@ async function confirmarPagamento(req, res) {
     const ehStatusSucesso = ['approved', 'pago', 'success', 'confirmado'].includes(statusLimpo);
 
     if (ehStatusSucesso && booking.status !== 'confirmado') {
-      console.log(`[ALERTA SECURITY] Forçando confirmação imediata da reserva ${idSeguro} via retorno de tela.`);
+      console.log(`[ALERTA SECURITY] Forçando confirmation imediata da reserva ${idSeguro} via retorno de tela.`);
       
       booking = await prisma.booking.update({
         where: { id: idSeguro },
@@ -217,11 +215,11 @@ async function confirmarPagamento(req, res) {
         include: { court: true, user: true }
       });
       
-      // Atualiza também a tabela auxiliar de pagamentos
+      // 💡 MODIFICADO: Atualiza o pagamento forçado utilizando o valorTotal correto salvo no banco
       await prisma.payment.upsert({
         where: { bookingId: idSeguro },
-        update: { status: 'aprovado' },
-        create: { bookingId: idSeguro, valor: booking.court.precoPorHora || 0, metodo: 'mercadopago', status: 'aprovado' }
+        update: { status: 'aprovado', valor: Number(booking.valorTotal) },
+        create: { bookingId: idSeguro, valor: Number(booking.valorTotal), metodo: 'mercadopago', status: 'aprovado' }
       });
 
       // Dispara o e-mail oficial do Resend para o cliente
