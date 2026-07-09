@@ -161,7 +161,7 @@ export default function MinhasReservas() {
 
       {/* Área de Conteúdo Centralizada */}
       <main className="max-w-xl mx-auto px-6 py-10 space-y-4">
-        {/* ALTERADO: Seletor de Períodos Dinâmico */}
+        {/* Seletor de Períodos Dinâmico */}
         {reservas.length > 0 && (
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -292,7 +292,8 @@ export default function MinhasReservas() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-sm">
+                {/* 💡 MODIFICADO: Grid alterado de grid-cols-2 para grid-cols-3 para incluir raquetes extras */}
+                <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-4 text-sm">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
                       Agendado para
@@ -307,7 +308,7 @@ export default function MinhasReservas() {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
                       Intervalo de Horário
                     </span>
-                    <span className="font-mono font-bold text-slate-800">
+                    <span className="font-mono font-bold text-slate-800 block whitespace-nowrap">
                       {new Date(r.horaInicio).toLocaleTimeString("pt-BR", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -317,6 +318,17 @@ export default function MinhasReservas() {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
+                    </span>
+                  </div>
+                  {/* 💡 ADICIONADO: Nova coluna exibindo o equipamento extra em tempo real de forma elegante */}
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                      Equipamento Extra
+                    </span>
+                    <span className="font-bold text-slate-800 block text-xs mt-0.5">
+                      {r.qtdRaquetes && Number(r.qtdRaquetes) > 0
+                        ? `🏓 ${r.qtdRaquetes} ${Number(r.qtdRaquetes) === 1 ? "raquete" : "raquetes"}`
+                        : "Nenhuma"}
                     </span>
                   </div>
                 </div>
