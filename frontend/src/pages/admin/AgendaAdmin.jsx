@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
@@ -31,7 +31,8 @@ export default function AgendaAdmin({
   const [erroMensagem, setErroMensagem] = useState("");
 
   const [quadraFiltrada, setQuadraFiltrada] = useState("todas");
-  const [qtdRaquetes, setQtdRaquetes] = useState(0); // 💡 Movido para dentro do componente corretamente
+  const [qtdRaquetes, setQtdRaquetes] = useState(0);
+  const [precoRaquete, setPrecoRaquete] = useState(0); // 💡 Armazena o preço vindo da API
 
   const [dadosForm, setDadosForm] = useState({
     atleta: "",
@@ -42,6 +43,40 @@ export default function AgendaAdmin({
     statusPagamento: "pago",
   });
   const [visaoAtual, setVisaoAtual] = useState("dayGridMonth");
+
+  // 💡 Busca o preço oficial da raquete do backend para o cálculo interativo
+  useEffect(() => {
+    api
+      .get("/bookings/preco-raquete")
+      .then((res) => setPrecoRaquete(Number(res.data.preco)))
+      .catch((err) => {
+        console.error("Erro ao carregar preço da raquete", err);
+        setPrecoRaquete(15.0); // Fallback de segurança
+      });
+  }, []);
+
+  // 💡 Calcula dinamicamente o valor total em tempo real com base no form
+  const calcularTotalManual = () => {
+    const quadraSelecionada = quadras.find(
+      (q) => String(q.id) === String(dadosForm.quadraId),
+    );
+    if (!quadraSelecionada || !dadosForm.horario || !dadosForm.horarioFim)
+      return 0;
+
+    const [hIni, mIni] = dadosForm.horario.split(":").map(Number);
+    const [hFim, mFim] = dadosForm.horarioFim.split(":").map(Number);
+
+    const minutosInicio = hIni * 60 + mIni;
+    const minutosFim = hFim * 60 + mFim;
+    const diferencaHoras = (minutosFim - minutosInicio) / 60;
+
+    if (diferencaHoras <= 0) return 0;
+
+    const valorQuadra = diferencaHoras * quadraSelecionada.precoPorHora;
+    const valorRaquetes = qtdRaquetes * precoRaquete;
+
+    return valorQuadra + valorRaquetes;
+  };
 
   const resourcesCalendar = quadras
     .filter(
@@ -177,7 +212,7 @@ export default function AgendaAdmin({
       const terminoSugerido = `${String(horas + 1).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
 
       setModoEdicao(false);
-      setQtdRaquetes(0); // Reseta a quantidade para novas reservas
+      setQtdRaquetes(0);
       setErroMensagem("");
       setConfirmarExclusao(false);
       setDadosForm({
@@ -192,7 +227,6 @@ export default function AgendaAdmin({
     }
   };
 
-  // Função auxiliar para garantir formato de horários redondos
   const SandyHorarioManual = (horarioStr) => {
     if (!horarioStr) return "08:00";
     const [h, m] = horarioStr.split(":");
@@ -227,7 +261,7 @@ export default function AgendaAdmin({
 
     setModoEdicao(true);
     setReservaIdAtual(r.id);
-    setQtdRaquetes(r.qtdRaquetes || 0); // 💡 Carrega as raquetes salvas no banco
+    setQtdRaquetes(r.qtdRaquetes || 0);
     setErroMensagem("");
     setConfirmarExclusao(false);
     setDadosForm({
@@ -243,7 +277,7 @@ export default function AgendaAdmin({
 
   const handleAbrirReservaManualFixa = () => {
     setModoEdicao(false);
-    setQtdRaquetes(0); // Reseta para nova reserva
+    setQtdRaquetes(0);
     setErroMensagem("");
     setConfirmarExclusao(false);
     setDadosForm({
@@ -293,7 +327,7 @@ export default function AgendaAdmin({
           horarioFim: dadosForm.horarioFim,
           courtId: dadosForm.quadraId,
           statusPagamento: dadosForm.statusPagamento,
-          qtdRaquetes: Number(qtdRaquetes), // 💡 Enviando a quantidade para o backend
+          qtdRaquetes: Number(qtdRaquetes),
         },
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -558,7 +592,6 @@ export default function AgendaAdmin({
                     </div>
                   </div>
 
-                  {/* 💡 ADICIONADO: Seletor de Raquetes Extras para o Balcão Admin */}
                   <div className="space-y-2 pt-1">
                     <label className="text-xs font-bold text-slate-500 ml-0.5 uppercase tracking-wider block">
                       Aluguel de Raquetes Extras (Balcão)
@@ -625,6 +658,18 @@ export default function AgendaAdmin({
                       </button>
                     </div>
                   </div>
+
+                  {/* 💡 ADICIONADO: Caixa de resumo financeiro interativa em tempo real para o balcão admin */}
+                  {calcularTotalManual() > 0 && (
+                    <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex justify-between items-center animate-in fade-in duration-200">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Valor total no balcão:
+                      </span>
+                      <span className="text-base font-black text-slate-800 font-mono">
+                        R$ {calcularTotalManual().toFixed(2)}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-2 pt-2">
                     <div className="grid grid-cols-2 gap-3">
