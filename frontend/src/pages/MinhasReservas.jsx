@@ -327,7 +327,7 @@ export default function MinhasReservas() {
                     </span>
                     <span className="font-bold text-slate-800 block text-xs mt-0.5">
                       {r.qtdRaquetes && Number(r.qtdRaquetes) > 0
-                        ? `🏓 ${r.qtdRaquetes} ${Number(r.qtdRaquetes) === 1 ? "raquete" : "raquetes"}`
+                        ? `${r.qtdRaquetes} ${Number(r.qtdRaquetes) === 1 ? "raquete" : "raquetes"}`
                         : "Nenhuma"}
                     </span>
                   </div>
