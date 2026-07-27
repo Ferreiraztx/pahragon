@@ -6,7 +6,7 @@
 ![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=for-the-badge&logo=tailwind-css)
 
-A **Pahragon Beach Tennis** é uma plataforma Full-Stack web de alto desempenho para agendamento automatizado de quadras de Beach Tennis, gestão de aluguel de equipamentos extras (raquetes) e controle total de caixa/agenda via painel administrativo.
+A sistema desenvolvido para a **Pahragon Beach Tennis** é uma plataforma Full-Stack web de alto desempenho para agendamento automatizado de quadras de Beach Tennis, gestão de aluguel de equipamentos extras (raquetes) e controle total de caixa/agenda via painel administrativo.
 
 O sistema elimina o gargalo de agendamentos manuais via WhatsApp, contando com checkout direto integrado ao **Mercado Pago**, disparos automáticos de confirmação por e-mail (**Resend**) e conformidade com as exigências da **LGPD**.
 
@@ -112,7 +112,9 @@ O servidor Express está pré-configurado com cabeçalhos HTTP rigorosos para ev
 
 JavaScript
 res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-📄 Licença
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
-Developed with ❤️ by [Seu Nome / Sua Empresa]
+## 📄 Licença e Propriedade
+Este software é de propriedade exclusiva e confidencial da Pahragon Beach Tennis. 
+Todos os direitos reservados.
+
+Developed by Matheus Ferreira
